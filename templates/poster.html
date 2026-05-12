@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WildIdea · {TITLE}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0c0c0e;
+    color: #e8e8ed;
+    font-family: 'Noto Sans SC', -apple-system, sans-serif;
+    padding: 48px 32px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .container { max-width: 880px; width: 100%; }
+
+  .header { text-align: center; margin-bottom: 36px; }
+  .header .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, {BADGE_COLOR}33, {BADGE_COLOR}11);
+    border: 1px solid {BADGE_COLOR}44;
+    color: {BADGE_ACCENT};
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 900;
+    background: {GRADIENT};
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+  }
+  .header .sub { color: #8a8a96; font-size: 14px; font-weight: 400; }
+  .header .sub .em { color: {BADGE_ACCENT}; font-weight: 500; }
+
+  /* Quarantine zone (single or double row) */
+  .quarantine {
+    background: #1a1a24;
+    border: 1px dashed #3a3a4a;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .quarantine .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .quarantine .label {
+    color: #8a8a96; font-size: 12px; font-weight: 500; white-space: nowrap;
+    background: #2a2a36; padding: 4px 10px; border-radius: 6px; flex-shrink: 0;
+  }
+  .quarantine .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .quarantine .tag {
+    background: #2a2a36; color: #6a6a7a; font-size: 11px;
+    padding: 3px 10px; border-radius: 6px; text-decoration: line-through;
+  }
+  /* ⚠️ 二次迭代用：前轮产出已ban 标签 */
+  .quarantine .tag-ban2 {
+    background: #2a1a1a; color: #f43f5e88; font-size: 11px;
+    padding: 3px 10px; border-radius: 6px; text-decoration: line-through;
+    border: 1px solid #f43f5e22;
+  }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; }
+
+  .card {
+    background: linear-gradient(145deg, #16161e, #1a1a24);
+    border: 1px solid #2a2a36;
+    border-radius: 12px;
+    padding: 18px 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, {CARD_BORDER}); }
+
+  .card .source { font-size: 11px; font-weight: 500; color: #6a6a7e; margin-bottom: 10px; letter-spacing: 1px; }
+  .card .source em { font-style: normal; color: {BADGE_ACCENT}; font-weight: 700; }
+  .card .its-says { font-size: 13px; color: #b0b0c0; line-height: 1.6; margin-bottom: 12px; padding-left: 10px; border-left: 2px solid #2a2a3e; }
+  .card .you-try { font-size: 14px; color: #e8e8ed; line-height: 1.6; font-weight: 500; background: linear-gradient(135deg, #ffffff08, #ffffff04); border-radius: 8px; padding: 10px 12px; }
+  .card .you-try strong { color: #fbbf24; font-weight: 700; }
+  .card .you-try .hl { color: {BADGE_ACCENT}; font-weight: 700; }
+
+  .key-insight {
+    background: linear-gradient(135deg, {INSIGHT_BG_1}, {INSIGHT_BG_2});
+    border: 1px solid {INSIGHT_BORDER};
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-top: 8px;
+  }
+  .key-insight .icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+  .key-insight .content h3 { font-size: 14px; font-weight: 700; color: {INSIGHT_HEADING}; margin-bottom: 6px; }
+  .key-insight .content p { font-size: 13px; color: #c0c0d0; line-height: 1.7; }
+  .key-insight .content p strong { color: #fbbf24; }
+
+  .footer { text-align: center; margin-top: 24px; color: #4a4a5a; font-size: 11px; letter-spacing: 1px; }
+
+  @media (max-width: 640px) {
+    body { padding: 24px 16px; }
+    .grid { grid-template-columns: 1fr; }
+    .header h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="badge">{BADGE_TEXT}</div>
+    <h1>{TITLE}</h1>
+    <div class="sub">视角：<span class="em">{FOCUS}</span></div>
+  </div>
+
+  {QUARANTINE_HTML}
+
+  <div class="grid">
+    {CARD_ROWS}
+  </div>
+
+  {SUMMARY}
+
+  <div class="footer">wildIdea · {SOURCES}</div>
+</div>
+</body>
+</html>
