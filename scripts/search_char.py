@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""方法B：随机组字 + Tavily搜索撞域。
+"""方法B：随机组字，生成待搜索词。
 
 用法：
-  python3 search_char.py                        # 随机取2字→搜→打印结果
-  python3 search_char.py --dry-run              # 只取字不搜索（调试用）
-  python3 search_char.py --query 键绒           # 用指定词搜索（跳过随机取字）
+  python3 search_char.py                        # 随机取2字→打印待搜索词
+  python3 search_char.py --dry-run              # 兼容参数，行为同默认
+  python3 search_char.py --query 键绒           # 用指定词（跳过随机取字）
 
-返回JSON: {chars, query, results:[{title,url,snippet}], chosen, domain}
+返回JSON: {chars, query, status, note}
 """
-import argparse, json, os, pathlib, random, re, subprocess, sys, urllib.request
+import argparse, json, pathlib, random
 
 CHAR_FILE = pathlib.Path(__file__).parent.parent / "references" / "common-chinese-chars.txt"
-TAVILY_SCRIPT = pathlib.Path.home() / ".hermes" / "skills" / "openclaw-imports" / "openclaw-tavily-search" / "scripts" / "tavily_search.py"
 
 def load_chars():
     txt = CHAR_FILE.read_text(encoding="utf-8", errors="ignore")
@@ -32,26 +31,9 @@ def make_query(a, b):
     c1, c2 = a + b, b + a
     return c1 if random.random() > 0.5 else c2
 
-def tavily_search(query, max_results=3):
-    """调用Tavily脚本搜索"""
-    if not TAVILY_SCRIPT.exists():
-        return None
-    result = subprocess.run(
-        [sys.executable, str(TAVILY_SCRIPT), "--query", query,
-         "--max-results", str(max_results), "--format", "brave"],
-        capture_output=True, text=True, timeout=30
-    )
-    if result.returncode != 0:
-        return None
-    try:
-        data = json.loads(result.stdout)
-        return data.get("results", [])
-    except json.JSONDecodeError:
-        return None
-
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dry-run", action="store_true", help="只取字不搜索")
+    parser.add_argument("--dry-run", action="store_true", help="兼容参数，行为同默认")
     parser.add_argument("--query", type=str, help="指定搜索词（跳过随机取字）")
     args = parser.parse_args()
 
@@ -66,24 +48,10 @@ def main():
     output = {
         "chars": {"a": chars_a, "b": chars_b},
         "query": query,
-        "results": [],
-        "chosen": None,
-        "domain": None,
-        "status": "skipped" if args.dry_run else "pending"
+        "status": "needs_search",
+        "note": "Use the current environment's available search method and apply references/search-integration.md."
     }
 
-    if args.dry_run:
-        print(json.dumps(output, ensure_ascii=False, indent=2))
-        return
-
-    results = tavily_search(query)
-    if results is None or len(results) == 0:
-        output["status"] = "search_failed"
-        print(json.dumps(output, ensure_ascii=False, indent=2))
-        return
-
-    output["results"] = results[:3]
-    output["status"] = "found"
     print(json.dumps(output, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":

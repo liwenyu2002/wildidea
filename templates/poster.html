@@ -5,133 +5,206 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WildIdea · {TITLE}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: #0c0c0e;
-    color: #e8e8ed;
-    font-family: 'Noto Sans SC', -apple-system, sans-serif;
-    padding: 48px 32px;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    background: #f3eee4;
+    color: #211f1c;
+    font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: grid;
+    place-items: center;
+    padding: 18px;
   }
-  .container { max-width: 880px; width: 100%; }
-
-  .header { text-align: center; margin-bottom: 36px; }
-  .header .badge {
-    display: inline-block;
-    background: linear-gradient(135deg, {BADGE_COLOR}33, {BADGE_COLOR}11);
-    border: 1px solid {BADGE_COLOR}44;
-    color: {BADGE_ACCENT};
-    padding: 4px 16px;
-    border-radius: 20px;
-    font-size: 12px;
-    letter-spacing: 2px;
-    font-weight: 500;
-    margin-bottom: 12px;
-  }
-  .header h1 {
-    font-size: 36px;
-    font-weight: 900;
-    background: {GRADIENT};
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 6px;
-  }
-  .header .sub { color: #8a8a96; font-size: 14px; font-weight: 400; }
-  .header .sub .em { color: {BADGE_ACCENT}; font-weight: 500; }
-
-  /* Quarantine zone (single or double row) */
-  .quarantine {
-    background: #1a1a24;
-    border: 1px dashed #3a3a4a;
-    border-radius: 10px;
-    padding: 14px 20px;
-    margin-bottom: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .quarantine .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .quarantine .label {
-    color: #8a8a96; font-size: 12px; font-weight: 500; white-space: nowrap;
-    background: #2a2a36; padding: 4px 10px; border-radius: 6px; flex-shrink: 0;
-  }
-  .quarantine .tags { display: flex; gap: 6px; flex-wrap: wrap; }
-  .quarantine .tag {
-    background: #2a2a36; color: #6a6a7a; font-size: 11px;
-    padding: 3px 10px; border-radius: 6px; text-decoration: line-through;
-  }
-  /* ⚠️ 二次迭代用：前轮产出已ban 标签 */
-  .quarantine .tag-ban2 {
-    background: #2a1a1a; color: #f43f5e88; font-size: 11px;
-    padding: 3px 10px; border-radius: 6px; text-decoration: line-through;
-    border: 1px solid #f43f5e22;
-  }
-
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; }
-
-  .card {
-    background: linear-gradient(145deg, #16161e, #1a1a24);
-    border: 1px solid #2a2a36;
+  .slide {
+    width: min(96vw, 1600px);
+    aspect-ratio: 16 / 9;
+    background: #fbf7ef;
+    border: 1px solid #ded4c5;
     border-radius: 12px;
-    padding: 18px 18px 20px;
+    padding: 26px;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 12px;
+    overflow: hidden;
+    box-shadow: 0 24px 70px #6f5f4a2b;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #7c4a2d;
+    border: 1px solid #d7b99f;
+    background: #f1e3d4;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+  }
+  h1 {
+    margin-top: 9px;
+    font-size: clamp(28px, 3.2vw, 54px);
+    line-height: 1.02;
+    font-weight: 900;
+    letter-spacing: 0;
+    color: #2b211b;
+  }
+  .subtitle {
+    margin-top: 8px;
+    color: #6f655b;
+    font-size: clamp(12px, 1vw, 16px);
+  }
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    max-width: 520px;
+  }
+  .stat {
+    min-width: 112px;
+    background: #f4eadc;
+    border: 1px solid #dfcfbd;
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: right;
+  }
+  .stat b { display: block; color: #8a4f32; font-size: 17px; line-height: 1; margin-bottom: 3px; }
+  .stat span { color: #766b60; font-size: 11px; }
+  .ban {
+    background: #f6efe5;
+    border: 1px dashed #d9c7b6;
+    border-radius: 9px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #766b60;
+    font-size: 11px;
+  }
+  .ban strong { color: #463a31; white-space: nowrap; }
+  .ban .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .ban span {
+    background: #efe2d4;
+    border-radius: 5px;
+    padding: 2px 7px;
+    text-decoration: line-through;
+    color: #8a7d70;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(2, minmax(0, auto));
+    gap: 9px;
+    min-height: 0;
+  }
+  .card {
+    min-width: 0;
+    min-height: 0;
+    background: #fffaf2;
+    border: 1px solid #dfd1c2;
+    border-radius: 9px;
+    padding: 10px 12px 9px;
+    display: grid;
+    grid-template-rows: auto auto auto auto auto;
+    align-content: start;
+    gap: 4px;
     position: relative;
     overflow: hidden;
   }
-  .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, {CARD_BORDER}); }
-
-  .card .source { font-size: 11px; font-weight: 500; color: #6a6a7e; margin-bottom: 10px; letter-spacing: 1px; }
-  .card .source em { font-style: normal; color: {BADGE_ACCENT}; font-weight: 700; }
-  .card .its-says { font-size: 13px; color: #b0b0c0; line-height: 1.6; margin-bottom: 12px; padding-left: 10px; border-left: 2px solid #2a2a3e; }
-  .card .you-try { font-size: 14px; color: #e8e8ed; line-height: 1.6; font-weight: 500; background: linear-gradient(135deg, #ffffff08, #ffffff04); border-radius: 8px; padding: 10px 12px; }
-  .card .you-try strong { color: #fbbf24; font-weight: 700; }
-  .card .you-try .hl { color: {BADGE_ACCENT}; font-weight: 700; }
-
-  .key-insight {
-    background: linear-gradient(135deg, {INSIGHT_BG_1}, {INSIGHT_BG_2});
-    border: 1px solid {INSIGHT_BORDER};
-    border-radius: 12px;
-    padding: 20px 24px;
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    margin-top: 8px;
+  .card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #b46b45, #d7a86e);
   }
-  .key-insight .icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
-  .key-insight .content h3 { font-size: 14px; font-weight: 700; color: {INSIGHT_HEADING}; margin-bottom: 6px; }
-  .key-insight .content p { font-size: 13px; color: #c0c0d0; line-height: 1.7; }
-  .key-insight .content p strong { color: #fbbf24; }
-
-  .footer { text-align: center; margin-top: 24px; color: #4a4a5a; font-size: 11px; letter-spacing: 1px; }
-
-  @media (max-width: 640px) {
-    body { padding: 24px 16px; }
-    .grid { grid-template-columns: 1fr; }
-    .header h1 { font-size: 28px; }
+  .id {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: #8b7f73;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+  }
+  .id em { color: #8a4f32; font-style: normal; }
+  .slot {
+    color: #3b271c;
+    background: #ead1ba;
+    border-radius: 999px;
+    padding: 2px 7px;
+    font-size: 10px;
+    font-weight: 900;
+    white-space: nowrap;
+    letter-spacing: 0;
+  }
+  .source {
+    color: #817569;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .source strong { color: #8a4f32; font-weight: 900; }
+  .name {
+    color: #7c4a2d;
+    font-size: clamp(14px, 1.08vw, 17px);
+    font-weight: 900;
+    line-height: 1.18;
+  }
+  .desc {
+    color: #38322d;
+    font-size: clamp(14px, 1.08vw, 16px);
+    line-height: 1.34;
+    overflow: hidden;
+  }
+  .fail {
+    color: #766b60;
+    font-size: clamp(10px, 0.78vw, 12px);
+    line-height: 1.3;
+    border-top: 1px solid #e1d2c2;
+    padding-top: 5px;
+  }
+  .bottom {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: center;
+    color: #665d55;
+    font-size: 12px;
+  }
+  .bottom strong { color: #7c4a2d; }
+  .footer { color: #9a8f83; font-size: 10px; letter-spacing: 1px; white-space: nowrap; }
+  @media (max-aspect-ratio: 4 / 3) {
+    body { place-items: start center; }
+    .slide { width: 1200px; max-width: none; }
   }
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="header">
-    <div class="badge">{BADGE_TEXT}</div>
-    <h1>{TITLE}</h1>
-    <div class="sub">视角：<span class="em">{FOCUS}</span></div>
-  </div>
+<main class="slide">
+  <header>
+    <div>
+      <div class="kicker">{BADGE_TEXT}</div>
+      <h1>{TITLE}</h1>
+      <div class="subtitle">{FOCUS}</div>
+    </div>
+    {META_HTML}
+  </header>
 
   {QUARANTINE_HTML}
-
-  <div class="grid">
-    {CARD_ROWS}
-  </div>
-
+  {CARD_ROWS}
   {SUMMARY}
-
-  <div class="footer">wildIdea · {SOURCES}</div>
-</div>
+</main>
 </body>
 </html>
