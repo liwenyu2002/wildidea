@@ -1,6 +1,6 @@
 # WildIdea HTML 海报生成指南
 
-当用户说"生成 HTML"、"做成海报"、"做成图"、"横着的 16:9 版本"时使用本文件。
+每次 WildIdea 标准模式生成 10 条结果后，默认使用本文件生成横版 HTML。用户不需要额外说"生成 HTML"。只有用户明确说"不要 HTML/只要文本"时才跳过。
 
 默认输出是 16:9 横版静态 HTML，风格为 Claude 式白底米黄：浅暖背景、低对比边框、棕色强调、信息密度高但不花。除非用户明确要求，不再使用深色霓虹、标题渐变、大面积装饰背景。
 
@@ -8,7 +8,9 @@
 
 ## 模板
 
-读取 `templates/poster.html`，替换全部占位符后写入 `outputs/xxx.html`。静态 HTML 可以直接用 `file:///` 打开，不需要启动本地服务；只有用户要求截图或浏览器验证时，才打开浏览器检查。
+读取 `templates/poster.html`，替换全部占位符后写入 `outputs/<topic>-16x9.html`。静态 HTML 可以直接用 `file:///` 打开，不需要启动本地服务；只有用户要求截图或浏览器验证时，才打开浏览器检查。
+
+命名规则：优先使用短英文 slug，例如 `toc-skill-ideas-16x9.html`、`photo-album-app-16x9.html`。无法稳定命名时，使用 `wildidea-YYYYMMDD-HHMM-16x9.html`。
 
 ## 占位符
 
@@ -100,8 +102,8 @@
 
 ## 生成与验证
 
-1. 生成 HTML 到 `outputs/xxx.html`。
+1. 生成 HTML 到 `outputs/<topic>-16x9.html`。
 2. 检查最终 HTML 没有未替换占位符。
 3. 检查 10 张卡片都存在，且每张都有 `.slot`、`.source`、`.name`、`.desc`、`.fail`。
 4. 检查没有旧版类名：`.anchor`、`.match`、`.badge-row`、`.insight`、`.container`、`.its-says`、`.you-try`。
-5. 如果用户正在浏览器看页面，直接提示文件路径和 `file:///` 地址；如用户要截图，再使用浏览器打开并目测文字是否溢出。
+5. 最终答复必须提示文件路径和 `file:///` 地址；如用户要截图，再使用浏览器打开并目测文字是否溢出。

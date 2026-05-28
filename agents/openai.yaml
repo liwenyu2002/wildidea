@@ -1,4 +1,4 @@
 interface:
   display_name: "WildIdea"
-  short_description: "Generate cross-domain anchors with mechanism-transfer review"
-  default_prompt: "Use $wildidea to generate concrete cross-domain anchors and mechanism-transfer candidates for this product, strategy, research, or algorithm question."
+  short_description: "Generate cross-domain anchors and a 16:9 HTML poster"
+  default_prompt: "Use $wildidea to generate concrete cross-domain anchors and mechanism-transfer candidates, then create a 16:9 HTML poster for this product, strategy, research, or algorithm question."
