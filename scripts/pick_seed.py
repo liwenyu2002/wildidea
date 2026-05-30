@@ -60,7 +60,7 @@ SEEDS = [
     (50, "中国应当对于人类有较大的贡献", "使命尺度、外部贡献、长期目标"),
 ]
 
-def pick(n=2):
+def pick(n=1):
     """随机抽 n 个种子，返回 [(#, text, direction), ...]"""
     indices = random.sample(range(len(SEEDS)), min(n, len(SEEDS)))
     return [SEEDS[i] for i in indices]

@@ -915,19 +915,19 @@ POOLS = {
       "domain": "通用消费",
       "anchor": "购物车/订单锁库存设定时间窗口，用户在窗口内可安心付款，过期自动释放库存",
       "kind": "产品通用机制",
-      "source": "电商/票务通用机制"
+      "source": "[Shopify inventory management](https://help.shopify.com/en/manual/products/inventory)"
     },
     {
       "domain": "游戏/竞技",
       "anchor": "Ban/Pick 先让用户或队伍排除不想遇到的选项，再选择目标对象，缓解选择空间过大和不公平匹配",
       "kind": "产品通用机制",
-      "source": "游戏竞技通用机制"
+      "source": "[Dota 2 Captain's Mode](https://dota2.fandom.com/wiki/Game_modes#Captain%27s_Mode)"
     },
     {
       "domain": "教育产品",
       "anchor": "间隔重复按遗忘风险安排复习，错题或低熟练项更早回到用户面前",
       "kind": "产品通用机制",
-      "source": "学习产品通用机制"
+      "source": "[Pimsleur, 1967](https://doi.org/10.1080/00437956.1967.11650092)"
     },
     {
       "domain": "AI 购物",
