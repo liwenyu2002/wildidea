@@ -6,7 +6,7 @@ WildIdea 干的事情很简单：**不让模型理解你的问题**。
 
 它从一整套外部领域库里随机抽取具体机制——CTC 的 blank 折叠、保险免赔额、防火分区、毛选里的"敌进我退"——然后把这些机制硬放到你的问题上。不解释、不翻译、不推导，直接映射。
 
-你可能会觉得这很暴力。但实测下来，比"先理解再类比"的方法产出**多样性高 90% 以上，新颖率从 1.6% 提升到 >50%**。（具体见论文 *Unlocking LLM Creativity in Science through Analogical Reasoning*，Shen et al., 2026）
+你可能会觉得这很暴力。设计思路上，WildIdea 受到了 Shen et al. (2026) *Unlocking LLM Creativity in Science through Analogical Reasoning* 的启发——那篇论文证明了"先冻结源域机制再映射"相比"先理解问题再找类比"，确实能显著提高新颖率和多样性。WildIdea 在此基础上加了工程化的校验和约束。
 
 ## 它长什么样
 
