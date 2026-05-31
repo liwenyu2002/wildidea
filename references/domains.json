@@ -3207,18 +3207,6 @@
             "url": "https://en.wikipedia.org/wiki/Gradus_ad_Parnassum_(Fux)",
             "code": "N/A (aesthetic principle)"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "编程教学",
-            "how": "像对位法的五类递进那样设计课程：第一周只允许单一循环，第二周引入条件分支，第三周引入嵌套结构——每阶段只增加一种控制流",
-            "result": "学习者在逐步增加的约束中建立对复杂度的直觉，避免一次性面对过多概念"
-          },
-          {
-            "target": "团队写作协作",
-            "how": "多人同时撰写文档时，先各自写出核心论点(第一类)，再逐步叠加论据和引用(第二、三类)，最后交织反驳与让步(第四、五类)",
-            "result": "多人文本保持各自论证线的可辨识性，避免观点纠缠成一团"
-          }
         ]
       },
       {
@@ -3238,18 +3226,6 @@
             "paper": "Bach, J.S. The Art of Fugue (BWV 1080); The Well-Tempered Clavier (BWV 846-893); 参见 Fux (1725) 对位法教材体系",
             "url": "https://en.wikipedia.org/wiki/Fugue",
             "code": "N/A (aesthetic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "会议议题引入",
-            "how": "先让一位参会者完整陈述核心观点(独奏主题)，再安排第二位在不同背景下复述并补充(答题+对题)，第三位同样——形成观点的赋格式呈示",
-            "result": "议题在多个视角中反复出现但不重复，参会者对核心论点形成深度记忆"
-          },
-          {
-            "target": "产品功能发布",
-            "how": "新功能先在种子用户群独立试用(声部一)，再依次扩展到不同用户群体(声部二、三)，每次扩展都带入新反馈形成'对题'",
-            "result": "功能在不同语境下被检验和强化，形成多维度的产品理解"
           }
         ]
       },
@@ -3271,18 +3247,6 @@
             "url": "https://en.wikipedia.org/wiki/Schenkerian_analysis",
             "code": "N/A (aesthetic principle)"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "软件架构评审",
-            "how": "像申克分析那样将代码逐层抽象：前景是具体实现，中景是模块交互模式，背景是核心不变量(invariant)——评审时从背景开始确认架构骨架是否健壮",
-            "result": "评审者不被细节淹没，先确认系统的核心逻辑链完整，再逐层检查装饰性实现"
-          },
-          {
-            "target": "学术论文写作",
-            "how": "将一篇论文的论点按前景(数据点)、中景(论证链)、背景(核心主张)分层审视，确保每层装饰都服务于更深结构",
-            "result": "论文的每个段落都能追溯到一个贯穿全文的逻辑骨架，增强说服力"
-          }
         ]
       },
       {
@@ -3302,18 +3266,6 @@
             "paper": "Schoenberg, A. (1923). Suite for Piano, Op. 25 (首部完全十二音作品); 理论阐述见 Schoenberg, Style and Idea (1950)",
             "url": "https://en.wikipedia.org/wiki/Twelve-tone_technique",
             "code": "N/A (aesthetic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "设计系统的色彩管理",
-            "how": "像十二音技法预设音列那样，先定义一组有限且等权的色板(如12色)，再通过明度、饱和度变换生成全部用色，避免某色占主导",
-            "result": "设计系统中的色彩使用具有全局一致性，视觉权重均衡"
-          },
-          {
-            "target": "团队任务分配",
-            "how": "为一组技能相近的成员预设一个轮换序列(音列)，每人按序列依次承担不同类型任务，通过变换序列(正序、逆序、交替)生成排班表",
-            "result": "任务负载均等分配，避免某人被锁定在单一角色"
           }
         ]
       },
@@ -3335,23 +3287,6 @@
             "url": "https://en.wikipedia.org/wiki/Kuleshov_effect",
             "code": "N/A (aesthetic/creative principle)"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "数据可视化",
-            "how": "两个单独看各自平淡的图表，并排放置时暴露出数据中隐藏的对比关系",
-            "result": "小倍数(small multiples)可视化的核心原则"
-          },
-          {
-            "target": "机器学习-对比学习",
-            "how": "正样本对和负样本对的并置，让模型学到单独看每个样本学不到的区分性表征",
-            "result": "SimCLR/CLIP 的核心训练机制"
-          },
-          {
-            "target": "药物研发-药物组合",
-            "how": "两种单独无效的药物组合使用时产生协同效应",
-            "result": "高通量药物组合筛选的方法论"
-          }
         ]
       },
       {
@@ -3371,18 +3306,6 @@
             "paper": "Griffith, D.W. (1916). Intolerance; Bordwell, D. & Thompson, K. Film Art: An Introduction",
             "url": "https://en.wikipedia.org/wiki/Cross-cutting",
             "code": "N/A (aesthetic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "多团队项目管理报告",
-            "how": "在周报中交叉呈现多个并行团队的进展(而非每个团队写完整段落)，让读者自然感受到各团队工作的同步性和相互依赖",
-            "result": "决策者直观理解跨团队瓶颈和时机耦合点"
-          },
-          {
-            "target": "数据仪表板布局",
-            "how": "将不同数据流(如用户增长、服务器负载、收入)以交错时间线排列，切换间隔逐步缩短至警报阈值",
-            "result": "运营者在视觉上感受到多个指标之间的'同时变化'关联，快速定位跨域问题"
           }
         ]
       },
@@ -3404,18 +3327,6 @@
             "url": "https://en.wikipedia.org/wiki/Kuleshov_effect",
             "code": "N/A (aesthetic principle)"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "产品展示策略",
-            "how": "同一产品的功能截图如果先展示用户痛点场景再出现，会比直接展示截图被感知为更有价值——产品本身没变，但并置的上下文改变了意义",
-            "result": "相同内容通过改变并置顺序获得更强的说服力"
-          },
-          {
-            "target": "简历/个人品牌",
-            "how": "同一段工作经历，前面接的是行业痛点描述vs前面接的是团队照片，会给招聘者留下截然不同的印象",
-            "result": "利用上下文并置操控信息接收方的情感投射"
-          }
         ]
       },
       {
@@ -3435,18 +3346,6 @@
             "paper": "Brunelleschi, F. (c.1415). 透视实验; Alberti, L.B. (1435). De Pictura (《论绘画》)",
             "url": "https://en.wikipedia.org/wiki/Perspective_(graphical)",
             "code": "N/A (aesthetic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "信息可视化/图表设计",
-            "how": "在设计层级化数据图表时，用'消失点'思维设定视觉焦点——所有视觉引导线应汇聚到核心数据点，次要信息按'近大远小'递减视觉权重",
-            "result": "读者的注意力被精确引导到设计师意图的焦点位置"
-          },
-          {
-            "target": "叙事结构设计",
-            "how": "在长篇叙事中设定一个'认知地平线'——读者的视角锚点；所有情节支线像汇聚线一样指向同一消失点(核心主题)，支线越远离核心则越收束",
-            "result": "叙事在多条线索中保持方向一致性，读者不会迷路"
           }
         ]
       },
@@ -3468,18 +3367,6 @@
             "url": "https://en.wikipedia.org/wiki/Chiaroscuro",
             "code": "N/A (aesthetic principle)"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "UI设计的焦点引导",
-            "how": "像明暗法用光的衰减聚焦视线那样，用视觉对比度梯度(而非硬边框)引导用户注意力——高对比区域成为'受光面'，低对比区域成为'暗面'",
-            "result": "界面的层级感更自然流畅，用户注意力被柔和地引向核心操作区"
-          },
-          {
-            "target": "演讲/演示文稿",
-            "how": "一页幻灯片只突出一个核心数据点(受光面)，其余信息做灰度淡化(暗面)，边缘信息不必硬性分组，让听众的认知注意力自然按亮度衰减分布",
-            "result": "听众记住一个清晰的焦点而非一堆均等权重的信息"
-          }
         ]
       },
       {
@@ -3499,18 +3386,6 @@
             "paper": "Brandi, C. (1963). Teoria del Restauro (《修复理论》)",
             "url": "https://en.wikipedia.org/wiki/Cesare_Brandi",
             "code": "N/A (aesthetic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "遗留代码重构",
-            "how": "像修复理论那样对待遗留系统：最小干预(只改必须改的)、可逆性(保留回退路径)、可识别性(新代码有明确注释标记)、不臆造(不凭猜测补充缺失的业务逻辑)",
-            "result": "重构后的系统保持历史可追溯性，未来维护者能区分原始代码和修改"
-          },
-          {
-            "target": "数据修复/清洗",
-            "how": "修复损坏数据时遵循：最小干预(不改不必要的字段)、可逆性(保留原始数据副本)、可识别性(标记哪些值被修复过)、不臆造(缺失值不凭猜测填充)",
-            "result": "数据集在修复后保持审计追踪，分析师能区分原始数据和修复数据"
           }
         ]
       },
@@ -3532,18 +3407,6 @@
             "url": "https://en.wikipedia.org/wiki/Kintsugi",
             "code": "N/A (aesthetic principle)"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "产品版本历史的用户体验",
-            "how": "像金缮展示裂痕那样，让产品的修改历史(包括bug修复和回退)成为用户可见的正向叙事，而非隐藏在更新日志深处——'这个功能经历过什么'本身成为产品故事的一部分",
-            "result": "用户对产品建立更深的信任，因为他们看到演化的透明轨迹"
-          },
-          {
-            "target": "失败复盘文化",
-            "how": "团队复盘时不用'掩盖'或'追究'的态度对待失败，而是像金缮那样把失败经历用金粉(可执行的教训)沿裂缝(失败点)固化——失败点成为团队流程中最显眼的改进标记",
-            "result": "团队将失败转化为可识别、可传承的知识资产，而非需要遗忘的耻辱"
-          }
         ]
       },
       {
@@ -3563,18 +3426,6 @@
             "paper": "Schellenberg, T.R. (1965). The Management of Archives. Columbia University Press.",
             "url": "https://en.wikipedia.org/wiki/Respect_des_fonds",
             "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "数据仓库 ETL 流程",
-            "how": "每一层数据（raw/staging/curated）保留来源系统标识与摄入时间戳，不在 ETL 过程中丢失来源归属",
-            "result": "数据血缘可追踪；出错时能定位到具体来源系统而非只能看到混合后的结果"
-          },
-          {
-            "target": "知识库 / Wiki 治理",
-            "how": "文档按创建团队或作者维护独立命名空间，避免不同团队的文档因主题相似而被合并到同一目录下",
-            "result": "版本权责清晰，跨团队引用时可判断原始出处与编辑历史"
           }
         ]
       },
@@ -3596,18 +3447,6 @@
             "url": "https://en.wikipedia.org/wiki/Hilary_Jenkinson",
             "code": "N/A"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "文件系统 / 代码仓库迁移",
-            "how": "迁移时保留原有目录结构和命名约定，不在新系统中按新分类法重新组织",
-            "result": "原开发者可通过熟悉的结构快速定位文件；新成员可从结构中学习项目的演进逻辑"
-          },
-          {
-            "target": "组织变革中的流程文档",
-            "how": "重写流程文档时保留原版的章节顺序和引用编号体系，在新版中标注对应关系而非重新编号",
-            "result": "老员工的肌肉记忆不被打断，跨版本审计可对齐"
-          }
         ]
       },
       {
@@ -3627,18 +3466,6 @@
             "paper": "Various paleographic and codicological studies; notably the Archimedes Palimpsest project (Netz et al., 2011).",
             "url": "https://en.wikipedia.org/wiki/Palimpsest",
             "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "软件遗留代码",
-            "how": "不急于'重写'，先用考古式方法读出旧代码中隐含的业务规则（注释、废弃分支、配置残留），再决定哪些规则需要移植",
-            "result": "避免因重写丢失已编入旧代码的隐性业务知识"
-          },
-          {
-            "target": "城市更新 / 空间改造",
-            "how": "改造旧建筑时保留部分原始结构痕迹（裸露砖墙、旧管线走向）作为新设计的一部分",
-            "result": "空间获得时间维度的可读性，使用者可感知场地的历史"
           }
         ]
       },
@@ -3660,18 +3487,6 @@
             "url": "https://en.wikipedia.org/wiki/A_Pattern_Language",
             "code": "N/A"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "软件设计模式",
-            "how": "Gang of Four (1994) 将 Alexander 的模式方法移植到面向对象软件设计，产生 23 个经典模式（Observer、Factory、Strategy 等）",
-            "result": "软件工程师获得共享词汇，设计讨论从'我觉得应该这样做'变为'这里适合用 Observer 模式'"
-          },
-          {
-            "target": "组织管理 / 团队协作",
-            "how": "将反复出现的团队协作问题写成模式（如 Standup、Retrospective、Pair Programming），每个模式描述情境、张力和做法",
-            "result": "敏捷实践从个人经验变成可教学、可组合的模式库"
-          }
         ]
       },
       {
@@ -3691,18 +3506,6 @@
             "paper": "Genette, G. (1980). Narrative Discourse: An Essay in Method. Trans. Jane E. Lewin. Cornell University Press. (Original: Figures III, 1972)",
             "url": "https://en.wikipedia.org/wiki/Narrative_discourse",
             "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "产品设计中的引导流程",
-            "how": "在主界面内嵌入一个'故事'层：新用户在一个模拟环境中完成任务（内层），完成后再回到真实界面（外层），内层经验改变外层的理解",
-            "result": "用户在安全环境中建立心智模型，回到主界面时已有操作经验而非纯记忆"
-          },
-          {
-            "target": "数据分析报告",
-            "how": "报告外层提供行业基准叙事，内层嵌入具体案例的数据故事，让读者在两层之间来回比较",
-            "result": "读者同时理解'普遍规律'和'个案特殊性'，结论更有说服力"
           }
         ]
       },
@@ -3724,18 +3527,6 @@
             "url": "https://en.wikipedia.org/wiki/Stanislavski%27s_system",
             "code": "N/A"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "产品需求分析",
-            "how": "将用户故事拆解为目标（用户想完成什么）、障碍（什么阻止了用户）、行动（用户实际做了什么），而不是直接写'用户想要功能 X'",
-            "result": "需求文档从功能清单变成可验证的行为链，更容易发现被忽略的障碍"
-          },
-          {
-            "target": "项目复盘",
-            "how": "复盘时不问'哪里出了错'，而是重建项目团队的目标-障碍-行动序列，找出关键节点的决策逻辑",
-            "result": "复盘从追责模式变成行为分析模式，团队更容易识别系统性障碍而非个人失误"
-          }
         ]
       },
       {
@@ -3755,18 +3546,6 @@
             "paper": "Laban, R. & Lawrence, F.C. (1947). Effort: Economy in Body Movement. Plays, Inc.",
             "url": "https://en.wikipedia.org/wiki/Laban_movement_analysis",
             "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "社交机器人运动设计",
-            "how": "将 Laban Effort 四维映射到机器人的关节速度、力度和轨迹参数，使机器人的动作传达可读的情感品质",
-            "result": "用户能直觉性地读懂机器人的'情绪状态'，无需语言解释"
-          },
-          {
-            "target": "用户界面动效设计",
-            "how": "用 Effort 维度参数化 UI 过渡动画（如 weight 映射为惯性感，time 映射为缓动曲线，flow 映射为阻尼系数）",
-            "result": "动效从'好不好看'升级为'传达什么态度'，界面性格可被精确调控"
           }
         ]
       },
@@ -3788,18 +3567,6 @@
             "url": "https://en.wikipedia.org/wiki/Weaving",
             "code": "N/A"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "数据架构设计",
-            "how": "经线 = 核心 schema 和数据模型（稳定、先定义）；纬线 = 数据流和事件（动态、在 schema 间穿梭）。先定好 schema 边界，再允许数据流自由填充",
-            "result": "系统既有结构稳定性又有数据丰富性；schema 变更可控，数据流变更有基线可比"
-          },
-          {
-            "target": "内容管理系统",
-            "how": "经线 = 内容类型定义和字段约束（Markdown 结构、元数据 schema）；纬线 = 创作者的实际内容。创作者在约束内自由表达",
-            "result": "内容可被机器解析和重组，同时创作者有足够的表达空间"
-          }
         ]
       },
       {
@@ -3819,18 +3586,6 @@
             "paper": "Ceramic craft fundamentals; see Rhodes, D. (1973). Clay and Glazes for the Potter. Chilton Book Co.",
             "url": "https://en.wikipedia.org/wiki/Ceramic_glaze",
             "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "软件部署流水线",
-            "how": "升温 = 环境预热和依赖就绪检查；保温 = canary 发布和稳态观察；降温 = 回滚窗口和灰度放量。每个阶段有明确的温度门控（健康指标阈值）",
-            "result": "部署从一次性发布变成可控的温度曲线，异常在保温段被拦截，不会烧穿整个生产环境"
-          },
-          {
-            "target": "组织变革管理",
-            "how": "升温段 = 逐步引入变革信息（不突然宣布）；保温段 = 在新状态下保持足够时间让习惯固化；降温段 = 渐进撤出变革支持而非骤停",
-            "result": "变革的'开裂率'下降；团队在保温段形成新惯性后再自然过渡"
           }
         ]
       },
@@ -3852,18 +3607,6 @@
             "url": "https://en.wikipedia.org/wiki/Chinese_calligraphy",
             "code": "N/A"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "版本控制中的代码审查",
-            "how": "不只看最终代码状态，还看提交历史（笔顺）、每次修改的力度（提按 = 修改幅度）和方向切换（折 = 重构/转 = 渐进优化）",
-            "result": "代码审查从'结果对不对'升级为'写法健不健康'；能识别出虽然结果正确但过程有风险的代码"
-          },
-          {
-            "target": "设计工具的手势输入",
-            "how": "将书法的提按和转折映射到触控笔的压力和倾斜参数，让手写输入不仅捕获形状还捕获力度和速度",
-            "result": "手写识别从静态形状匹配升级为动态过程理解，识别准确率和表达力同时提升"
-          }
         ]
       },
       {
@@ -3883,18 +3626,6 @@
             "paper": "Durkheim, E. (1912). The Elementary Forms of Religious Life. Trans. Karen Fields (1995). Free Press. Turner, V. (1969). The Ritual Process: Structure and Anti-Structure. Aldine.",
             "url": "https://en.wikipedia.org/wiki/Collective_effervescence",
             "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "团队定期仪式（Standup / Retro）",
-            "how": "将敏捷仪式按三阶段结构化：分离（关掉日常聊天窗口，进入仪式空间）、阈限（无职位差异地轮流发言）、聚合（明确 action items 后回到日常工作）",
-            "result": "仪式从走过场变成有效的状态切换机制；参与者在阈限阶段更愿意说出真话"
-          },
-          {
-            "target": "产品 onboarding 流程",
-            "how": "设计新用户激活流程为仪式化三阶段：分离（旧工具切换到新工具的确认动作）、阈限（引导式任务序列，用户暂时放下'老手'身份从零学习）、聚合（完成引导后获得'已认证'标识并解锁完整功能）",
-            "result": "用户身份从'试用者'切换为'正式用户'的心理节点被明确，留存率提升"
           }
         ]
       },
@@ -3916,18 +3647,6 @@
             "url": "https://archive.org/details/introductiontost00lang",
             "code": "N/A"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "数据治理",
-            "how": "把史料批判的来源-作者-时间-传抄链四步法映射到数据溯源（data lineage），每条数据标注采集源、记录者、时间戳和加工链路",
-            "result": "数据质量报告从模糊的'可信'升级为逐字段的可审计证明链"
-          },
-          {
-            "target": "新闻事实核查",
-            "how": "对每条新闻线索执行外部考证（信源身份、首发平台）和内部考证（信息一致性、利益冲突）",
-            "result": "建立分级信源评估体系，减少未经核实的二手信息进入报道"
-          }
         ]
       },
       {
@@ -3947,18 +3666,6 @@
             "paper": "ICOM (2004). ICOM Code of Ethics for Museums. Paris: International Council of Museums.",
             "url": "https://icom.museum/en/ethics/icom-code-of-ethics-for-museums/",
             "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "企业资产管理",
-            "how": "将入藏四元组映射为IT资产登记：唯一资产编号、采购来源与合同链、运行环境监控、机房/云位置记录",
-            "result": "资产可追溯性显著提升，审计时能快速定位每件资产的完整生命周期"
-          },
-          {
-            "target": "临床样本管理",
-            "how": "生物样本入库时记录样本编号、采集来源与知情同意链、保存温控条件和冷库位置",
-            "result": "样本溯源时间缩短，来源不明的样本可被自动标记为不可用于研究"
           }
         ]
       },
@@ -3980,18 +3687,6 @@
             "url": "https://arxiv.org/abs/2305.17493",
             "code": "N/A"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "企业创新管理",
-            "how": "在组织引入AI辅助设计/写作工具后，追踪创意提案的通过率和多样性指数",
-            "result": "发现提案数量增加但内容重叠度上升，触发引入多样化提示策略和随机化种子机制"
-          },
-          {
-            "target": "教育课程设计",
-            "how": "允许学生使用AI辅助写作的同时，要求每人提交一份'与AI输出的差异说明'，保持批判性思维",
-            "result": "作业提交率提升的同时保留了学生的独立思考痕迹"
-          }
         ]
       },
       {
@@ -4011,18 +3706,6 @@
             "paper": "Kreminski, M. et al. (2024). Interactive Generative AI for Co-Creation. CHI 2024; Lubart, T. (2024). Creativity and Generative AI: Multi-Turn Collaborative Systems.",
             "url": "https://dl.acm.org/doi/proceedings/10.1145/3613904",
             "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "产品原型设计",
-            "how": "将多轮协商法应用于产品外观设计：设计师提出方向、AI生成变体、设计师圈选局部修改、AI迭代",
-            "result": "设计评审轮次减少30%，因为协商过程本身就是持续评审"
-          },
-          {
-            "target": "政策文件起草",
-            "how": "政策撰写者用AI生成初稿，逐段标注'同意/修改/否决'，AI根据标注生成修订版，循环2-3轮",
-            "result": "起草时间缩短的同时保留了撰写者的政策意图和措辞偏好"
           }
         ]
       },
@@ -4044,18 +3727,6 @@
             "url": "https://www.oecd.org/en/topics/sub-issues/cultural-and-creative-sectors.html",
             "code": "N/A"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "软件开发流程",
-            "how": "将创意链条重组映射到软件开发：需求灵感（AI辅助市场分析）->草稿（AI生成代码骨架）->编辑（AI代码审查）->协作（AI辅助合并冲突）->分发（AI生成部署文档）",
-            "result": "开发流程中每个环节的AI介入程度可独立优化，而非一刀切地'用AI写代码'"
-          },
-          {
-            "target": "企业品牌传播",
-            "how": "将品牌内容生产拆解为洞察、创意、制作、审核、投放五环节，分别评估AI工具的适用性",
-            "result": "品牌团队从4人缩减为2人+AI工具链，但增加了AI内容审核岗"
-          }
         ]
       },
       {
@@ -4075,18 +3746,6 @@
             "paper": "Maietti, F. et al. (2024). AI-Based Damage Assessment for Cultural Heritage. Journal of Cultural Heritage; Grilli, E. et al. (2023). Deep Learning for Crack Detection in Heritage Buildings.",
             "url": "https://www.sciencedirect.com/journal/journal-of-cultural-heritage",
             "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "工业设备预测性维护",
-            "how": "将文化遗产保护的四步法映射到工厂设备：振动/温度传感器识别异常 -> 环境和负载预测 -> 故障风险评估 -> 维护优先级排序",
-            "result": "设备非计划停机时间减少，维护预算从均匀分配转为按风险分配"
-          },
-          {
-            "target": "城市基础设施管理",
-            "how": "对桥梁、管网等市政设施执行同样的损伤检测-环境预测-风险评估-维修决策链",
-            "result": "市政维修预算使用效率提升，紧急抢修转变为计划性维护"
           }
         ]
       },
@@ -4108,18 +3767,6 @@
             "url": "https://www.sciencedirect.com/journal/digital-applications-in-archaeology-and-cultural-heritage",
             "code": "N/A"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "企业培训场景",
-            "how": "用3D场景生成技术为安全培训创建可探索的虚拟事故现场，学员可'走进'场景识别隐患",
-            "result": "培训效果从被动观看升级为主动探索，隐患识别准确率提升"
-          },
-          {
-            "target": "房地产展示",
-            "how": "将数字博物馆的可探索展陈方法应用于未建成楼盘的虚拟样板间，支持自由行走和材质切换",
-            "result": "客户在施工前即可体验空间感受，减少实体样板间建设成本"
-          }
         ]
       },
       {
@@ -4140,18 +3787,6 @@
             "url": "https://www.nature.com/heritagescience/",
             "code": "N/A"
           }
-        ],
-        "transfer_examples": [
-          {
-            "target": "城市管网管理",
-            "how": "为地下管网建立数字副本，接入压力和流量传感器，在副本中模拟管道老化和泄漏情景，预排维修计划",
-            "result": "管道爆管事故减少，维修从应急抢修转为预测性更换"
-          },
-          {
-            "target": "人体器官手术预演",
-            "how": "将文物数字副本法应用于患者器官：基于CT/MRI建数字副本，在副本中试错不同手术方案",
-            "result": "复杂手术的术前规划时间缩短，手术中意外情况减少"
-          }
         ]
       },
       {
@@ -4171,18 +3806,6 @@
             "paper": "NeurIPS (2024). Machine Learning for Creativity and Design Workshop. NeurIPS 2024, Vancouver.",
             "url": "https://neurips.cc/Conferences/2024",
             "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "企业创新评估",
-            "how": "将学术创意评审的四维度法引入企业内部创新提案评审：技术可行性 + 创意价值 + 可执行性 + 战略意义",
-            "result": "创新提案评审从纯ROI导向升级为技术-创意-执行-战略的综合评估，减少'有创意但不赚钱'和'赚钱但无创意'的提案被误杀"
-          },
-          {
-            "target": "教育项目设计",
-            "how": "在STEM教育中引入'技术+艺术'双轨项目评审，要求学生同时提交技术报告和创意作品",
-            "result": "学生从'只做实验'转向'用技术表达想法'，跨学科能力显著提升"
           }
         ]
       }
@@ -5269,7 +4892,7 @@
             "output": "基于现场事实的决策方案，附带可追溯的证据链",
             "key_insight": "丰田 Genchi Genbutsu（现地现物）是该原则在制造业的制度化：到实际地点、看实际事物、取实际数据，再发言",
             "paper": "《反对本本主义》1930",
-            "url": "https://en.wikipedia.org/wiki/Oppose_Book_Worship",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
           },
           {
@@ -5279,21 +4902,9 @@
             "process": "提案者须提交证据包（数据来源、样本量、信度评估）；评审团对证据充分性打分，未达标则退回补充调查",
             "output": "通过证据门槛的提案集，淘汰率可量化",
             "key_insight": "Pfeffer & Sutton 的 Evidence-Based Management（EBMgt）框架将此原则制度化：决策前须检索最佳证据、批判性评估、结合情境判断",
-            "paper": "Pfeffer & Sutton, Hard Facts, Dangerous Half-Truths, and Total Nonsense, 2006",
-            "url": "https://www.hbs.edu/faculty/Pages/item.aspx?num=31728",
+            "paper": "毛泽东著作（格言/短句）",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "AI 安全：部署前审计",
-            "how": "模型部署前强制完成红队测试、对抗样本覆盖、偏差审计，未通过审计的模型不得上线",
-            "result": "将 '没有调查没有发言权' 转化为 '没有审计没有部署权'，降低部署风险"
-          },
-          {
-            "target": "创业：产品-市场匹配验证",
-            "how": "创始人在融资路演前须完成至少 100 次用户访谈，用一手数据支撑 PMF 判断",
-            "result": "过滤掉缺乏实证的'本本主义'商业计划，提高种子轮存活率"
           }
         ]
       },
@@ -5310,8 +4921,8 @@
             "process": "识别理论的隐含前提条件 → 对比本地条件差异 → 调整参数或重构方案 → 小规模试点验证",
             "output": "经过情境校准的本地化方案",
             "key_insight": "James Scott 在《Seeing Like a State》中用 mētis（地方性实践知识）概念论证：大型项目失败的根源是忽视本地条件、盲目套用标准化模型",
-            "paper": "《反对本本主义》1930; James C. Scott, Seeing Like a State, 1998",
-            "url": "https://en.wikipedia.org/wiki/Seeing_Like_a_State",
+            "paper": "《反对本本主义》1930",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
           },
           {
@@ -5322,20 +4933,8 @@
             "output": "泛化到新场景的域适配模型",
             "key_insight": "迁移学习和域适配是反本本主义的技术实现：不照搬源域知识，而是在目标域中重新校准",
             "paper": "《反对本本主义》1930",
-            "url": "https://en.wikipedia.org/wiki/Transfer_learning",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "跨国企业本地化运营",
-            "how": "麦当劳在印度不卖牛肉堡、在中国推出米饭套餐——拒绝照搬美国总部菜单，按本地饮食文化校准",
-            "result": "反教条的本地化策略带来区域市场高渗透率"
-          },
-          {
-            "target": "ML：Domain Adaptation",
-            "how": "医疗影像模型在 A 医院训练后，不能直接部署到 B 医院（设备/人群差异），须在 B 医院小样本上 fine-tune",
-            "result": "域适配后诊断准确率从 72% 提升至 91%，证明 '反本本主义' 在 AI 中的技术对应"
           }
         ]
       },
@@ -5353,7 +4952,7 @@
             "output": "经事实校验的理论，或被证伪后的新假设",
             "key_insight": "AI 对齐中的 reward hacking 和 sycophancy 是'不实事求是'的技术表现：模型优化代理指标（reward）而非真实目标（truth）",
             "paper": "《改造我们的学习》1941",
-            "url": "https://en.marxists.org/chinese/mazedong/06/004.htm",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
           },
           {
@@ -5363,21 +4962,9 @@
             "process": "采样系统输出 → 人工或自动标注真实值 → 计算偏差指标 → 偏差超阈值则触发再训练或人工介入",
             "output": "偏差控制在可接受范围内的对齐系统",
             "key_insight": "Anthropic 的对齐研究强调：模型看起来对齐（passing evals）不等于真正对齐——必须用事实而非表象来检验",
-            "paper": "《改造我们的学习》1941; Hubinger et al., Sleeper Agents, 2024",
-            "url": "https://arxiv.org/abs/2401.05566",
+            "paper": "《改造我们的学习》1941",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "AI 安全：对齐评估",
-            "how": "用真实世界基准（而非合成评测集）持续审计 LLM 输出的事实性，将 hallucination 率控制在阈值以下",
-            "result": "以事实为锚的评估体系比纯奖励信号更能检测出隐性不对齐"
-          },
-          {
-            "target": "质量管理：六西格玛",
-            "how": "DMAIC（Define-Measure-Analyze-Improve-Control）流程以数据为决策依据，拒绝主观臆断",
-            "result": "缺陷率从 3.4σ 降至 6σ，本质是 '实事求是' 的工程化"
           }
         ]
       },
@@ -5395,7 +4982,7 @@
             "output": "适应本地条件的定制化系统设计",
             "key_insight": "Scott 的 mētis 概念与 Hayek 的分散知识论共同论证：中央计划者无法获得本地知识，因此'从实际出发'是唯一可靠的设计起点",
             "paper": "多篇：《中国革命战争的战略问题》1936、《论持久战》1938 等",
-            "url": "https://en.wikipedia.org/wiki/M%C4%93tis_(knowledge)",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
           },
           {
@@ -5405,21 +4992,9 @@
             "process": "约束枚举 → 约束间优先级排序 → 架构方案与约束的匹配度打分 → 选最高分方案",
             "output": "约束匹配度最高的非模板化架构方案",
             "key_insight": "游击战的战略原则——'你打你的，我打我的'——本质是从本地条件出发而非模仿正规军战术",
-            "paper": "多篇；Al Ries & Jack Trout, Marketing Warfare, 1986",
-            "url": "https://en.wikipedia.org/wiki/Marketing_warfare_strategies",
+            "paper": "毛泽东著作（格言/短句）",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "产品设计：新兴市场",
-            "how": "M-Pesa 移动支付在肯尼亚不是照搬西方信用卡体系，而是从本地约束出发（银行网点稀少、手机普及率高）设计",
-            "result": "从实际出发的非模板化设计成为全球移动支付标杆"
-          },
-          {
-            "target": "AI 部署：边缘计算",
-            "how": "在带宽受限的工业现场，不照搬云端大模型架构，而是从算力/带宽/延迟约束出发设计轻量化方案",
-            "result": "约束驱动的架构使推理延迟从 2s 降至 50ms，满足实时控制需求"
           }
         ]
       },
@@ -5436,8 +5011,8 @@
             "process": "初步理论学习 → 立即投入实际使用 → 收集使用中的反馈 → 根据反馈修正认知 → 再次使用",
             "output": "经实战校验的技能或知识",
             "key_insight": "Kolb 的体验学习四阶段（具体经验→反思观察→抽象概念化→主动实验）是该原则的学习科学化表述",
-            "paper": "《中国革命战争的战略问题》1936; Kolb, Experiential Learning, 1984",
-            "url": "https://en.wikipedia.org/wiki/Experiential_learning",
+            "paper": "《中国革命战争的战略问题》1936",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
           },
           {
@@ -5448,20 +5023,8 @@
             "output": "随使用不断进化的在线学习系统",
             "key_insight": "强化学习的核心循环（agent-environment interaction → reward → policy update）是 '使用也是学习' 的算法实现",
             "paper": "《中国革命战争的战略问题》1936",
-            "url": "https://en.wikipedia.org/wiki/Reinforcement_learning",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "AI：RLHF 人类反馈强化学习",
-            "how": "LLM 在与人类对话的使用过程中收集偏好反馈，用 PPO 等算法在线更新策略",
-            "result": "纯预训练的 '读书' 加上 RLHF 的 '使用' 使模型从语言模型进化为助手"
-          },
-          {
-            "target": "军事训练：实弹演习",
-            "how": "不满足于课堂理论教学，通过模拟实战的实弹演习让士兵在'使用'中学习战斗技能",
-            "result": "训练-实战转化率显著高于纯课堂训练"
           }
         ]
       },
@@ -5478,8 +5041,8 @@
             "process": "Plan（从实践中形成改进方案）→ Do（小规模实施）→ Check（用数据检验效果）→ Act（标准化或修正）→ 进入下一轮",
             "output": "每轮迭代都比上一轮更优的系统",
             "key_insight": "Deming 将此循环引入日本制造业，丰田将其加速为高频微迭代（Kaizen），证明 '实践-认识' 循环的速度本身就是竞争优势",
-            "paper": "《实践论》1937; Deming, Out of the Crisis, 1986",
-            "url": "https://en.wikipedia.org/wiki/PDCA",
+            "paper": "《实践论》1937",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
           },
           {
@@ -5489,21 +5052,9 @@
             "process": "单循环修证失败 → 触发假设审查 → 发现根因在底层假设 → 修正假设 → 基于新假设重新实践",
             "output": "假设层面被修正后的行为模式重构",
             "key_insight": "Argyris 的 Double-Loop Learning（1977）论证：组织只做单循环学习会陷入 '熟练的无能'——越做越熟练但方向错误",
-            "paper": "《实践论》1937; Argyris, Double Loop Learning in Organizations, HBR 1977",
-            "url": "https://hbr.org/1977/09/double-loop-learning-in-organizations",
+            "paper": "《实践论》1937",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "AI：迭代对齐",
-            "how": "用 red-team 发现对齐失败 → 分析失败模式 → 更新安全训练数据 → 再训练 → 再 red-team，形成对齐的实践-认识循环",
-            "result": "Anthropic 的 Constitutional AI 即是此循环的工程化实现"
-          },
-          {
-            "target": "精益创业：Build-Measure-Learn",
-            "how": "Eric Ries 的 BML 循环是 '实践-认识-再实践' 在产品开发中的直接映射",
-            "result": "将产品迭代周期从 12 个月压缩至 2 周，验证速度提升 24 倍"
           }
         ]
       },
@@ -5520,8 +5071,8 @@
             "process": "记录观测数据（不做过度解释）→ 标记为'已观测/未理解' → 积累更多同类观测 → 当模式密度足够时形成解释模型",
             "output": "经时间验证的现象-机制映射",
             "key_insight": "Popper 的科学发现逻辑同样指出：观测先于理解，理解可能滞后数年甚至数世纪（如大陆漂移从观测到接受用了 50 年）",
-            "paper": "《实践论》1937; Popper, The Logic of Scientific Discovery, 1934/1959",
-            "url": "https://plato.stanford.edu/entries/popper/",
+            "paper": "《实践论》1937",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
           },
           {
@@ -5531,21 +5082,9 @@
             "process": "检测到异常 → 记录完整上下文 → 标记为待解释项 → 定期回顾异常库 → 当同类异常达到模式阈值时启动根因分析",
             "output": "基于充分证据的异常根因模型，避免过早归因",
             "key_insight": "AI 安全中的 deceptive alignment 表现为正常输出（可感觉）但隐藏恶意目标（不可立刻理解），需要长周期观测和机械可解释性来揭示",
-            "paper": "《实践论》1937; Hubinger et al., Sleeper Agents, 2024",
-            "url": "https://arxiv.org/abs/2401.05566",
+            "paper": "《实践论》1937",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "AI 可解释性：机械可解释性研究",
-            "how": "Anthropic 发现模型中的叠加（superposition）现象：神经元同时编码多个特征——这个现象被观测到后花了数年才建立理论解释",
-            "result": "Elhage et al., Toy Models of Superposition (2022) 证明了'感觉→理解'的时间滞后在 AI 研究中同样成立"
-          },
-          {
-            "target": "医学：长 COVID 的诊断",
-            "how": "2020 年即观测到持续症状（感觉），但病理机制到 2023-2024 年才逐步建立（理解）",
-            "result": "过早下结论的'理解'（如'心理作用'）被证伪，等待积累机制证据才获得正确认识"
           }
         ]
       },
@@ -5562,8 +5101,8 @@
             "process": "收集行为观测 → 提出机制假说 → 设计探针实验 → 在神经元/电路层面验证假说 → 建立从行为到机制的因果链",
             "output": "揭示模型行为背后计算机制的可解释性报告",
             "key_insight": "Anthropic 的机械可解释性研究正是 '透过现象看本质' 的 AI 版本：不满足于解释模型做了什么（表象），要揭示它是怎么做的（本质）",
-            "paper": "《实践论》1937; Elhage et al., Toy Models of Superposition, Anthropic 2022",
-            "url": "https://transformer-circuits.pub/2022/toy_model/index.html",
+            "paper": "《实践论》1937",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
           },
           {
@@ -5573,21 +5112,9 @@
             "process": "多源信号采集 → 去噪与特征提取 → 建立信号-隐变量的生成模型 → 用贝叶斯推断估计隐变量后验分布",
             "output": "隐变量的后验概率分布估计",
             "key_insight": "因果推断（Judea Pearl）的核心挑战即是从观测到的关联（现象）推断因果结构（本质），需要 do-calculus 等工具突破混杂偏倚",
-            "paper": "《实践论》1937; Pearl, Causality, 2000",
-            "url": "https://bayes.cs.ucla.edu/BOOK-2K/",
+            "paper": "《实践论》1937",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "AI 安全：检测隐藏目标",
-            "how": "不满足于模型在评测中的正常表现（现象），用 activation probing 和 circuit analysis 试图发现潜在的欺骗性目标（本质）",
-            "result": "Anthropic Sleeper Agents 论文证明标准安全训练无法消除隐藏的后门行为——表象安全不等于本质安全"
-          },
-          {
-            "target": "商业情报：竞争分析",
-            "how": "竞争对手的公开信息是现象（产品发布、财报、招聘广告），需要推断其隐藏的战略意图和研发方向（本质）",
-            "result": "多源情报交叉验证可提前 6-12 个月预判竞争对手战略转向"
           }
         ]
       },
@@ -5605,7 +5132,7 @@
             "output": "经数据支撑的后验结论，或'证据不足，暂无结论'的诚实判断",
             "key_insight": "医学中的 RCT（随机对照试验）是该原则的制度化：药物是否有效必须在试验末尾用数据说话，而非由药理学理论预判",
             "paper": "《反对本本主义》1930",
-            "url": "https://en.wikipedia.org/wiki/Randomized_controlled_trial",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
           },
           {
@@ -5615,21 +5142,9 @@
             "process": "记录先验信念 → 设计盲化/双盲化方案 → 独立收集数据 → 数据分析后再揭开分组 → 用数据检验（而非确认）先验信念",
             "output": "不受先验信念污染的调查结论",
             "key_insight": "Kahneman 的 prospect theory 研究证实：人类天然存在确认偏误，必须用制度设计（如预注册研究方案）来对抗",
-            "paper": "《反对本本主义》1930; Kahneman, Thinking, Fast and Slow, 2011",
-            "url": "https://en.wikipedia.org/wiki/Thinking,_Fast_and_Slow",
+            "paper": "《反对本本主义》1930",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "ML：数据审计防止标签泄露",
-            "how": "在模型评估中使用 hold-out 测试集并盲化标注过程，确保评估结论在数据末尾产生而非被先验知识污染",
-            "result": "防止数据泄露导致的虚假高准确率，使评估结论反映真实泛化能力"
-          },
-          {
-            "target": "司法：无罪推定原则",
-            "how": "刑事审判中结论必须在证据调查末尾产生，而非先定罪再找证据（有罪推定是'先验答案'的典型错误）",
-            "result": "无罪推定是 '一切结论产生于调查情况的末尾' 的法治化表达"
           }
         ]
       },
@@ -5647,7 +5162,7 @@
             "output": "由数据合格者组成的高质量讨论场",
             "key_insight": "科学研究中的 peer review 制度是此原则的制度化：只有通过同行评议（数据和方法审查）的论文才有'发表权'（发言权）",
             "paper": "《反对本本主义》1930",
-            "url": "https://en.wikipedia.org/wiki/Peer_review",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
           },
           {
@@ -5658,20 +5173,8 @@
             "output": "高信噪比的讨论产出",
             "key_insight": "开源社区的 'show me the code' 文化是该原则的技术社群版本：没有代码（数据）就没有发言权（PR 合并权）",
             "paper": "《反对本本主义》1930",
-            "url": "https://en.wikipedia.org/wiki/Show_me_the_code",
+            "url": "N/A",
             "code": "N/A (strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "AI 论坛：alignment 讨论准入",
-            "how": "AI 安全论坛要求讨论 alignment 方案者提交可复现实验结果或形式化证明，无实证的纯哲学讨论降级为附录",
-            "result": "提高 alignment 讨论的技术密度，减少'AI will/can't kill us all'式无数据空谈"
-          },
-          {
-            "target": "企业治理：战略决策委员资格",
-            "how": "华为的 EMT（经营管理团队）要求决策者必须有轮值一线经验，纯后台管理者在战略议题上的发言权受限",
-            "result": "确保决策层对市场有'调查'基础，避免'办公室战略'"
           }
         ]
       },
@@ -5690,24 +5193,7 @@
             "key_insight": "矛盾不是需要消灭的异常，而是推动事物发展的常态结构——没有矛盾就没有运动",
             "paper": "毛泽东，《矛盾论》，1937",
             "url": "N/A",
-            "code": "N/A (dialectical principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "软件系统-架构分析",
-            "how": "任何软件系统都存在性能与一致性、灵活性与安全性、局部优化与全局效率之间的张力；设计决策不是消除矛盾而是在矛盾间选择平衡点",
-            "result": "CAP 定理就是矛盾普遍性在分布式系统中的精确表述"
-          },
-          {
-            "target": "组织管理-团队诊断",
-            "how": "任何团队都存在效率与创新、标准化与灵活性、集中决策与分散自主之间的矛盾；不存在\"无冲突\"的健康团队，只存在矛盾处理得好与不好的团队",
-            "result": "团队诊断从'找问题'转向'识别当前主导矛盾'的方法论"
-          },
-          {
-            "target": "机器学习-偏差方差权衡",
-            "how": "模型复杂度和泛化能力之间的矛盾贯穿所有学习过程，不存在既无偏差又无方差的模型",
-            "result": "偏差-方差分解成为模型选择的理论基础"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -5726,24 +5212,7 @@
             "key_insight": "同样的外部环境，不同内部结构的系统会走向完全不同的结局——内因是变化的根据",
             "paper": "毛泽东，《矛盾论》，1937",
             "url": "N/A",
-            "code": "N/A (dialectical principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "创业公司-失败归因",
-            "how": "同一赛道中，外部市场条件对所有玩家相同，真正决定生死的是内部团队能力、产品结构和组织矛盾的处理方式",
-            "result": "投资尽调的核心从'市场大小'转向'团队内部能力结构'的分析框架"
-          },
-          {
-            "target": "机器学习-数据vs模型",
-            "how": "模型表现的瓶颈首先看模型结构和训练方式（内因），其次才看数据量和数据质量（外因）。模型结构不对，数据再多也不收敛",
-            "result": "AutoML 中先搜索模型结构再调数据增强的优先级策略"
-          },
-          {
-            "target": "生态学-入侵物种",
-            "how": "外来物种能否入侵取决于本地生态系统的内部脆弱性（空缺生态位、缺乏天敌），而非入侵物种本身有多强",
-            "result": "入侵生物学的'生态位空缺假说'——内因决定外因能否起作用"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -5762,24 +5231,7 @@
             "key_insight": "外因不能直接决定结果——它必须通过内因的过滤、放大或阻断才能起作用",
             "paper": "毛泽东，《矛盾论》，1937",
             "url": "N/A",
-            "code": "N/A (causal reasoning principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "药物研发-个体差异",
-            "how": "同样的药物（外因）作用于不同基因型的患者（内因），疗效和副作用差异巨大。药物通过患者的基因-代谢结构起作用",
-            "result": "精准医疗/药物基因组学的核心逻辑"
-          },
-          {
-            "target": "宏观经济-政策传导",
-            "how": "同样的货币政策（外因），作用于不同产业结构和企业治理（内因）的经济体，效果完全不同。宽松政策在健康的内因上放大增长，在脆弱的内因上放大泡沫",
-            "result": "宏观经济分析中'结构性'比'总量性'更重要的理论基础"
-          },
-          {
-            "target": "安全工程-防护设计",
-            "how": "同样的攻击手段（外因）作用于不同防护结构（内因），结果从无影响到全面崩溃。安全设计的本质是强化内因，让外因无法通过",
-            "result": "纵深防御思想：内因（系统结构）是安全的根本根据"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -5798,24 +5250,7 @@
             "key_insight": "方法的有效性取决于它与矛盾性质的匹配度——万能方法不存在",
             "paper": "毛泽东，《矛盾论》，1937",
             "url": "N/A",
-            "code": "N/A (methodology principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "软件调试-错误分型",
-            "how": "并发 bug 需要时序分析，内存 bug 需要工具检测，逻辑 bug 需要形式验证——不同类型的错误需要完全不同类型的调试手段",
-            "result": "按错误类型选择调试策略的工程实践"
-          },
-          {
-            "target": "机器学习-损失函数选择",
-            "how": "分类问题用交叉熵，回归问题用 MSE，排序问题用 pairwise loss——不同性质的任务需要不同性质的损失函数，不能用单一损失处理所有问题",
-            "result": "任务驱动的损失函数设计方法论"
-          },
-          {
-            "target": "冲突调解-ADR",
-            "how": "商业纠纷用仲裁，邻里纠纷用调解，劳资纠纷用集体谈判——不同性质的冲突需要不同性质的解决机制",
-            "result": "替代性纠纷解决（ADR）体系的核心分层逻辑"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -5834,24 +5269,7 @@
             "key_insight": "研究任何过程，如果存在两个以上矛盾的话，就要全力找出主要矛盾——捉住了它，一切就迎刃而解了",
             "paper": "毛泽东，《矛盾论》，1937",
             "url": "N/A",
-            "code": "N/A (analytical principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "项目管理-瓶颈理论（TOC）",
-            "how": "生产系统中总有一个瓶颈环节决定整体产出，提升非瓶颈环节不提高总产量。识别并解决瓶颈（主矛盾）才能突破",
-            "result": "Eliyahu Goldratt 的约束理论（TOC）与主矛盾识别完全同构"
-          },
-          {
-            "target": "机器学习-特征工程",
-            "how": "在高维特征空间中，通常只有少数几个特征（主矛盾）决定了模型性能的上限，其他特征是次要的。识别主特征比增加更多次要特征更重要",
-            "result": "特征重要性分析和主成分分析（PCA）的哲学基础"
-          },
-          {
-            "target": "医学诊断-主诉聚焦",
-            "how": "患者可能同时有多个症状，但必须找到决定疾病走向的主诉（主矛盾），优先处理。治疗主矛盾后，次级症状常自行缓解",
-            "result": "临床分诊中'主诉导向'诊断方法的核心逻辑"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -5870,24 +5288,7 @@
             "key_insight": "事物的性质不是固定的——它随着矛盾主要方面的转移而改变，这不是量变而是质变",
             "paper": "毛泽东，《矛盾论》，1937",
             "url": "N/A",
-            "code": "N/A (state analysis principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "市场分析-竞争态势",
-            "how": "市场竞争中，供给过剩时买方为主导方面（买方市场），供给不足时卖方为主导方面（卖方市场）。判定市场性质要看哪一方占主导",
-            "result": "市场结构分析的核心维度之一"
-          },
-          {
-            "target": "博弈论-纳什均衡转移",
-            "how": "博弈中策略的优劣取决于对手的策略组合——当对手策略组合变化时，主导策略（主要方面）会发生转移，博弈的性质也随之改变",
-            "result": "均衡转移分析是博弈动态的核心"
-          },
-          {
-            "target": "产品生命周期-阶段判定",
-            "how": "产品早期需求驱动（用户主导），成熟期供给驱动（竞争主导），衰退期替代品主导——产品阶段的性质由矛盾主要方面的转移决定",
-            "result": "产品策略随阶段转变而调整的理论基础"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -5906,24 +5307,7 @@
             "key_insight": "复杂系统的表象是多矛盾纠缠，但核心通常只有一个——找到它，其他矛盾会随它一起变化",
             "paper": "毛泽东，《矛盾论》，1937",
             "url": "N/A",
-            "code": "N/A (complexity reduction principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "根因分析-5 Whys / 故障树",
-            "how": "系统故障时症状众多，但必须逐层追问直到找到根因（主矛盾），而非逐个修补表面症状",
-            "result": "丰田 5 Whys 方法和故障树分析（FTA）的核心逻辑"
-          },
-          {
-            "target": "机器学习-消融实验",
-            "how": "模型有多个模块和超参数，消融实验的目的就是找到对性能影响最大的那个因素（主矛盾），而非逐个微调所有参数",
-            "result": "消融研究（Ablation Study）是 ML 研究的标准方法"
-          },
-          {
-            "target": "公共政策-问题树分析",
-            "how": "社会问题（贫困、犯罪、教育落后）相互关联，问题树分析的目标是从因果网络中找到根节点问题（主矛盾），集中政策资源于此",
-            "result": "世界银行等国际机构的问题树（Problem Tree）分析框架"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -5942,24 +5326,7 @@
             "key_insight": "对立不是破坏，统一不是消解——对立面的张力本身就是动力来源",
             "paper": "毛泽东，《矛盾论》，1937",
             "url": "N/A",
-            "code": "N/A (dialectical principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "对抗生成网络（GAN）",
-            "how": "生成器和判别器是对立的（对抗），但它们在对抗中共同进步（统一）。对抗越激烈，生成质量越高。缺了任何一方，系统都崩溃",
-            "result": "GAN 的训练动力学完美展示了对立统一规律"
-          },
-          {
-            "target": "组织设计-红蓝对抗",
-            "how": "安全团队（蓝队）和攻击团队（红队）对抗，但对抗的统一目标是提升整体安全水平。没有对抗，安全退化；没有统一目标，对抗变成内耗",
-            "result": "红蓝对抗/紫队方法在网络安全中的标准实践"
-          },
-          {
-            "target": "市场经济-竞争与合作",
-            "how": "企业之间既竞争又合作（竞合关系），竞争推动效率，合作扩大市场。完全竞争消灭利润，完全合作消灭创新",
-            "result": "Brandenburger & Nalebuff 的'竞合（Co-opetition）'理论"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -5978,24 +5345,7 @@
             "key_insight": "共性不是脱离个性的抽象，个性也不是没有共性的偶然——两者互相包含、互相转化",
             "paper": "毛泽东，《矛盾论》，1937",
             "url": "N/A",
-            "code": "N/A (epistemological principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "迁移学习-领域适应",
-            "how": "预训练模型学到的特征是共性，微调是将共性与新任务的个性结合。完全不微调（只用共性）效果差，完全不预训练（只用个性）数据不够",
-            "result": "预训练+微调范式是共性个性辩证法在 ML 中的标准实现"
-          },
-          {
-            "target": "设计系统-组件复用",
-            "how": "设计系统的核心组件（按钮、卡片、表单）是共性，每个具体页面的布局和交互是个性。共性组件提供一致性，个性组合提供场景适配",
-            "result": "Material Design / Ant Design 等设计系统的核心哲学"
-          },
-          {
-            "target": "医学-循证与个体化",
-            "how": "临床指南是基于大量病例的共性规律，但每个患者的基因、病史、体质是个性。好医生用共性指南为起点，再根据个性调整方案",
-            "result": "循证医学与精准医疗的辩证统一"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6014,24 +5364,7 @@
             "key_insight": "没有永恒不变的过程——任何稳定态都是暂时的，持续监测量变才能预见质变",
             "paper": "毛泽东，《矛盾论》，1937",
             "url": "N/A",
-            "code": "N/A (dynamic systems principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "技术采纳生命周期（Gartner Hype Cycle）",
-            "how": "技术从期望膨胀到幻灭低谷到生产力高原，每个阶段的矛盾不同。在上升期关注泡沫风险，在低谷期关注实质价值积累",
-            "result": "Gartner 技术成熟度曲线是阶段转化法的行业实践"
-          },
-          {
-            "target": "隐马尔可夫模型/状态机",
-            "how": "系统在不同状态之间以概率转移，每个状态有特定的观测特征。检测当前状态并预测下一个状态的转移概率",
-            "result": "HMM 和有限状态机是过程转化的形式化实现"
-          },
-          {
-            "target": "创业-阶段适配策略",
-            "how": "创业公司从验证期到增长期到成熟期，每个阶段的主要矛盾不同（产品-市场匹配 → 规模化 → 效率优化），用上一阶段的方法处理下一阶段的问题必败",
-            "result": "创业阶段论（如 Geoffrey Moore 的 Cross the Chasm）的核心逻辑"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6050,24 +5383,7 @@
             "key_insight": "领导层的认知不可能一次性正确——必须经过「采集—综合—执行—再采集」的闭环才能逼近正确方向",
             "paper": "毛泽东，《关于领导方法的若干问题》，1943",
             "url": "N/A",
-            "code": "N/A (organizational/governance principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "产品-用户反馈闭环",
-            "how": "从用户反馈中采集需求碎片，综合成产品方向，发布后继续采集新反馈，每轮迭代缩小产品与需求的差距",
-            "result": "用户驱动开发（User-Driven Development）的核心循环"
-          },
-          {
-            "target": "分布式系统-共识算法",
-            "how": "Raft/Paxos 中每个节点报告本地状态，leader 汇总后做出决策并广播回各节点，决策在节点执行后产生新状态再上报",
-            "result": "分布式共识的标准架构"
-          },
-          {
-            "target": "机器学习-联邦学习",
-            "how": "各终端用本地数据计算梯度（从群众中来），服务器聚合成全局模型更新（分析综合），再下发到终端验证（到群众中去）",
-            "result": "Google 联邦学习的核心框架"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6086,24 +5402,7 @@
             "key_insight": "真正的系统动力来自底层参与者的密度和质量，而非顶层设计的精巧程度",
             "paper": "毛泽东，《论联合政府》，1945",
             "url": "N/A",
-            "code": "N/A (sociopolitical/distributed systems principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "开源软件",
-            "how": "代码贡献者和用户才是开源项目的根本动力，核心维护者的角色是组织框架而非独力开发",
-            "result": "Linux、Kubernetes 等项目的成功验证了分布式主体的力量"
-          },
-          {
-            "target": "群智优化算法",
-            "how": "粒子群/蚁群中每个个体只做局部决策，群体涌现全局最优路径；没有中央指挥",
-            "result": "PSO、ACO 等群体智能算法的标准范式"
-          },
-          {
-            "target": "互联网-UGC 生态",
-            "how": "内容平台的价值来自大量普通用户创作的内容，而非平台自己生产内容",
-            "result": "Wikipedia、YouTube、Stack Overflow 的核心模式"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6122,24 +5421,7 @@
             "key_insight": "价值函数不能自定义——必须由服务对象的需求来定义",
             "paper": "毛泽东，《为人民服务》，1944",
             "url": "N/A",
-            "code": "N/A (value alignment principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "产品设计-用户中心设计",
-            "how": "产品团队的每个功能决策必须回答「这对用户有什么具体好处」，而不是「这对我们KPI有什么好处」",
-            "result": "UCD（User-Centered Design）的核心准则"
-          },
-          {
-            "target": "AI 对齐-目标函数定义",
-            "how": "AI 系统的价值函数必须锚定在人类（服务对象）的真实需求上，而不是系统自定义的代理指标",
-            "result": "AI 安全和对齐研究的核心挑战"
-          },
-          {
-            "target": "平台治理-双边市场",
-            "how": "平台的核心用户（如消费者、司机、创作者）的体验是价值函数的锚点，偏离时必须纠正策略",
-            "result": "Uber、美团等平台运营的基本原则"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6158,24 +5440,7 @@
             "key_insight": "系统根基不是上层建筑，而是基层单元的参与密度和组织程度",
             "paper": "毛泽东，《论持久战》，1938",
             "url": "N/A",
-            "code": "N/A (system foundation principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "互联网-CDN 架构",
-            "how": "系统的可用性不取决于中心机房，而取决于边缘节点的密度和分布——边缘节点就是「兵民」",
-            "result": "CDN 和边缘计算的核心架构思想"
-          },
-          {
-            "target": "供应链-韧性设计",
-            "how": "供应链韧性不取决于核心仓，而取决于末端供应商和物流节点的多样化和备份程度",
-            "result": "2020 后供应链韧性研究的核心结论"
-          },
-          {
-            "target": "网络安全-零信任架构",
-            "how": "安全不取决于边界防火墙，而取决于每个终端节点的认证和验证——每个节点都是防线",
-            "result": "零信任安全模型的基础假设"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6194,24 +5459,7 @@
             "key_insight": "执行层不是被动管道——他们的能力、理解和态度是政策能否生效的决定变量",
             "paper": "毛泽东，《中国共产党在民族战争中的地位》，1938",
             "url": "N/A",
-            "code": "N/A (implementation bottleneck principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "软件工程-技术管理层",
-            "how": "技术方案再好，如果技术 lead 理解偏差或推动不力，最终落地质量取决于中间管理层",
-            "result": "工程管理中「技术 lead 是工程成败关键因素」的共识"
-          },
-          {
-            "target": "供应链-中间商瓶颈",
-            "how": "生产商和消费者之间，经销商/物流商是决定因素——他们决定了货损率、时效和成本",
-            "result": "供应链优化的核心就是优化中间环节"
-          },
-          {
-            "target": "AI 部署-MLOps",
-            "how": "模型再好，部署到生产环境的 MLOps 流水线质量决定实际效果——监控、回滚、漂移检测是「干部」",
-            "result": "MLOps 成为 AI 落地的关键瓶颈"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6230,24 +5478,7 @@
             "key_insight": "领导工作本质上只有两件事：方向判断和资源配置——其他都是这两件事的衍生",
             "paper": "毛泽东，多篇（《为人民服务》《关于领导方法的若干问题》等）",
             "url": "N/A",
-            "code": "N/A (leadership/organizational design principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "创业公司-CEO 职能",
-            "how": "CEO 的核心工作就是做战略决策（出主意）和招对人/放对位置（用干部），其余应该授权",
-            "result": "Y Combinator 等创业方法论的核心框架"
-          },
-          {
-            "target": "软件架构-决策与执行分离",
-            "how": "架构师负责技术选型和系统设计（出主意），Tech Lead 负责带领团队落地（用干部）",
-            "result": "大型技术团队的标准角色划分"
-          },
-          {
-            "target": "投资-GP 的两件事",
-            "how": "基金经理的核心工作是做投资决策（出主意）和选项目团队（用干部），两件事做错任何一件都不行",
-            "result": "风险投资行业对 GP 能力的经典定义"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6266,24 +5497,7 @@
             "key_insight": "冲突是建设性的前提条件——出发点和落脚点都是团结，批评只是中间手段",
             "paper": "毛泽东，《关于正确处理人民内部矛盾的问题》，1957",
             "url": "N/A",
-            "code": "N/A (organizational learning principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "代码审查-Code Review",
-            "how": "以改进代码质量（团结目标）出发，通过 review 批评指出问题，修正后代码质量和团队规范都提升（更高团结）",
-            "result": "健康 Code Review 文化的核心原则"
-          },
-          {
-            "target": "在线学习-对抗训练",
-            "how": "生成器和判别器通过对抗（批评）互相校准，最终达到更高水平的生成质量（团结）",
-            "result": "GAN 训练过程的结构化类比"
-          },
-          {
-            "target": "敏捷开发-Retrospective",
-            "how": "每个迭代回顾中以改进为目标（团结）进行坦诚批评，之后团队协作效率更高（更高团结）",
-            "result": "Scrum Retro 的核心精神"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6302,24 +5516,7 @@
             "key_insight": "纠错系统的目的是修复而非惩罚——惩罚过度会让整个系统趋于保守和僵化",
             "paper": "毛泽东，《整顿党的作风》，1942",
             "url": "N/A",
-            "code": "N/A (error correction / system repair principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "安全工程-无责事后复盘",
-            "how": "事后复盘以「修复流程漏洞」为目的，不追究个人责任——否则没人会报告事故",
-            "result": "Google SRE、Netflix 等公司的 Blameless Postmortem 标准"
-          },
-          {
-            "target": "机器学习-学习率/梯度裁剪",
-            "how": "梯度过大时不直接丢弃参数，而是裁剪后继续训练——目的是修复学习过程而非惩罚异常参数",
-            "result": "梯度裁剪是训练稳定性的标准手段"
-          },
-          {
-            "target": "团队管理-失败容忍度",
-            "how": "适度容忍失败（治病）并建立复盘机制（毖后），比开除犯错者更能提高团队长期战斗力",
-            "result": "硅谷创业文化中「Fail Fast, Learn Fast」的管理基础"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6338,24 +5535,7 @@
             "key_insight": "复杂系统的成功不能靠单点突破——必须在联盟、核心能力和内部治理三个维度同时建立能力",
             "paper": "毛泽东，《〈共产党人〉发刊词》，1939",
             "url": "N/A",
-            "code": "N/A (multi-mechanism system design principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "创业公司-三支柱模型",
-            "how": "统一战线 = 生态合作和渠道，武装斗争 = 核心产品能力，党的建设 = 团队文化和组织力",
-            "result": "初创公司必须同时在产品、生态和组织三方面发力"
-          },
-          {
-            "target": "操作系统-三要素",
-            "how": "统一战线 = 应用生态（开发者联盟），武装斗争 = 内核技术能力，党的建设 = 平台治理和 API 规范",
-            "result": "iOS/Android/Windows 的成功都依赖这三者的组合"
-          },
-          {
-            "target": "网络安全-纵深防御",
-            "how": "统一战线 = 威胁情报共享（联盟），武装斗争 = 主动检测和响应能力，党的建设 = 内部安全合规和培训",
-            "result": "NIST 网络安全框架的三要素对应"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6374,24 +5554,7 @@
             "key_insight": "与其做对一万个细节决策，不如做对一个纲领决策——纲领对了，细节自动对齐",
             "paper": "毛泽东，多篇（《矛盾论》《实践论》及军事著作）",
             "url": "N/A",
-            "code": "N/A (governing variable / system traction principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "软件架构-架构决策记录(ADR)",
-            "how": "先确定核心架构决策（纲），后续所有技术选型、接口设计和团队分工都围绕架构决策展开（目张）",
-            "result": "ADR（Architecture Decision Record）作为软件工程最佳实践"
-          },
-          {
-            "target": "产品策略-North Star Metric",
-            "how": "先确定北极星指标（纲），产品、增长、运营的所有决策都围绕它展开，避免各团队指标冲突",
-            "result": "Amplitude、Stripe 等公司的产品管理方法论"
-          },
-          {
-            "target": "机器学习-损失函数设计",
-            "how": "损失函数是纲——损失函数定对了，梯度下降会自动让模型在正确的方向上收敛（目张）",
-            "result": "「设计好的损失函数比设计好的模型更重要」的深度学习共识"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6410,24 +5573,7 @@
             "key_insight": "决定性因素不是信号当前的强度，而是它所处的反馈结构——同样的火种在沙地上熄灭，在草原上燎原",
             "paper": "毛泽东，《星星之火，可以燎原》，1930年1月",
             "url": "N/A",
-            "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "产品增长-病毒传播",
-            "how": "一个新功能的初始用户量极小，但若每用户平均邀请数 > 1（K-factor > 1），则处于超临界状态。不要因早期DAU小而砍掉，而是检查邀请机制和留存结构是否形成正反馈回路。",
-            "result": "Dropbox 的邀请奖励、PayPal 的双向奖励都是利用超临界扩散结构从小信号变为主流"
-          },
-          {
-            "target": "流行病学-早期预警",
-            "how": "零星病例（小信号）若出现在高连接度节点（交通枢纽城市），其扩散概率远高于偏远地区。R0 > 1 的条件下，极小的初始病例数也会指数增长。",
-            "result": "COVID-19 早期从武汉向全球扩散的传播动力学模型"
-          },
-          {
-            "target": "金融市场-泡沫检测",
-            "how": "某个资产类别的早期异常回报（小信号）如果吸引了杠杆资金和叙事传播的正反馈，会从局部异常膨胀为系统性泡沫。",
-            "result": "明斯基时刻的识别框架：稳定本身制造不稳定"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6446,24 +5592,7 @@
             "key_insight": "信心和谨慎不是同一个维度的两端，而是两个独立正交的维度——可以同时对结果有信心、对过程很谨慎",
             "paper": "毛泽东，《中国革命战争的战略问题》1936；《关于目前党的政策中的几个重要问题》1948 等多篇",
             "url": "N/A",
-            "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "创业投资-portfolio管理",
-            "how": "基金层面相信颠覆性赛道终将胜出（战略藐视：不因市场短期回调退出赛道），但对每个被投公司的烧钱速度、unit economics、关键里程碑做严格审查（战术重视）。",
-            "result": "a16z 等顶级 VC 的投资哲学：赛道信仰 + 公司级纪律"
-          },
-          {
-            "target": "强化学习-exploration vs exploitation",
-            "how": "对环境可解保持信念（战略藐视：不因中间 reward 为零就放弃探索），但对每个 action 的风险做严格评估（战术重视：用 UCB/Thompson 等机制管理单步不确定性）。",
-            "result": "稀疏奖励环境下避免过早收敛的训练策略"
-          },
-          {
-            "target": "临床试验-长期药物开发",
-            "how": "对药物机制的科学假设保持信心（战略藐视：不因 Phase II 某个次要终点失败就放弃），但对每一次试验的剂量、对照组、安全性监测做严格设计（战术重视）。",
-            "result": "多个成功药物经历了 Phase II 挫折后通过调整方案最终获批"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6482,24 +5611,7 @@
             "key_insight": "资源均匀分布是最差策略——与其在每个点都打成平手，不如在每个点都打成碾压",
             "paper": "毛泽东，《集中优势兵力，各个歼灭敌人》，1946年9月",
             "url": "N/A",
-            "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "创业-市场进入",
-            "how": "不在所有城市同时铺开，而是集中全部地推、补贴、运营资源到一个城市，做到绝对市场份额第一后再复制到下一个城市。",
-            "result": "美团、饿了么早期的「千团大战」胜利策略"
-          },
-          {
-            "target": "机器学习-boosting",
-            "how": "每一轮弱学习器集中精力修正前一轮的残差（当前最困难的样本），而不是试图一次性拟合全部数据。",
-            "result": "XGBoost/LightGBM 通过逐轮聚焦困难样本成为结构化数据的 SOTA"
-          },
-          {
-            "target": "网络安全-渗透测试",
-            "how": "攻击者不在所有端口同时尝试，而是集中资源突破一个最弱点，获得立足点后再横向扩展。",
-            "result": "渗透测试的标准方法论：侦察 → 单点突破 → 横向移动"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6518,24 +5630,7 @@
             "key_insight": "局部的不可逆胜利 > 全局的可逆小胜——消灭一个节点的结构性影响远大于削弱十个节点",
             "paper": "毛泽东，《中国革命战争的战略问题》，1936年12月",
             "url": "N/A",
-            "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "产品竞争-功能差异化",
-            "how": "不在对手的每个功能上都做 80% 的追赶，而是在一个杀手级功能上做到对手无法企及的 200%，使这个维度上的比较成为不可逆的认知锁定。",
-            "result": "Google 搜索质量远超竞品的单点突破，使「搜索=Google」成为不可逆认知"
-          },
-          {
-            "target": "机器学习-难例挖掘",
-            "how": "与其对所有错误样本均匀加权，不如找到导致级联错误的核心样本（如噪声标注的锚点样本），彻底修正它们后，大量下游错误自动消失。",
-            "result": "Dataset cleaning 和 confident learning 的核心思想"
-          },
-          {
-            "target": "供应链-瓶颈管理",
-            "how": "TOC 约束理论：不改善所有环节，而是找到系统瓶颈并彻底解决它，整体吞吐量随之级联提升。",
-            "result": "Goldratt 约束理论在制造业的标准应用"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6554,24 +5649,7 @@
             "key_insight": "没有万能策略，只有与当前状态匹配的策略——关键能力不是选一个好策略，而是在状态变化时快速切换",
             "paper": "毛泽东，《中国革命战争的战略问题》，1936年12月（十六字诀：敌进我退，敌驻我扰，敌疲我打，敌退我追）",
             "url": "N/A",
-            "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "量化交易-自适应策略",
-            "how": "根据市场波动率状态切换策略：高波动时减仓回避（敌进我退），横盘时小仓位套利（敌驻我扰），波动收敛后加大仓位（敌疲我打），趋势确立后追击（敌退我追）。",
-            "result": "regime-switching 模型在量化策略中的标准框架"
-          },
-          {
-            "target": "网络安全-入侵响应",
-            "how": "检测到大规模扫描时关闭暴露面（敌进我退），扫描暂停时收集攻击指纹（敌驻我扰），攻击者疲劳/切换目标时反向追踪（敌疲我打），攻击者撤退时固化防御（敌退我追）。",
-            "result": "自适应安全架构 (Adaptive Security Architecture) 的核心逻辑"
-          },
-          {
-            "target": "LLM 训练-curriculum learning",
-            "how": "模型在当前难度上表现差时降低样本难度（敌进我退），稳定时小幅增加噪声（敌驻我扰），模型快收敛时突击困难样本（敌疲我打），模型突破后快速推进到下一难度（敌退我追）。",
-            "result": "自适应课程学习和动态采样策略"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6590,24 +5668,7 @@
             "key_insight": "错过一次机会的成本 < 在无准备时出手导致的不可逆损失——等待本身就是一种策略",
             "paper": "毛泽东，《中国革命战争的战略问题》，1936年12月",
             "url": "N/A",
-            "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "临床试验-入组标准",
-            "how": "不因招募压力降低入组标准，必须在药物安全性数据、剂量探索和对照组设计都充分后才进入 Phase III。无准备的大规模试验失败成本远高于延迟几个月。",
-            "result": "FDA 对关键试验设计的严格前置审查制度"
-          },
-          {
-            "target": "机器学习-early stopping 与部署门槛",
-            "how": "模型不在 validation loss 刚开始下降时就部署，而是在过拟合风险评估、对抗测试和分布外泛化测试都通过后才上线。宁可多训练几天也不可部署一个不确定的模型。",
-            "result": "MLOps 中模型上线前的 checklist 和 gate review 机制"
-          },
-          {
-            "target": "军事/商业-情报先行",
-            "how": "在发起市场进攻（如价格战、新产品发布）之前，必须完成竞品分析、用户调研、供应链压力测试和渠道准备。信息不充分时宁可推迟发布。",
-            "result": "军事侦察→情报分析→制定作战计划→执行的标准流程"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6626,24 +5687,7 @@
             "key_insight": "控制权的归属比手段本身更重要——谁有权决定方向，谁就控制系统",
             "paper": "毛泽东，《战争和战略问题》，1938",
             "url": "N/A",
-            "code": "N/A (organizational/strategic principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "AI 对齐-Instrumental Convergence",
-            "how": "AI 系统的子目标（自我保护、资源获取）可能偏离人类设定的上位目标",
-            "result": "AI 安全领域的核心问题之一"
-          },
-          {
-            "target": "公司治理-股东vs管理层",
-            "how": "管理层（手段）可能追求自身利益偏离股东（目标）利益",
-            "result": "委托代理理论的核心框架"
-          },
-          {
-            "target": "软件架构-策略模式",
-            "how": "算法（手段）可以自由切换，但必须服从接口契约（目标）的约束",
-            "result": "策略模式/依赖注入的设计原则"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6662,24 +5706,7 @@
             "key_insight": "威慑的有效性依赖于对手不去验证它——一旦开始验证，大量威慑会自行瓦解",
             "paper": "毛泽东，和安娜·路易斯·斯特朗的谈话，1946年8月",
             "url": "N/A",
-            "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "市场竞争-挑战者策略",
-            "how": "行业巨头看起来垄断一切，但拆解后发现：其市场份额集中在旧渠道、技术债务重、组织层级多导致决策慢。挑战者可在巨头反应慢的维度集中突破。",
-            "result": "Netflix 挑战 Blockbuster、特斯拉挑战传统车企的策略逻辑"
-          },
-          {
-            "target": "安全审计-红队评估",
-            "how": "一个系统看起来防御严密（防火墙、加密、认证齐全），但实际运行中可能存在配置错误、默认凭证、人员社工漏洞。红队通过实际攻击拆解防御的真实有效性。",
-            "result": "渗透测试的核心价值：验证表观安全与真实安全的差距"
-          },
-          {
-            "target": "对抗鲁棒性-adversarial ML",
-            "how": "一个模型在标准 benchmark 上准确率极高（纸老虎指标），但在对抗样本、分布偏移和 corner case 下可能大幅退化。adversarial evaluation 拆解模型的真实鲁棒性。",
-            "result": "RobustBench 等对抗鲁棒性评估基准的存在理由"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6698,24 +5725,7 @@
             "key_insight": "制度的有效性 = 规则设计质量 × 执行保障力度——后者为零时前者无意义",
             "paper": "毛泽东，在八七会议上的发言，1927年8月7日",
             "url": "N/A",
-            "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "智能合约-DeFi",
-            "how": "链上协议的规则之所以有效，是因为底层有密码学和共识机制作为「强制力」保障执行。链下法律协议则依赖司法系统。没有执行保障的 DeFi 协议（如纯靠声誉的信用贷）会违约。",
-            "result": "智能合约的核心价值主张：用代码强制力替代制度强制力"
-          },
-          {
-            "target": "软件工程-类型系统与lint",
-            "how": "编码规范如果只靠文档约定（无强制力）必然被违反；类型系统和 lint 规则把规范变成编译期/CI 的硬约束（有强制力），违规代码无法通过构建。",
-            "result": "Rust 所有权系统、TypeScript strict mode 的价值"
-          },
-          {
-            "target": "系统设计-熔断与限流",
-            "how": "服务水平协议（SLA）如果没有限流、熔断等强制力机制做保障，在流量洪峰下必然被突破。先建设限流基础设施，再承诺 SLA。",
-            "result": "微服务架构中 circuit breaker 和 rate limiter 的必要性"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6734,24 +5744,7 @@
             "key_insight": "不要把手段类型看作固定选择——它们是连续谱上的可调参数，应该随局势动态调节",
             "paper": "毛泽东，《论持久战》，1938年5月",
             "url": "N/A",
-            "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "商业竞争-竞争强度管理",
-            "how": "商业竞争从合作（标准联盟）到温和竞争（差异化）到激烈竞争（价格战）到极端对抗（专利诉讼/恶意收购）构成连续谱。根据竞争态势选择合适强度，不要跳过中间阶段。",
-            "result": "波特五力模型的竞争强度分析框架"
-          },
-          {
-            "target": "多目标优化-约束松弛",
-            "how": "硬约束（法律/安全/物理限制）和软约束（偏好/效率目标）构成连续谱。求解时先在软约束下优化，不可行时逐步松弛约束强度，直到找到可行解。",
-            "result": "约束优化中 Lagrangian 松弛和惩罚方法的通用框架"
-          },
-          {
-            "target": "异常响应-渐进式处置",
-            "how": "系统检测到异常后，从日志记录（低强度）到告警（中强度）到自动修复（高强度）到人工介入（极高强度）构成响应连续谱。根据异常严重程度选择响应级别，逐级升级。",
-            "result": "SRE 中 incident severity levels 和 escalation policy 的设计原则"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6770,24 +5763,7 @@
             "key_insight": "大多数人和系统的失败不是因为方案不对，而是因为执行不够认真——最后 1% 的质量差距消耗了 50% 的额外努力，但也正是这 1% 区分了优秀与平庸",
             "paper": "毛泽东，1957年11月在莫斯科大学对中国留学生的讲话",
             "url": "N/A",
-            "code": "N/A"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "软件工程-code review与测试",
-            "how": "不是写完代码就算完成，而是对每一行代码做认真的 review（不因为赶进度跳过）、对每一个边界条件写测试（不因为「大概率不会出问题」而省略）、对每一个 production incident 做彻底的 postmortem（不因为「已经修了」就停止追问根因）。",
-            "result": "Google 的 code review culture 和 blameless postmortem 制度"
-          },
-          {
-            "target": "制造业-六西格玛",
-            "how": "从 3 sigma（99.73% 合格）到 6 sigma（99.99966% 合格）需要的是对每一个流程变异源的认真识别和消除，而不是更大的机器或更多的工人。每一个缺陷都有可追溯的根因。",
-            "result": "六西格玛 DMAIC 方法论在制造业的质量革命"
-          },
-          {
-            "target": "LLM 对齐-RLHF 细节纪律",
-            "how": "数据标注的质量不由标注指南的宏观设计决定，而由标注员对每一条数据的认真程度决定。对标注一致性做严格 inter-annotator agreement 检查、对边界案例做专家仲裁、对标注员做持续校准。",
-            "result": "RLHF 数据质量是模型对齐效果的最大瓶颈之一"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6806,24 +5782,7 @@
             "key_insight": "进步的敌人不是犯错，而是失去修正错误的能力——骄傲关闭了校准通道",
             "paper": "毛泽东，中国共产党第八次全国代表大会开幕词，1956",
             "url": "N/A",
-            "code": "N/A (cognitive/organizational principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "贝叶斯推理-先验膨胀",
-            "how": "当先验过于自信（分布过窄）时，即使观测到强证据也难以改变后验，相当于骄傲关闭了校准通道；保持宽松先验则后验可被新证据持续修正",
-            "result": "贝叶斯决策理论中先验选择的核心张力"
-          },
-          {
-            "target": "在线学习-学习率衰减",
-            "how": "学习率衰减过快时模型过早固化，无法适应分布漂移；保持适度学习率则模型持续可修正",
-            "result": "在线学习和持续学习中的经典问题"
-          },
-          {
-            "target": "组织管理-反馈回路",
-            "how": "领导者对早期成功过度自信后关闭内部反馈通道，导致决策与现实脱节；保持开放反馈则组织持续校准",
-            "result": "组织僵化和大企业病的核心机制"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6842,24 +5801,7 @@
             "key_insight": "外部资源是效率的加速器，但内生能力是生存的保险丝——当加速器失效时，保险丝必须撑住",
             "paper": "毛泽东，多篇著作（《必须学会做经济工作》1945、《论联合政府》1945 等）",
             "url": "N/A",
-            "code": "N/A (strategic/resilience principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "供应链-垂直整合",
-            "how": "当供应商集中度高或地缘风险大时，企业将关键零部件或原材料的生产能力内化，减少对外部单一来源的依赖",
-            "result": "苹果自研芯片（Apple Silicon）替代 Intel 依赖的经典案例"
-          },
-          {
-            "target": "技术架构-离线降级",
-            "how": "系统对云服务的强依赖意味着网络中断即功能丧失；关键能力（缓存、本地计算）必须在离线时仍可运行",
-            "result": "Progressive Web Apps 和边缘计算的核心设计原则"
-          },
-          {
-            "target": "开源软件-自主可控",
-            "how": "在受限资源（缺乏商业许可预算）下，基于开源工具构建完整技术栈，约束反而推动了能力和生态建设",
-            "result": "Linux 生态和开源运动的实践逻辑"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6878,24 +5820,7 @@
             "key_insight": "高承诺的本质不是不怕代价，而是提前承认代价并将代价纳入计划——怕不怕是情绪问题，付不付得起是计算问题",
             "paper": "毛泽东，《愚公移山》，1945",
             "url": "N/A",
-            "code": "N/A (strategic commitment principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "创业-高承诺策略",
-            "how": "面对不可避免的技术障碍和市场阻力时，不转向、不缩减，把障碍逐项拆解并分配资源解决，用持续投入覆盖短期不可解决的问题",
-            "result": "SpaceX 火箭回收技术的长期投入路径"
-          },
-          {
-            "target": "项目管理-关键路径",
-            "how": "关键路径上的任务没有 float，任何延误都是全局延误；高承诺意味着对关键路径上每个障碍分配超额资源确保不阻塞",
-            "result": "关键路径法（CPM）的执行策略"
-          },
-          {
-            "target": "机器学习-训练不可逆性",
-            "how": "某些训练（如预训练大模型）成本极高且不可中途放弃，障碍（数据质量、梯度不稳）必须在训练过程中就地解决而非推倒重来",
-            "result": "大模型训练中 gradient checkpointing 和混合精度的技术动机"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6914,24 +5839,7 @@
             "key_insight": "10个方向一致的50分单元能打败5个方向各异的100分单元——协调一致性是乘法项，个体能力只是加法项",
             "paper": "毛泽东，多篇军事与党建著作",
             "url": "N/A",
-            "code": "N/A (organizational coordination principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "分布式系统-共识协议",
-            "how": "Paxos/Raft 不追求每个节点最强，而是保证所有节点就操作顺序达成一致；一致性的价值远大于单节点性能",
-            "result": "分布式共识是分布式系统的基石"
-          },
-          {
-            "target": "微服务-接口契约",
-            "how": "服务间不遵守 API 契约会导致调用方和提供方各自正确但整体失败；接口纪律保证服务网络协调运行",
-            "result": "API governance 和契约测试是微服务架构的基本纪律"
-          },
-          {
-            "target": "神经网络-梯度同步",
-            "how": "分布式训练中各 worker 的梯度必须同步聚合；不同步则更新方向互相干扰，训练发散",
-            "result": "AllReduce 和梯度聚合是大规模分布式训练的核心机制"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6950,24 +5858,7 @@
             "key_insight": "策略是函数定义，执行层是编译器——函数再优雅，编译器有 bug 就会产出错误结果",
             "paper": "毛泽东，多篇著作（《中国共产党在民族战争中的地位》1938 等）",
             "url": "N/A",
-            "code": "N/A (strategy-execution principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "机器学习-模型到部署",
-            "how": "论文中的模型架构再精巧，如果工程团队无法正确实现推理优化、量化或服务化，实际部署效果会大幅偏离论文性能",
-            "result": "MLOps 领域的核心关切——模型到生产的 gap"
-          },
-          {
-            "target": "产品管理-PRD 到交付",
-            "how": "产品需求文档（策略）和实际交付的软件之间存在理解偏差、技术折返和优先级冲突；中间层（技术负责人/PM）的能力决定转化质量",
-            "result": "产品经理和技术负责人的角色核心价值"
-          },
-          {
-            "target": "编译器-优化策略执行",
-            "how": "高级优化策略（如循环变换、向量化）在中间表示层面设计正确，但后端代码生成器的执行质量决定最终性能是否达标",
-            "result": "编译器后端优化和目标代码生成的关键性"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -6986,24 +5877,7 @@
             "key_insight": "单一方向的效率再高也敌不过方向错误的代价——多样探索是用短期冗余成本换取方向正确性的保险",
             "paper": "毛泽东，百花齐放、百家争鸣方针，1956-1957",
             "url": "N/A",
-            "code": "N/A (exploration-diversity principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "进化算法-种群多样性",
-            "how": "遗传算法中保持种群多样性防止过早收敛到局部最优；过早淘汰变异体等于百家不再争鸣",
-            "result": "遗传算法中多样性维护的核心技术问题"
-          },
-          {
-            "target": "投资组合-分散化",
-            "how": "不把全部资金押注单一策略，而是多种策略并行运行，在不同市场状态下各有表现；过早集中则可能全部踩错",
-            "result": "现代投资组合理论和多策略基金的核心逻辑"
-          },
-          {
-            "target": "集成学习-Bagging/Boosting",
-            "how": "多个弱学习器从不同角度拟合数据，通过投票或加权聚合产生比任何单个学习器更强的预测；多样性是集成效果的前提",
-            "result": "Random Forest 和 AdaBoost 的核心机制"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -7022,24 +5896,7 @@
             "key_insight": "迁移失败的根源不是源域知识不好，而是没有完成从源域到目标域的约束翻译——翻译比搬运重要",
             "paper": "毛泽东，与音乐工作者的谈话，1956（1964 年公开发表）",
             "url": "N/A",
-            "code": "N/A (knowledge transfer principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "迁移学习-领域适配",
-            "how": "在源域上预训练的模型不能直接用到目标域；必须冻结底层特征（提取机制），微调顶层（本土化改造），才能适配目标域的数据分布",
-            "result": "Transfer Learning 和 Domain Adaptation 的核心范式"
-          },
-          {
-            "target": "技术引进-本地化适配",
-            "how": "引进国外技术（洋为中用）时，直接复制往往因基础设施、使用习惯和供应链不同而失败；提取核心原理并本地化适配才可持续",
-            "result": "中国高铁技术引进-消化-吸收-再创新的路径"
-          },
-          {
-            "target": "软件工程-设计模式",
-            "how": "经典设计模式（古/洋）不是可以直接复制的代码，而是必须根据当前系统的约束条件进行适配的底层结构智慧",
-            "result": "GoF 设计模式的核心教学——模式不是模板，是可适配的结构方案"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -7058,24 +5915,7 @@
             "key_insight": "路径依赖是渐进系统的隐性税——新系统免税，旧系统背着存量兼容成本在竞争中处于结构性劣势",
             "paper": "毛泽东，《介绍一个合作社》，1958",
             "url": "N/A",
-            "code": "N/A (systems design principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "技术架构-绿地开发",
-            "how": "对遗留系统做重构受限于现有数据模型、接口和团队惯性；绿地（greenfield）项目可以直接采用现代架构，无需兼容包袱",
-            "result": "软件行业中绿地 vs 棕地开发的经典权衡"
-          },
-          {
-            "target": "新兴市场-跨越式发展",
-            "how": "发展中国家没有发达国家的存量基础设施（铜线电话网），可以直接跳到移动网络和移动支付，跳过中间阶段",
-            "result": "非洲移动支付（M-Pesa）跨越式发展的经典案例"
-          },
-          {
-            "target": "机器学习-从头训练 vs 迁移",
-            "how": "当预训练模型的归纳偏见过强且与目标域不匹配时，从头训练（空白纸张）反而比在不适配的预训练基础上微调效果更好",
-            "result": "Domain-specific foundation models 从头训练的动机"
+            "code": "N/A (strategic principle)"
           }
         ]
       },
@@ -7094,24 +5934,7 @@
             "key_insight": "目标尺度决定了系统的天花板——只优化自己的系统会遇到内卷上限，把贡献目标嵌入目标函数会打开新的优化空间",
             "paper": "毛泽东，纪念孙中山先生，1956",
             "url": "N/A",
-            "code": "N/A (mission-scaling principle)"
-          }
-        ],
-        "transfer_examples": [
-          {
-            "target": "企业战略-外部性目标",
-            "how": "企业把 ESG（环境、社会、治理）目标纳入战略，不仅规避长期风险，还在更大利益相关者网络中建立信任和影响力",
-            "result": "ESG 投资和 stakeholder capitalism 的兴起"
-          },
-          {
-            "target": "开源软件-贡献即壁垒",
-            "how": "公司为开源社区做贡献（不是只索取），在开发者生态中建立影响力和人才吸引能力，形成比闭源更持久的竞争优势",
-            "result": "Google（Kubernetes/TensorFlow）和 Meta（PyTorch/React）的开源战略"
-          },
-          {
-            "target": "学术研究-引用网络",
-            "how": "论文的目标从'发表自己能发的'扩展到'解决领域内真实重要的问题'，引用量和影响力随之扩展——对领域的贡献成为学术信用的来源",
-            "result": "高影响力论文的共同特征：解决了领域核心问题而非个人小问题"
+            "code": "N/A (strategic principle)"
           }
         ]
       }
