@@ -90,7 +90,7 @@
 
 ### 卡片写法
 
-- `.slot` 必须写清楚远域类别，例如 `D1 算法技术`、`D2 学术机制`、`D3 人文艺术`、`D4 产品机制`、`D5 毛选`、`D6 随机组词`。
+- `.slot` 必须写清楚远域类别，例如 `D1 算法技术`、`D2 学术机制`、`D3 人文艺术`、`D4 产品机制`、`MAO 毛选`、`RANDOM_WORD 随机组词`。
 - `.source` 必须写具体来源机制名，例如 `Hyperband`、`Kalman NIS`、`V2G`，不要只写"算法技术"。
 - `.proto` 必须写“源域原型/外域抽象结果”，也就是映射到用户领域之前最后冻结出的通用机制。不能出现用户领域术语。
 - `.name` 是候选方法名，尽量短。
@@ -122,7 +122,7 @@
 ## 生成与验证
 
 1. 生成 HTML 到 `outputs/<topic>.html`。
-2. 运行 `python scripts/validate_poster.py outputs/<topic>.html`。
+2. 运行 `python scripts/validate_poster.py outputs/<topic>.html --forbid-proto-term <用户领域禁词...> --search-sidecar outputs/<topic>.search.json`（`--forbid-proto-term` 和 `--search-sidecar` 在标准模式下均为必填）。
 3. 若脚本失败，先修 HTML 再交付。
 4. 最终答复必须提示文件路径和 `file:///` 地址；如用户要截图，再使用浏览器打开并目测文字是否溢出。
 
@@ -130,6 +130,6 @@
 
 - 结构：占位符、10 张卡片、`.slot/.source/.proto/.name/.desc/.fail`、`.ban.rejected`、旧版类名、固定比例裁切、文字溢出防护。
 - 候选契约（内容）：`.source` 非空且不能是槽位名（必须写具体来源机制，如 `Hyperband`）；`.name/.proto/.desc/.fail` 不得残留模板样例文字。
-- 可选去锚点审查：`--forbid-proto-term <用户领域术语...>` 检查 `.proto` 是否泄露了用户领域术语。算法/科研类建议带上任务名、数据类型、指标作为禁词，例如：
-  `python scripts/validate_poster.py outputs/eeg.html --forbid-proto-term EEG 脑电 域适应`
+- 必填去锚点审查：`--forbid-proto-term <用户领域术语...>` 是必填项，不传直接 FAIL。脚本自动做 NFKC+大小写归一并展开中英同义词。检查 `.proto` 是否泄露了用户领域术语，同时检测 `.proto` 与 `.desc` 的相似度（疑似马后炮）。禁词需覆盖任务名、数据类型、指标，例如：
+  `python scripts/validate_poster.py outputs/eeg.html --forbid-proto-term EEG 脑电 域适应 --search-sidecar outputs/eeg.search.json`
 - 非标准模式（精简/极端/一杀）卡片数不是 10 时，用 `--cards N` 指定预期数量。

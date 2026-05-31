@@ -68,6 +68,7 @@ wildidea/
 │   └── readme-result-example.png
 ├── references/
 │   ├── common-chinese-chars.txt
+│   ├── domains.json
 │   ├── mechanism-transfer.md
 │   ├── output-innovation-recipes.md
 │   ├── poster-guide.md
@@ -77,7 +78,9 @@ wildidea/
 │   ├── pick_domain_slots.py
 │   ├── pick_seed.py
 │   ├── search_char.py
-│   └── validate_poster.py
+│   ├── search_helper.py
+│   ├── validate_poster.py
+│   └── validate_search.py
 └── templates/
     └── poster.html
 ```
@@ -85,10 +88,15 @@ wildidea/
 说明：
 
 - `SKILL.md` 是主流程。
-- `scripts/pick_domain_slots.py` 内置领域库，按问题类型随机抽取 10 个槽位，避免每次调用把完整领域库塞进上下文。
+- `references/domains.json` 是外部领域锚点库（D1–D4 + MAO 毛选），每条带稳定 id，可在不改代码的前提下扩充。
+- `scripts/pick_domain_slots.py` 从 `references/domains.json` 按问题类型随机抽取 10 个锚点（分布在 D1–D4、MAO、RANDOM_WORD 等槽位），只返回抽样 JSON，避免每次调用把完整领域库塞进上下文；支持 `--reroll` 重抽单槽位和 `--exclude` 防重抽。
+- `scripts/pick_seed.py` 从 `references/domains.json` 的 MAO 池读取毛选种子，供 `pick_domain_slots.py` 的毛选槽位使用。
+- `scripts/search_char.py` 从 `references/common-chinese-chars.txt` 随机抽取两个汉字生成待搜索词，供随机组词槽位使用。
 - `references/mechanism-transfer.md` 用于算法/科研类问题，包含源域优先、去锚点退化、最近邻审查、最强反驳等规则。
 - `references/poster-guide.md` 和 `templates/poster.html` 用于生成横版自由窗口白底米黄 HTML 海报。
-- `scripts/validate_poster.py` 是内部 HTML 结构校验脚本，用于保证输出稳定。
+- `scripts/validate_poster.py` 是校验脚本：检查 HTML 结构、卡片字段、去锚点禁词（NFKC+大小写归一+跨语言同义词展开）、proto-desc 相似度（马后炮检测）、干预动词多样性、搜索证据 sidecar 完整性。
+- `scripts/search_helper.py` 是联网搜索辅助脚本：用搜狗引擎（零 API key，urllib + curl 双保险），供随机组词和联网验证使用。
+- `scripts/validate_search.py` 是搜索证据 sidecar 的独立校验器。
 - `outputs/` 是本地生成物目录，已在 `.gitignore` 中忽略，不作为 skill 内容提交。
 
 ## 默认 HTML 输出
