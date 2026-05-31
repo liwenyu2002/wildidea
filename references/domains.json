@@ -3,7 +3,9 @@
     "D1": "算法技术",
     "D2": "学术机制",
     "D3": "人文艺术",
-    "D4": "产品机制"
+    "D4": "产品机制",
+    "MAO": "毛选",
+    "RANDOM_WORD": "随机组词"
   },
   "quotas": {
     "algorithm": {
@@ -1150,6 +1152,308 @@
         "anchor": "法律 AI 产品把案情评估、文件整理、时间线、证据和 discovery 放到同一责任链里，而不是只生成法律文本",
         "kind": "高风险工作流机制",
         "source": "[Thomson Reuters GenAI report](https://www.thomsonreuters.com/en/reports/2025-generative-ai-in-professional-services-report)"
+      }
+    ],
+    "MAO": [
+      {
+        "id": "MAO-00",
+        "seed_no": 1,
+        "anchor": "没有调查，没有发言权",
+        "mechanism_hint": "证据门槛、知识合法性、发言条件"
+      },
+      {
+        "id": "MAO-01",
+        "seed_no": 2,
+        "anchor": "反对本本主义",
+        "mechanism_hint": "反教条、情境知识、经验校准"
+      },
+      {
+        "id": "MAO-02",
+        "seed_no": 3,
+        "anchor": "实事求是",
+        "mechanism_hint": "事实约束、模型—现实对齐"
+      },
+      {
+        "id": "MAO-03",
+        "seed_no": 4,
+        "anchor": "从实际出发",
+        "mechanism_hint": "场景优先、局部条件、非模板化设计"
+      },
+      {
+        "id": "MAO-04",
+        "seed_no": 5,
+        "anchor": "读书是学习，使用也是学习，而且是更重要的学习",
+        "mechanism_hint": "实践反馈、使用中学习、在线校正"
+      },
+      {
+        "id": "MAO-05",
+        "seed_no": 6,
+        "anchor": "实践、认识、再实践、再认识",
+        "mechanism_hint": "迭代闭环、反馈循环、实验主义"
+      },
+      {
+        "id": "MAO-06",
+        "seed_no": 7,
+        "anchor": "感觉到了的东西，我们不能立刻理解它",
+        "mechanism_hint": "观测与解释分离、表征滞后"
+      },
+      {
+        "id": "MAO-07",
+        "seed_no": 8,
+        "anchor": "要透过现象看本质",
+        "mechanism_hint": "表层信号、隐变量、机制识别"
+      },
+      {
+        "id": "MAO-08",
+        "seed_no": 9,
+        "anchor": "一切结论产生于调查情况的末尾",
+        "mechanism_hint": "后验判断、延迟归纳、避免先验答案"
+      },
+      {
+        "id": "MAO-09",
+        "seed_no": 10,
+        "anchor": "你对于某个问题没有调查，就停止你对于某个问题的发言权",
+        "mechanism_hint": "发言权门槛、数据准入资格"
+      },
+      {
+        "id": "MAO-10",
+        "seed_no": 11,
+        "anchor": "矛盾存在于一切事物的发展过程中",
+        "mechanism_hint": "内部张力、动态系统、普遍冲突"
+      },
+      {
+        "id": "MAO-11",
+        "seed_no": 12,
+        "anchor": "事物发展的根本原因，不是在事物的外部而是在事物的内部",
+        "mechanism_hint": "内因优先、内生机制、系统自解释"
+      },
+      {
+        "id": "MAO-12",
+        "seed_no": 13,
+        "anchor": "外因是变化的条件，内因是变化的根据",
+        "mechanism_hint": "环境扰动 vs 内在结构、因果层级"
+      },
+      {
+        "id": "MAO-13",
+        "seed_no": 14,
+        "anchor": "不同质的矛盾，只有用不同质的方法才能解决",
+        "mechanism_hint": "问题分型、异质策略、局部方法论"
+      },
+      {
+        "id": "MAO-14",
+        "seed_no": 15,
+        "anchor": "主要的矛盾起着领导的、决定的作用",
+        "mechanism_hint": "主矛盾识别、瓶颈变量、优先级选择"
+      },
+      {
+        "id": "MAO-15",
+        "seed_no": 16,
+        "anchor": "矛盾的主要方面决定事物的性质",
+        "mechanism_hint": "主导因素、状态判别、相位主导"
+      },
+      {
+        "id": "MAO-16",
+        "seed_no": 17,
+        "anchor": "研究复杂过程就要全力找出主要矛盾",
+        "mechanism_hint": "复杂系统降维、关键冲突、主轴定位"
+      },
+      {
+        "id": "MAO-17",
+        "seed_no": 18,
+        "anchor": "对立统一规律是宇宙的根本规律",
+        "mechanism_hint": "对抗与协同、双重机制、张力生成"
+      },
+      {
+        "id": "MAO-18",
+        "seed_no": 19,
+        "anchor": "共性个性、绝对相对的道理是矛盾问题的精髓",
+        "mechanism_hint": "泛化与特例、全局规律与局部差异"
+      },
+      {
+        "id": "MAO-19",
+        "seed_no": 20,
+        "anchor": "任何过程都转化为别的过程",
+        "mechanism_hint": "阶段演化、状态转移、生命周期"
+      },
+      {
+        "id": "MAO-20",
+        "seed_no": 21,
+        "anchor": "从群众中来，到群众中去",
+        "mechanism_hint": "自下而上、反馈汇聚、群体校准"
+      },
+      {
+        "id": "MAO-21",
+        "seed_no": 22,
+        "anchor": "人民是创造世界历史的动力",
+        "mechanism_hint": "分布式主体、集体智能、底层动力"
+      },
+      {
+        "id": "MAO-22",
+        "seed_no": 23,
+        "anchor": "为人民服务",
+        "mechanism_hint": "服务对象、目标对齐、价值函数"
+      },
+      {
+        "id": "MAO-23",
+        "seed_no": 24,
+        "anchor": "兵民是胜利之本",
+        "mechanism_hint": "基础单元、后勤网络、系统根基"
+      },
+      {
+        "id": "MAO-24",
+        "seed_no": 25,
+        "anchor": "政策确定之后，干部就是决定的因素",
+        "mechanism_hint": "执行层瓶颈、中间环节、代理问题"
+      },
+      {
+        "id": "MAO-25",
+        "seed_no": 26,
+        "anchor": "领导者的责任是出主意、用干部两件事",
+        "mechanism_hint": "决策与执行分离、资源配置、组织设计"
+      },
+      {
+        "id": "MAO-26",
+        "seed_no": 27,
+        "anchor": "团结—批评—团结",
+        "mechanism_hint": "纠错循环、冲突修复、组织学习"
+      },
+      {
+        "id": "MAO-27",
+        "seed_no": 28,
+        "anchor": "惩前毖后，治病救人",
+        "mechanism_hint": "纠错不是惩罚、系统修复"
+      },
+      {
+        "id": "MAO-28",
+        "seed_no": 29,
+        "anchor": "统一战线、武装斗争、党的建设是三个主要法宝",
+        "mechanism_hint": "多机制组合、联盟—行动—组织三角"
+      },
+      {
+        "id": "MAO-29",
+        "seed_no": 30,
+        "anchor": "路线是个纲，纲举目张",
+        "mechanism_hint": "上位结构、纲领变量、系统牵引"
+      },
+      {
+        "id": "MAO-30",
+        "seed_no": 31,
+        "anchor": "星星之火，可以燎原",
+        "mechanism_hint": "小信号放大、临界扩散、增长引爆"
+      },
+      {
+        "id": "MAO-31",
+        "seed_no": 32,
+        "anchor": "战略上藐视敌人，战术上重视敌人",
+        "mechanism_hint": "宏观信心与微观谨慎、双层决策"
+      },
+      {
+        "id": "MAO-32",
+        "seed_no": 33,
+        "anchor": "集中优势兵力，各个歼灭敌人",
+        "mechanism_hint": "局部优势、资源聚焦、分而治之"
+      },
+      {
+        "id": "MAO-33",
+        "seed_no": 34,
+        "anchor": "伤其十指，不如断其一指",
+        "mechanism_hint": "关键突破、局部不可逆、集中打击"
+      },
+      {
+        "id": "MAO-34",
+        "seed_no": 35,
+        "anchor": "敌进我退，敌驻我扰，敌疲我打，敌退我追",
+        "mechanism_hint": "动态响应、非对称策略、时机选择"
+      },
+      {
+        "id": "MAO-35",
+        "seed_no": 36,
+        "anchor": "不打无准备之仗，不打无把握之仗",
+        "mechanism_hint": "准备阈值、风险控制、置信门槛"
+      },
+      {
+        "id": "MAO-36",
+        "seed_no": 37,
+        "anchor": "党指挥枪，不容许枪指挥党",
+        "mechanism_hint": "工具服从目标、控制权、手段边界"
+      },
+      {
+        "id": "MAO-37",
+        "seed_no": 38,
+        "anchor": "一切反动派都是纸老虎",
+        "mechanism_hint": "表面强势与真实脆弱、威慑拆解"
+      },
+      {
+        "id": "MAO-38",
+        "seed_no": 39,
+        "anchor": "枪杆子里面出政权",
+        "mechanism_hint": "强制力基础、底层约束、权力来源"
+      },
+      {
+        "id": "MAO-39",
+        "seed_no": 40,
+        "anchor": "政治是不流血的战争，战争是流血的政治",
+        "mechanism_hint": "冲突连续谱、手段转换"
+      },
+      {
+        "id": "MAO-40",
+        "seed_no": 41,
+        "anchor": "世界上怕就怕\"认真\"二字",
+        "mechanism_hint": "执行强度、细节纪律、质量控制"
+      },
+      {
+        "id": "MAO-41",
+        "seed_no": 42,
+        "anchor": "谦虚使人进步，骄傲使人落后",
+        "mechanism_hint": "认知开放、过度自信、持续校准"
+      },
+      {
+        "id": "MAO-42",
+        "seed_no": 43,
+        "anchor": "自力更生，艰苦奋斗",
+        "mechanism_hint": "内生能力、资源约束、韧性建设"
+      },
+      {
+        "id": "MAO-43",
+        "seed_no": 44,
+        "anchor": "下定决心，不怕牺牲，排除万难，去争取胜利",
+        "mechanism_hint": "高承诺策略、障碍清除、目标坚持"
+      },
+      {
+        "id": "MAO-44",
+        "seed_no": 45,
+        "anchor": "有纪律的党是无敌的",
+        "mechanism_hint": "组织纪律、协调一致性、理论框架"
+      },
+      {
+        "id": "MAO-45",
+        "seed_no": 46,
+        "anchor": "正确的路线确定之后，干部就是决定的因素",
+        "mechanism_hint": "策略—执行落差、实施能力"
+      },
+      {
+        "id": "MAO-46",
+        "seed_no": 47,
+        "anchor": "百花齐放，百家争鸣",
+        "mechanism_hint": "多样探索、观点竞争、创新生态"
+      },
+      {
+        "id": "MAO-47",
+        "seed_no": 48,
+        "anchor": "古为今用，洋为中用",
+        "mechanism_hint": "知识迁移、本土化改造、跨域吸收"
+      },
+      {
+        "id": "MAO-48",
+        "seed_no": 49,
+        "anchor": "一张白纸，没有负担，好写最新最美的文字",
+        "mechanism_hint": "低路径依赖、重构机会、空白系统"
+      },
+      {
+        "id": "MAO-49",
+        "seed_no": 50,
+        "anchor": "中国应当对于人类有较大的贡献",
+        "mechanism_hint": "使命尺度、外部贡献、长期目标"
       }
     ]
   }

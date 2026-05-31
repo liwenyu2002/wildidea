@@ -27,7 +27,7 @@ def pick_chars(chars):
     return chars[i], chars[j]
 
 def make_query(a, b):
-    """试两种组合，选看起来更有故事的"""
+    """把两个字拼成待搜索词。正反两种顺序随机选一种，没有优劣判断。"""
     c1, c2 = a + b, b + a
     return c1 if random.random() > 0.5 else c2
 
