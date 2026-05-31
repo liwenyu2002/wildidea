@@ -88,7 +88,7 @@ wildidea/
 说明：
 
 - `SKILL.md` 是主流程。
-- `references/domains.json` 是外部领域锚点库（D1–D4 + MAO 毛选），每条带稳定 id，可在不改代码的前提下扩充。
+- `references/domains.json` 是外部领域锚点库（D1–D4 + MAO 毛选），每条带稳定 id，可在不改代码的前提下扩充。部分锚点已补充本地方法库（`methods` 字段：真实方法名、机制、输入/过程/输出、论文/代码出处；`transfer_examples` 字段：已知跨域迁移案例）。
 - `scripts/pick_domain_slots.py` 从 `references/domains.json` 按问题类型随机抽取 10 个锚点（分布在 D1–D4、MAO、RANDOM_WORD 等槽位），只返回抽样 JSON，避免每次调用把完整领域库塞进上下文；支持 `--reroll` 重抽单槽位和 `--exclude` 防重抽。
 - `scripts/pick_seed.py` 从 `references/domains.json` 的 MAO 池读取毛选种子，供 `pick_domain_slots.py` 的毛选槽位使用。
 - `scripts/search_char.py` 从 `references/common-chinese-chars.txt` 随机抽取两个汉字生成待搜索词，供随机组词槽位使用。

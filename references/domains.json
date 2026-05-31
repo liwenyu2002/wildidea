@@ -46,14 +46,74 @@
         "domain": "序列建模",
         "anchor": "CTC 允许 blank：不是每一帧都必须贴标签，最后再把重复和 blank 折叠成序列",
         "kind": "经典",
-        "source": "[Graves et al., 2006](https://www.cs.toronto.edu/~graves/icml_2006.pdf)"
+        "source": "[Graves et al., 2006](https://www.cs.toronto.edu/~graves/icml_2006.pdf)",
+        "methods": [
+          {
+            "name": "CTC (Connectionist Temporal Classification)",
+            "mechanism": "输入序列长度远大于输出序列长度时，允许大量帧标为 blank（空白），只在非 blank 位置做判定，最后把连续重复和 blank 折叠成紧凑序列。blank 吸收了时间对齐的不确定性。",
+            "input": "帧级特征序列（长度 T，如音频帧）",
+            "process": "每帧输出一个标签（含 blank），解码时贪心折叠连续重复和 blank",
+            "output": "紧凑标签序列（长度 ≤ T）",
+            "key_insight": "不是每个位置都必须有输出——大量位置标 blank 不仅允许，而且是正确的",
+            "paper": "Graves et al., Connectionist Temporal Classification: Labelling Unsegmented Sequence Data with Recurrent Neural Networks, ICML 2006",
+            "url": "https://www.cs.toronto.edu/~graves/icml_2006.pdf",
+            "code": "torch.nn.CTCLoss (PyTorch built-in)"
+          }
+        ],
+        "transfer_examples": [
+          {
+            "target": "语音识别",
+            "how": "音素序列比音频帧短得多，CTC 用 blank 帧自动对齐不对称长度",
+            "result": "成为端到端语音识别标准损失函数，取代传统 HMM-GMM"
+          },
+          {
+            "target": "手写识别/OCR",
+            "how": "笔画序列与字符序列长度不对称",
+            "result": "大幅降低标注成本，不需要逐帧标注"
+          },
+          {
+            "target": "动作识别",
+            "how": "视频帧序列与动作标签序列长度不对称",
+            "result": "免去逐帧标注，直接从视频到动作序列"
+          }
+        ]
       },
       {
         "id": "D1-01",
         "domain": "鲁棒估计",
         "anchor": "RANSAC 随机抽最小样本拟合模型，只有内点比例超过阈值才接受",
         "kind": "经典",
-        "source": "[Fischler & Bolles, 1981](https://dl.acm.org/doi/10.1145/358669.358692)"
+        "source": "[Fischler & Bolles, 1981](https://dl.acm.org/doi/10.1145/358669.358692)",
+        "methods": [
+          {
+            "name": "RANSAC (Random Sample Consensus)",
+            "mechanism": "面对混有大量离群点的数据，随机抽取能拟合模型的最小样本子集（如 2 个点拟直线），用该子集拟合模型，统计所有数据中有多少落在容差带内（内点）。内点比例超过阈值才接受该模型，否则重抽。",
+            "input": "含离群点的数据集",
+            "process": "重复：随机抽最小样本 → 拟合 → 统计内点比例 → 比例超阈值则接受",
+            "output": "鲁棒拟合的模型（对离群点免疫）",
+            "key_insight": "离群点再多也不怕，只要内点的最小样本被抽到一次就能拟合出正确模型",
+            "paper": "Fischler & Bolles, Random Sample Consensus: A Paradigm for Model Fitting, Communications of the ACM 1981",
+            "url": "https://dl.acm.org/doi/10.1145/358669.358692",
+            "code": "sklearn.linear_model.RANSACRegressor; cv2.findHomography(..., cv2.RANSAC)"
+          }
+        ],
+        "transfer_examples": [
+          {
+            "target": "计算机视觉-特征匹配",
+            "how": "从 SIFT 匹配点中鲁棒估计单应矩阵，排除误匹配",
+            "result": "成为几乎所有视觉 SLAM 和图像拼接的标准步骤"
+          },
+          {
+            "target": "机器人-SLAM",
+            "how": "从激光雷达点云中鲁棒估计地面平面，排除障碍物点",
+            "result": "自动驾驶中地面分割的标准方法"
+          },
+          {
+            "target": "金融-异常交易检测",
+            "how": "从交易数据中拟合正常行为模型，内点=正常交易，离群点=异常",
+            "result": "用于信用卡欺诈检测的鲁棒基线"
+          }
+        ]
       },
       {
         "id": "D1-02",
@@ -144,7 +204,37 @@
         "domain": "贝叶斯决策",
         "anchor": "Thompson sampling 从每个动作的后验里抽一次样，选抽样收益最高者",
         "kind": "经典/通用",
-        "source": "[Agrawal & Goyal, 2012](https://proceedings.mlr.press/v23/agrawal12.html)"
+        "source": "[Agrawal & Goyal, 2012](https://proceedings.mlr.press/v23/agrawal12.html)",
+        "methods": [
+          {
+            "name": "Thompson Sampling",
+            "mechanism": "给每个选项维护一个收益后验分布（如 Beta 分布）。每次决策时，从每个选项的后验里各抽一次样，选样本值最高的选项执行。执行后用观测结果更新后验。分布窄（充分了解）的选项几乎总被选中；分布宽（不确定）的偶尔被选中——探索与利用由分布宽度自动调节。",
+            "input": "各选项的历史观测数据",
+            "process": "从每个后验抽样 → 选最高 → 执行 → 用结果更新后验",
+            "output": "每轮选择的选项",
+            "key_insight": "不需要设计探索率 ε——后验宽度自然决定探索程度",
+            "paper": "Thompson, On the Likelihood that One Unknown Probability Exceeds Another, Biometrika 1933; Russo et al., A Tutorial on Thompson Sampling, Foundations and Trends in ML 2018",
+            "url": "https://arxiv.org/abs/1707.02038",
+            "code": "numpy Beta distribution sampling; vowpalwabbit --cb_explore"
+          }
+        ],
+        "transfer_examples": [
+          {
+            "target": "临床试验",
+            "how": "给每个治疗方案维护治愈率后验，每轮分配更多患者到后验高的方案",
+            "result": "自适应临床试验设计，减少无效治疗的患者数"
+          },
+          {
+            "target": "推荐系统",
+            "how": "给每个推荐策略维护点击率后验，自动平衡探索新策略和利用最优策略",
+            "result": "比 ε-greedy 更高效的内容推荐"
+          },
+          {
+            "target": "A/B 测试",
+            "how": "动态调整流量分配，后验高的变体获得更多流量",
+            "result": "比固定 50/50 分配更快找到最优变体"
+          }
+        ]
       },
       {
         "id": "D1-15",
@@ -291,7 +381,32 @@
         "domain": "自动算法发现",
         "anchor": "AlphaEvolve 让 LLM 生成代码变体，用自动评测器打分，再保留优胜变体进入下一轮进化",
         "kind": "2025 官方系统",
-        "source": "[Google DeepMind AlphaEvolve](https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/)"
+        "source": "[Google DeepMind AlphaEvolve](https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/)",
+        "methods": [
+          {
+            "name": "AlphaEvolve",
+            "mechanism": "用 LLM 生成代码/算法的变异体，每个变异体自动在基准测试上评分，保留得分最高的变异体进入下一轮进化。每一代变异+选择，经过多代逼近最优。LLM 负责创造性变异，自动评测器负责客观筛选。",
+            "input": "初始代码/算法 + 评测基准",
+            "process": "LLM 生成 N 个变异体 → 自动评测打分 → 保留 Top-K → 下一代变异",
+            "output": "进化后的最优代码/算法",
+            "key_insight": "LLM 的创造力 + 自动评测的客观性 = 既新颖又有效的方案",
+            "paper": "DeepMind, AlphaEvolve: A Gemini-powered coding agent for designing advanced algorithms, 2025",
+            "url": "https://deepmind.google/discover/blog/alphaevolve/",
+            "code": "Not publicly available (DeepMind internal)"
+          }
+        ],
+        "transfer_examples": [
+          {
+            "target": "数学优化",
+            "how": "进化矩阵乘法算法，发现比 Strassen 更快的新算法",
+            "result": "在 4×4 矩阵乘法上发现新 SOTA"
+          },
+          {
+            "target": "芯片设计",
+            "how": "进化芯片布局方案，自动优化功耗/面积/时序",
+            "result": "用于 Google TPU 的芯片设计优化"
+          }
+        ]
       },
       {
         "id": "D1-36",
@@ -396,7 +511,32 @@
         "domain": "机器人基础模型",
         "anchor": "GR00T N1 用慢思考系统做规划、快动作系统做连续运动，把机器人控制拆成快慢双系统",
         "kind": "2025 官方系统",
-        "source": "[NVIDIA GR00T N1](https://developer.nvidia.com/blog/nvidia-isaac-gr00t-n1-open-foundation-model-for-generalist-humanoid-robots/)"
+        "source": "[NVIDIA GR00T N1](https://developer.nvidia.com/blog/nvidia-isaac-gr00t-n1-open-foundation-model-for-generalist-humanoid-robots/)",
+        "methods": [
+          {
+            "name": "GR00T N1 (NVIDIA Dual-System Robot Foundation Model)",
+            "mechanism": "把机器人控制拆成快慢两个系统：慢系统（System 2）做高层规划和决策，每几步才更新一次；快系统（System 1）做低层连续运动控制，每步都实时响应。两个系统各管各的节奏，慢系统给快系统发指令，快系统独立执行。",
+            "input": "视觉/本体感知输入 + 任务指令",
+            "process": "慢系统规划动作序列 → 快系统逐帧执行连续运动 → 慢系统定期重规划",
+            "output": "连续的机器人关节控制信号",
+            "key_insight": "规划和执行不需要同频——慢思考+快行动比每步都深度思考更高效",
+            "paper": "NVIDIA, GR00T N1: Open Foundation Model for Generalist Humanoid Robots, 2025",
+            "url": "https://developer.nvidia.com/blog/building-humanoid-robots-with-nvidia-gr00t-n1/",
+            "code": "NVIDIA Isaac (partial)"
+          }
+        ],
+        "transfer_examples": [
+          {
+            "target": "自动驾驶",
+            "how": "慢系统做路径规划（每秒几次），快系统做油门/刹车/转向控制（每秒几十次）",
+            "result": "自动驾驶的标准架构"
+          },
+          {
+            "target": "软件架构-CQRS",
+            "how": "命令侧（快）处理写操作，查询侧（慢）处理复杂读操作，各自独立扩展",
+            "result": "高并发系统的标准模式"
+          }
+        ]
       }
     ],
     "D2": [
@@ -496,7 +636,37 @@
         "domain": "建筑安全",
         "anchor": "防火/防烟分区通过隔断、门和压差限制烟火蔓延，局部失火不应全楼扩散",
         "kind": "工程经典",
-        "source": "[ASHRAE smoke control](https://handbook.ashrae.org/Handbooks/A19/IP/a19_ch54/a19_ch54_ip.aspx)"
+        "source": "[ASHRAE smoke control](https://handbook.ashrae.org/Handbooks/A19/IP/a19_ch54/a19_ch54_ip.aspx)",
+        "methods": [
+          {
+            "name": "Fire Compartmentalization（防火/防烟分区）",
+            "mechanism": "把大空间切成若干隔间，用防火墙、防火门和压差控制连通。正压隔间的空气往负压隔间流，保证烟气只往一个方向走、不会反向蔓延。某个隔间起火时，结构保证火与烟被困在本区内。",
+            "input": "建筑空间布局",
+            "process": "划分隔间 → 安装防火隔断/门 → 设定压差 → 联动排烟系统",
+            "output": "局部失火被限制在本区，相邻区安全",
+            "key_insight": "不是消灭火灾，而是控制火灾的传播范围——牺牲局部保全整体",
+            "paper": "NFPA 80A, NFPA 101 Life Safety Code; BS 9999",
+            "url": "https://en.wikipedia.org/wiki/Compartmentalization_(fire_protection)",
+            "code": "PyroSim (FDS fire simulation); CONTAM (airflow simulation)"
+          }
+        ],
+        "transfer_examples": [
+          {
+            "target": "软件工程-微服务 Bulkhead 模式",
+            "how": "每个微服务有独立的资源池（线程池/连接池），一个服务故障不会耗尽其他服务的资源",
+            "result": "Netflix Hystrix 的核心设计模式"
+          },
+          {
+            "target": "网络安全-网络分段",
+            "how": "把网络切成 VLAN/安全区，一个区被入侵不蔓延到其他区",
+            "result": "零信任架构的基础原则"
+          },
+          {
+            "target": "金融-风险隔离",
+            "how": "不同资产类别放在独立的账户/SPV 中，一个类别爆雷不传染其他",
+            "result": "资产证券化和风险隔离的标准结构"
+          }
+        ]
       },
       {
         "id": "D2-14",
@@ -629,7 +799,37 @@
         "domain": "单细胞组学",
         "anchor": "单细胞和空间组学把细胞身份、状态和空间邻域一起建模，样本不是孤立点而是带邻居的状态点",
         "kind": "2025 生命科学机制",
-        "source": "[Nature Reviews Methods Primers](https://www.nature.com/articles/s43586-025-00392-y)"
+        "source": "[Nature Reviews Methods Primers](https://www.nature.com/articles/s43586-025-00392-y)",
+        "methods": [
+          {
+            "name": "Spatial Transcriptomics（空间转录组学）",
+            "mechanism": "不把每个细胞当作孤立的数据点。把细胞的基因表达特征和它在组织中的空间位置、邻居细胞的类型一起建模。同一个细胞在不同邻居环境中可能表现出完全不同的身份和状态。",
+            "input": "组织切片的基因表达矩阵 + 空间坐标",
+            "process": "每个细胞的特征 = 自身表达 + 邻居表达的加权组合 → 聚类/分类",
+            "output": "考虑空间上下文的细胞类型/状态注释",
+            "key_insight": "细胞的身份不由自身单独决定，而由自身 + 邻居共同决定",
+            "paper": "Ståhl et al., Visualization and analysis of gene expression in tissue sections by spatial transcriptomics, Science 2016; Marx, Method of the Year: spatially resolved transcriptomics, Nature Methods 2021",
+            "url": "https://www.nature.com/articles/s41592-021-01233-2",
+            "code": "squidpy (Python); Scanpy + spatial tools; 10x Genomics Space Ranger"
+          }
+        ],
+        "transfer_examples": [
+          {
+            "target": "图神经网络",
+            "how": "GNN 中每个节点的表征由自身特征 + 邻居节点特征聚合而成",
+            "result": "GNN 的核心思想与空间转录组学的邻域建模完全同构"
+          },
+          {
+            "target": "推荐系统-协同过滤",
+            "how": "用户的偏好不只由自身行为决定，还由相似用户的行为决定",
+            "result": "ItemCF/UserCF 的核心假设"
+          },
+          {
+            "target": "城市规划",
+            "how": "一个区域的活力由自身设施 + 周边区域的人流/功能共同决定",
+            "result": "城市活力分析的空间统计方法"
+          }
+        ]
       },
       {
         "id": "D2-33",
@@ -722,7 +922,37 @@
         "domain": "电影",
         "anchor": "蒙太奇通过镜头碰撞产生单个镜头没有的意义",
         "kind": "经典",
-        "source": "[Soviet montage theory](https://www.britannica.com/art/montage-filmmaking)"
+        "source": "[Soviet montage theory](https://www.britannica.com/art/montage-filmmaking)",
+        "methods": [
+          {
+            "name": "Kuleshov Effect / Soviet Montage Theory",
+            "mechanism": "两个单独看各自平淡的镜头，剪辑在一起时会产生单个镜头本来没有的新意义。意义不在任何单一镜头里，而是在两个镜头的碰撞中涌现。库列肖夫实验证明：同一个演员的中性表情，配上不同的上下文镜头（食物/棺材/孩子），观众解读出完全不同的表情。",
+            "input": "多个独立拍摄的镜头素材",
+            "process": "选择镜头 → 确定剪辑顺序 → 镜头碰撞产生新意义",
+            "output": "单个镜头没有的、在碰撞中涌现的意义",
+            "key_insight": "意义不在元素本身，而在元素的并置关系中",
+            "paper": "Kuleshov, The Art of Cinema, 1929; Eisenstein, Film Form and The Film Sense",
+            "url": "https://en.wikipedia.org/wiki/Kuleshov_effect",
+            "code": "N/A (aesthetic/creative principle)"
+          }
+        ],
+        "transfer_examples": [
+          {
+            "target": "数据可视化",
+            "how": "两个单独看各自平淡的图表，并排放置时暴露出数据中隐藏的对比关系",
+            "result": "小倍数(small multiples)可视化的核心原则"
+          },
+          {
+            "target": "机器学习-对比学习",
+            "how": "正样本对和负样本对的并置，让模型学到单独看每个样本学不到的区分性表征",
+            "result": "SimCLR/CLIP 的核心训练机制"
+          },
+          {
+            "target": "药物研发-药物组合",
+            "how": "两种单独无效的药物组合使用时产生协同效应",
+            "result": "高通量药物组合筛选的方法论"
+          }
+        ]
       },
       {
         "id": "D3-05",
@@ -1375,7 +1605,37 @@
         "id": "MAO-36",
         "seed_no": 37,
         "anchor": "党指挥枪，不容许枪指挥党",
-        "mechanism_hint": "工具服从目标、控制权、手段边界"
+        "mechanism_hint": "工具服从目标、控制权、手段边界",
+        "methods": [
+          {
+            "name": "手段-目标控制原则（党指挥枪）",
+            "mechanism": "手段必须服从目标，不允许手段反过来控制目标。工具再强大，也只是实现上位目标的手段；当工具的行为偏离上位目标时，必须由目标侧发出指令纠正工具侧。控制权始终在目标方、不在手段方。",
+            "input": "目标声明 + 手段执行记录",
+            "process": "目标层声明方向 → 手段层执行 → 定期一致性校验 → 偏离时由目标层纠偏",
+            "output": "手段始终对齐目标的执行结果",
+            "key_insight": "控制权的归属比手段本身更重要——谁有权决定方向，谁就控制系统",
+            "paper": "毛泽东，《战争和战略问题》，1938",
+            "url": "N/A",
+            "code": "N/A (organizational/strategic principle)"
+          }
+        ],
+        "transfer_examples": [
+          {
+            "target": "AI 对齐-Instrumental Convergence",
+            "how": "AI 系统的子目标（自我保护、资源获取）可能偏离人类设定的上位目标",
+            "result": "AI 安全领域的核心问题之一"
+          },
+          {
+            "target": "公司治理-股东vs管理层",
+            "how": "管理层（手段）可能追求自身利益偏离股东（目标）利益",
+            "result": "委托代理理论的核心框架"
+          },
+          {
+            "target": "软件架构-策略模式",
+            "how": "算法（手段）可以自由切换，但必须服从接口契约（目标）的约束",
+            "result": "策略模式/依赖注入的设计原则"
+          }
+        ]
       },
       {
         "id": "MAO-37",
