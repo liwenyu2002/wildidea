@@ -34,13 +34,21 @@ def cmd_generate(args):
     _cfg = _get_cfg()
 
     # Fix judge model name to match provider
-    # If user hasn't explicitly set --judge-model, adapt to provider
-    if judge_model == "anthropic/claude-sonnet-4.5" and args.provider == "deepseek":
-        judge_model = "deepseek-v4-pro"
-    elif judge_model == "anthropic/claude-sonnet-4.5" and args.provider == "xiaomi":
-        judge_model = "xiaomi/mimo-v2.5-pro"
+    # Strip provider prefix for direct API providers
+    if args.provider == "deepseek" and judge_model.startswith("deepseek/"):
+        judge_model = judge_model.split("/", 1)[1]  # deepseek/deepseek-v4-pro -> deepseek-v4-pro
+    elif args.provider == "xiaomi" and "/" in judge_model:
+        judge_model = judge_model.split("/", 1)[1] if judge_model.startswith("xiaomi/") else judge_model
 
     sd_thr, sd_avg = get_calibrated_thresholds(judge_model, _cfg)
+
+    # Also fix generation model name for direct APIs
+    gen_model = args.model
+    if args.provider == "deepseek" and gen_model.startswith("deepseek/"):
+        gen_model = gen_model.split("/", 1)[1]
+    elif args.provider == "xiaomi" and gen_model.startswith("xiaomi/"):
+        gen_model = gen_model.split("/", 1)[1]
+
     judge_config = JudgeConfig(
         model=judge_model, provider=args.provider,
         api_key=args.api_key, base_url=args.base_url, proxy=args.proxy,
@@ -48,7 +56,7 @@ def cmd_generate(args):
     )
 
     config = Config(
-        provider=args.provider, model=args.model,
+        provider=args.provider, model=gen_model,
         api_key=args.api_key, base_url=args.base_url, proxy=args.proxy,
         judge_config=judge_config,
         forbid_terms=args.forbid_proto_term or [],
@@ -58,7 +66,7 @@ def cmd_generate(args):
     )
 
     section("Configuration")
-    info(f"Model:  {bold(args.model)}")
+    info(f"Model:  {bold(gen_model)}")
     info(f"Judge:  {bold(judge_model)} (SD threshold: ≥ {sd_thr})")
     info(f"Search: {'enabled' if config.search_enabled else 'disabled'}")
 
