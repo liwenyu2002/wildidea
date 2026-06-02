@@ -56,22 +56,59 @@ def cmd_generate(args):
 
     section("Generating candidates")
 
+    # Dashboard for parallel mode
+    dashboard = None
+    worker_map = {}  # maps thread id to worker index
+    next_worker = [0]
+
     def on_progress(event, data):
+        nonlocal dashboard
+
         if event == "type":
             info(f"Problem type: {bold(data['value'])}")
+        elif event == "parallel_start":
+            from .dashboard import Dashboard
+            n = data["workers"]
+            dashboard = Dashboard(n_workers=n, cols=min(n, 3))
+            dashboard.show()
         elif event == "slots_done":
-            info(f"Got {data['count']} domain slots")
+            if not dashboard:
+                info(f"Got {data['count']} domain slots")
         elif event == "generating":
-            done, slot, domain = data["done"], data["slot"], data["domain"]
-            print(f"  {dim(f'[{done}/10]')} Generating from {cyan(slot)} ({dim(domain)})...", end=" ", flush=True)
+            if dashboard:
+                # Assign a worker slot
+                import threading
+                tid = threading.current_thread().ident
+                if tid not in worker_map:
+                    worker_map[tid] = next_worker[0]
+                    next_worker[0] = (next_worker[0] + 1) % dashboard.n_workers
+                wi = worker_map[tid]
+                dashboard.update(wi, status="generating", slot=data["slot"], domain=data["domain"], attempt=data.get("attempt", 1))
+            else:
+                done, slot, domain = data["done"], data["slot"], data["domain"]
+                print(f"  {dim(f'[{done}/10]')} Generating from {cyan(slot)} ({dim(domain)})...", end=" ", flush=True)
         elif event == "candidate_ok":
-            print(f"{green('✔')} {bold(data['name'])}")
+            if dashboard:
+                import threading
+                tid = threading.current_thread().ident
+                wi = worker_map.get(tid, 0)
+                dashboard.update(wi, status="done", name=data["name"])
+            else:
+                print(f"{green('✔')} {bold(data['name'])}")
         elif event == "banned":
-            print(f"{yellow('✗')} banned by search")
+            if not dashboard:
+                print(f"{yellow('✗')} banned by search")
         elif event == "invalid":
-            print(f"{yellow('✗')} {data['errors'][0][:40]}")
+            if not dashboard:
+                print(f"{yellow('✗')} {data['errors'][0][:40]}")
         elif event == "gen_fail":
-            print(f"{red('✗')} {data['reason']}")
+            if dashboard:
+                import threading
+                tid = threading.current_thread().ident
+                wi = worker_map.get(tid, 0)
+                dashboard.update(wi, status="fail", error=data["reason"])
+            else:
+                print(f"{red('✗')} {data['reason']}")
         elif event == "judging_start":
             section(f"Judging ({data['count']} candidates)")
         elif event == "judging":
@@ -86,6 +123,10 @@ def cmd_generate(args):
             warn(f"Eliminated {data['count']} candidates below threshold")
         elif event == "rendered":
             success(f"HTML → {data['path']}")
+        elif event == "done":
+            if dashboard:
+                ok = data.get("candidates", 0)
+                dashboard.finish(ok, max(0, 10 - ok))
         elif event == "error":
             error(data['message'])
 
