@@ -106,6 +106,27 @@ def cmd_validate(args):
     return 0
 
 
+def _apply_config(args):
+    """Apply saved config as defaults for generate command."""
+    from .configure import get_config
+    config = get_config()
+    if not hasattr(args, "provider"):
+        return
+    # CLI args override saved config
+    if args.provider == "openrouter" and config.get("provider"):
+        args.provider = config["provider"]
+    if args.model == "anthropic/claude-sonnet-4.5" and config.get("model"):
+        args.model = config["model"]
+    if args.judge_model == "anthropic/claude-sonnet-4.5" and config.get("judge_model"):
+        args.judge_model = config["judge_model"]
+    if not args.api_key and config.get("api_key") and config["api_key"] != "__ENV__":
+        args.api_key = config["api_key"]
+    if not args.base_url and config.get("base_url"):
+        args.base_url = config["base_url"]
+    if not args.proxy and config.get("proxy"):
+        args.proxy = config["proxy"]
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="wildidea",
@@ -115,6 +136,11 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logging")
 
     sub = parser.add_subparsers(dest="command", required=True)
+
+    # --- configure ---
+    cfg = sub.add_parser("configure", help="Interactive setup wizard")
+    cfg.add_argument("--show", action="store_true", help="Show current config")
+    cfg.add_argument("--reset", action="store_true", help="Reset config")
 
     # --- generate ---
     gen = sub.add_parser("generate", help="Generate innovation candidates")
@@ -153,7 +179,16 @@ def main():
         datefmt="%H:%M:%S",
     )
 
-    if args.command == "generate":
+    if args.command == "configure":
+        from .configure import configure, show_config, reset_config
+        if args.show:
+            show_config()
+        elif args.reset:
+            reset_config()
+        else:
+            configure()
+    elif args.command == "generate":
+        _apply_config(args)
         cmd_generate(args)
     elif args.command == "validate":
         sys.exit(cmd_validate(args))
