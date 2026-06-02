@@ -19,22 +19,45 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 
 PROVIDERS = {
     "1": {
-        "name": "OpenRouter",
+        "name": "OpenRouter（300+ 模型，一个 key 走天下）",
         "id": "openrouter",
         "base_url": "https://openrouter.ai/api/v1",
         "env_key": "OPENROUTER_API_KEY",
         "models": [
             "anthropic/claude-sonnet-4.5",
-            "anthropic/claude-sonnet-4",
             "anthropic/claude-opus-4.8",
             "deepseek/deepseek-v4-pro",
-            "deepseek/deepseek-r1",
             "google/gemini-2.5-flash",
             "openai/gpt-4.1",
+            "openai/o3-mini",
         ],
     },
     "2": {
-        "name": "OpenAI",
+        "name": "DeepSeek（官方直连）",
+        "id": "deepseek",
+        "base_url": "https://api.deepseek.com/v1",
+        "env_key": "DEEPSEEK_API_KEY",
+        "models": [
+            "deepseek-chat",
+            "deepseek-reasoner",
+        ],
+    },
+    "3": {
+        "name": "硅基流动 SiliconFlow（MiMo / Qwen / 国产模型）",
+        "id": "siliconflow",
+        "base_url": "https://api.siliconflow.cn/v1",
+        "env_key": "SILICONFLOW_API_KEY",
+        "models": [
+            "XiaomiMiMo/MiMo-V2.5-Pro",
+            "Qwen/Qwen2.5-72B-Instruct",
+            "deepseek-ai/DeepSeek-V3",
+            "deepseek-ai/DeepSeek-R1",
+            "Pro/deepseek-ai/DeepSeek-V3",
+            "Pro/deepseek-ai/DeepSeek-R1",
+        ],
+    },
+    "4": {
+        "name": "OpenAI（官方直连）",
         "id": "openai",
         "base_url": "https://api.openai.com/v1",
         "env_key": "OPENAI_API_KEY",
@@ -45,8 +68,8 @@ PROVIDERS = {
             "o3-mini",
         ],
     },
-    "3": {
-        "name": "Ollama (本地)",
+    "5": {
+        "name": "Ollama（本地部署）",
         "id": "ollama",
         "base_url": "http://localhost:11434/v1",
         "env_key": None,
@@ -55,9 +78,10 @@ PROVIDERS = {
             "qwen2.5:72b",
             "deepseek-r1:70b",
             "mistral-large",
+            "MiMo-V2.5-Pro",
         ],
     },
-    "4": {
+    "6": {
         "name": "自定义 (OpenAI-compatible API)",
         "id": "custom",
         "base_url": None,
@@ -67,9 +91,10 @@ PROVIDERS = {
 }
 
 JUDGE_MODELS = {
-    "1": {"name": "Claude Sonnet 4.5 (推荐，论文原版)", "model": "anthropic/claude-sonnet-4.5"},
-    "2": {"name": "DeepSeek V4 Pro (免费)", "model": "deepseek/deepseek-v4-pro"},
-    "3": {"name": "和生成模型相同", "model": "same_as_generation"},
+    "1": {"name": "Claude Sonnet 4.5（推荐，论文原版，最稳定）", "model": "anthropic/claude-sonnet-4.5"},
+    "2": {"name": "DeepSeek V4 Pro（免费，评分偏高约 +0.5）", "model": "deepseek/deepseek-v4-pro"},
+    "3": {"name": "MiMo V2.5 Pro（国产，性价比高）", "model": "XiaomiMiMo/MiMo-V2.5-Pro"},
+    "4": {"name": "和生成模型相同（最后手段）", "model": "same_as_generation"},
 }
 
 

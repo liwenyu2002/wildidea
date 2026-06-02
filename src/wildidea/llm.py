@@ -20,6 +20,14 @@ PROVIDERS = {
         "base_url": "https://api.openai.com/v1",
         "env_key": "OPENAI_API_KEY",
     },
+    "deepseek": {
+        "base_url": "https://api.deepseek.com/v1",
+        "env_key": "DEEPSEEK_API_KEY",
+    },
+    "siliconflow": {
+        "base_url": "https://api.siliconflow.cn/v1",
+        "env_key": "SILICONFLOW_API_KEY",
+    },
     "ollama": {
         "base_url": "http://localhost:11434/v1",
         "env_key": None,
