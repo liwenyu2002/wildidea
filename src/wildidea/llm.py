@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import urllib.error
 import urllib.request
 from typing import Optional
 
@@ -120,8 +121,17 @@ class LLMClient:
             opener = urllib.request.build_opener(handler)
         else:
             opener = urllib.request.build_opener()
-        with opener.open(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode())
+        try:
+            with opener.open(req, timeout=timeout) as resp:
+                return json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            body = e.read().decode() if e.fp else ""
+            try:
+                err = json.loads(body)
+                msg = err.get("error", {}).get("message", body[:200])
+            except:
+                msg = body[:200] if body else str(e)
+            raise RuntimeError(f"API error {e.code}: {msg}") from e
 
     def chat(
         self,
