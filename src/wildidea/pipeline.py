@@ -5,6 +5,7 @@ import json
 import logging
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -44,6 +45,7 @@ class Config:
     output_dir: Path = field(default_factory=lambda: Path("outputs"))
     search_enabled: bool = True
     max_retries: int = 3
+    parallel: int = 1  # Number of parallel generation workers (1 = sequential)
 
 
 @dataclass
@@ -173,49 +175,94 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
 
     _emit("slots_done", count=len(slots))
 
-    # 2. Generate candidates
+    # 2. Generate candidates (parallel or sequential)
     candidates: list[Candidate] = []
     exclude_ids = []
+    slots_todo = list(slots)
 
-    for slot_i, slot in enumerate(slots):
-        if len(candidates) >= 10:
-            break
-
+    def _try_slot(slot):
+        """Try to generate one candidate from a slot. Returns (slot, raw_dict) or (slot, None)."""
         slot_name = slot.get("slot", "?")
-        domain = slot.get("domain", "?")
-
         for attempt in range(config.max_retries):
-            _emit("generating", slot=slot_name, domain=domain, attempt=attempt+1, total=len(slots), done=len(candidates))
-
             raw = _generate_candidate(problem, slot, llm)
             if not raw:
-                _emit("gen_fail", slot=slot_name, reason="empty response")
                 continue
-
-            # 3. Search dedup
             if config.search_enabled:
                 if _search_dedup(raw.get("name", ""), raw.get("desc", "")):
-                    _emit("banned", slot=slot_name, name=raw.get("name", ""), reason="search dedup")
                     continue
-
-            # 4. Validate
             errors = _validate_candidate(raw, config.forbid_terms)
             if errors:
-                _emit("invalid", slot=slot_name, errors=errors)
                 continue
+            return slot, raw
+        return slot, None
 
-            c = Candidate(
-                name=raw["name"],
-                slot=raw.get("slot", slot_name),
-                source=raw.get("source", domain),
-                proto=raw.get("proto", ""),
-                desc=raw.get("desc", ""),
-                fail=raw.get("fail", ""),
-            )
-            candidates.append(c)
-            exclude_ids.append(slot.get("id", ""))
-            _emit("candidate_ok", name=c.name, slot=c.slot, source=c.source, done=len(candidates))
-            break
+    if config.parallel > 1:
+        # Parallel generation
+        _emit("parallel_start", workers=config.parallel, total=len(slots_todo))
+        with ThreadPoolExecutor(max_workers=config.parallel) as pool:
+            futures = {pool.submit(_try_slot, s): s for s in slots_todo[:config.parallel * 2]}
+            for future in as_completed(futures):
+                if len(candidates) >= 10:
+                    break
+                slot, raw = future.result()
+                slot_name = slot.get("slot", "?")
+                domain = slot.get("domain", "?")
+                if raw:
+                    c = Candidate(
+                        name=raw["name"],
+                        slot=raw.get("slot", slot_name),
+                        source=raw.get("source", domain),
+                        proto=raw.get("proto", ""),
+                        desc=raw.get("desc", ""),
+                        fail=raw.get("fail", ""),
+                    )
+                    candidates.append(c)
+                    exclude_ids.append(slot.get("id", ""))
+                    _emit("candidate_ok", name=c.name, slot=c.slot, source=c.source, done=len(candidates))
+                else:
+                    _emit("gen_fail", slot=slot_name, reason="exhausted retries")
+
+            # If not enough, fill with sequential
+            remaining = [s for s in slots_todo if s.get("id") not in exclude_ids]
+            for slot in remaining:
+                if len(candidates) >= 10:
+                    break
+                slot_name = slot.get("slot", "?")
+                domain = slot.get("domain", "?")
+                _emit("generating", slot=slot_name, domain=domain, attempt=1, total=len(slots), done=len(candidates))
+                _, raw = _try_slot(slot)
+                if raw:
+                    c = Candidate(
+                        name=raw["name"], slot=raw.get("slot", slot_name),
+                        source=raw.get("source", domain), proto=raw.get("proto", ""),
+                        desc=raw.get("desc", ""), fail=raw.get("fail", ""),
+                    )
+                    candidates.append(c)
+                    _emit("candidate_ok", name=c.name, slot=c.slot, source=c.source, done=len(candidates))
+                else:
+                    _emit("gen_fail", slot=slot_name, reason="exhausted retries")
+    else:
+        # Sequential generation (original behavior)
+        for slot_i, slot in enumerate(slots_todo):
+            if len(candidates) >= 10:
+                break
+            slot_name = slot.get("slot", "?")
+            domain = slot.get("domain", "?")
+            for attempt in range(config.max_retries):
+                _emit("generating", slot=slot_name, domain=domain, attempt=attempt+1, total=len(slots), done=len(candidates))
+                _, raw = _try_slot(slot)
+                if raw:
+                    c = Candidate(
+                        name=raw["name"], slot=raw.get("slot", slot_name),
+                        source=raw.get("source", domain), proto=raw.get("proto", ""),
+                        desc=raw.get("desc", ""), fail=raw.get("fail", ""),
+                    )
+                    candidates.append(c)
+                    exclude_ids.append(slot.get("id", ""))
+                    _emit("candidate_ok", name=c.name, slot=c.slot, source=c.source, done=len(candidates))
+                    break
+                else:
+                    _emit("gen_fail", slot=slot_name, reason="empty response")
 
     _emit("candidates_done", count=len(candidates))
     result.candidates = candidates

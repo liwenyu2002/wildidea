@@ -46,6 +46,7 @@ def cmd_generate(args):
         forbid_terms=args.forbid_proto_term or [],
         output_dir=Path(args.output_dir),
         search_enabled=not args.no_search,
+        parallel=args.parallel,
     )
 
     section("Configuration")
@@ -214,6 +215,7 @@ def main():
     gen.add_argument("--forbid-proto-term", nargs="+", metavar="TERM", help="De-anchoring terms")
     gen.add_argument("--output-dir", default="outputs", help="Output directory")
     gen.add_argument("--no-search", action="store_true", help="Disable search dedup")
+    gen.add_argument("--parallel", type=int, default=1, help="Parallel workers for generation (default: 1)")
 
     # --- validate ---
     val = sub.add_parser("validate", help="Validate an HTML poster")
