@@ -32,6 +32,14 @@ def cmd_generate(args):
     from .calibrate import get_calibrated_thresholds
     from .configure import get_config as _get_cfg
     _cfg = _get_cfg()
+
+    # Fix judge model name to match provider
+    # If user hasn't explicitly set --judge-model, adapt to provider
+    if judge_model == "anthropic/claude-sonnet-4.5" and args.provider == "deepseek":
+        judge_model = "deepseek-v4-pro"
+    elif judge_model == "anthropic/claude-sonnet-4.5" and args.provider == "xiaomi":
+        judge_model = "xiaomi/mimo-v2.5-pro"
+
     sd_thr, sd_avg = get_calibrated_thresholds(judge_model, _cfg)
     judge_config = JudgeConfig(
         model=judge_model, provider=args.provider,
@@ -175,6 +183,7 @@ def cmd_generate(args):
         "avg_scores": result.avg_scores,
     }
     json_path = Path(args.output_dir) / f"{Path(result.html_path).stem if result.html_path else 'result'}.json"
+    json_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # Result summary
