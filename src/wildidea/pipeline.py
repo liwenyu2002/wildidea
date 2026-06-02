@@ -134,19 +134,24 @@ def _validate_candidate(candidate: dict, forbid_terms: list[str]) -> list[str]:
     return errors
 
 
-def run(problem: str, config: Config) -> Result:
+def run(problem: str, config: Config, on_progress=None) -> Result:
     """Execute the full WildIdea pipeline.
 
     Args:
         problem: The user's problem statement.
         config: Pipeline configuration.
+        on_progress: Optional callback(event: str, data: dict) for real-time progress.
 
     Returns:
         Result with HTML path, candidates, and scores.
     """
+    def _emit(event: str, **data):
+        if on_progress:
+            on_progress(event, data)
+
     result = Result()
     problem_type = detect_type(problem)
-    logger.info(f"Problem type: {problem_type}")
+    _emit("type", value=problem_type)
 
     # Initialize LLM client
     llm = LLMClient(
@@ -158,62 +163,70 @@ def run(problem: str, config: Config) -> Result:
     )
 
     # 1. Pick domain slots
-    logger.info("Picking domain slots...")
+    _emit("slots_start")
     try:
         slots = build_slots(problem_type)
     except PoolExhausted as e:
         result.errors.append(str(e))
+        _emit("error", message=str(e))
         return result
 
-    logger.info(f"Got {len(slots)} slots")
+    _emit("slots_done", count=len(slots))
 
     # 2. Generate candidates
     candidates: list[Candidate] = []
     exclude_ids = []
 
-    for slot in slots:
+    for slot_i, slot in enumerate(slots):
         if len(candidates) >= 10:
             break
 
+        slot_name = slot.get("slot", "?")
+        domain = slot.get("domain", "?")
+
         for attempt in range(config.max_retries):
-            logger.info(f"  Generating candidate for {slot.get('slot','?')} ({slot.get('domain','?')}) attempt {attempt+1}")
+            _emit("generating", slot=slot_name, domain=domain, attempt=attempt+1, total=len(slots), done=len(candidates))
 
             raw = _generate_candidate(problem, slot, llm)
             if not raw:
+                _emit("gen_fail", slot=slot_name, reason="empty response")
                 continue
 
             # 3. Search dedup
             if config.search_enabled:
                 if _search_dedup(raw.get("name", ""), raw.get("desc", "")):
-                    logger.info(f"    Banned by search dedup")
+                    _emit("banned", slot=slot_name, name=raw.get("name", ""), reason="search dedup")
                     continue
 
             # 4. Validate
             errors = _validate_candidate(raw, config.forbid_terms)
             if errors:
-                logger.info(f"    Validation failed: {errors}")
+                _emit("invalid", slot=slot_name, errors=errors)
                 continue
 
-            candidates.append(Candidate(
+            c = Candidate(
                 name=raw["name"],
-                slot=raw.get("slot", slot.get("slot", "?")),
-                source=raw.get("source", slot.get("domain", "?")),
+                slot=raw.get("slot", slot_name),
+                source=raw.get("source", domain),
                 proto=raw.get("proto", ""),
                 desc=raw.get("desc", ""),
                 fail=raw.get("fail", ""),
-            ))
+            )
+            candidates.append(c)
             exclude_ids.append(slot.get("id", ""))
+            _emit("candidate_ok", name=c.name, slot=c.slot, source=c.source, done=len(candidates))
             break
 
-    logger.info(f"Generated {len(candidates)} candidates")
+    _emit("candidates_done", count=len(candidates))
     result.candidates = candidates
 
     # 5. Independent judge evaluation
     if candidates and config.judge_config:
-        logger.info("Running independent judge evaluation...")
+        _emit("judging_start", count=len(candidates))
         judge = JudgeClient(config.judge_config)
-        for c in candidates:
+        for i, c in enumerate(candidates, 1):
             try:
+                _emit("judging", name=c.name, index=i, total=len(candidates))
                 c.scores = judge.evaluate(
                     problem=problem,
                     source_domain=c.source,
@@ -221,15 +234,16 @@ def run(problem: str, config: Config) -> Result:
                     proto=c.proto,
                     desc=c.desc,
                 )
-                logger.info(f"  {c.name}: SD={c.scores.structural_depth}")
+                _emit("judged", name=c.name, sd=c.scores.structural_depth, nv=c.scores.novelty)
             except Exception as e:
-                logger.warning(f"  Judge failed for {c.name}: {e}")
+                _emit("judge_fail", name=c.name, error=str(e))
 
         # 6. Eliminate low scores
         before = len(candidates)
         candidates = [c for c in candidates if c.scores and judge.passes_threshold(c.scores)]
-        if len(candidates) < before:
-            logger.info(f"Eliminated {before - len(candidates)} candidates below SD threshold")
+        eliminated = before - len(candidates)
+        if eliminated:
+            _emit("eliminated", count=eliminated)
         result.candidates = candidates
 
     # 7. Compute average scores
@@ -262,6 +276,7 @@ def run(problem: str, config: Config) -> Result:
             ban_tags=config.forbid_terms[:8],
             stats=stats,
         )
-        logger.info(f"HTML saved to {result.html_path}")
+        _emit("rendered", path=str(result.html_path))
 
+    _emit("done", candidates=len(candidates), scores=result.avg_scores)
     return result

@@ -54,7 +54,39 @@ def cmd_generate(args):
     info(f"Search: {'enabled' if config.search_enabled else 'disabled'}")
 
     section("Generating candidates")
-    result = run(args.problem, config)
+
+    def on_progress(event, data):
+        if event == "type":
+            info(f"Problem type: {bold(data['value'])}")
+        elif event == "slots_done":
+            info(f"Got {data['count']} domain slots")
+        elif event == "generating":
+            print(f"  {dim(f'[{data[\"done\"]}/10]')} Generating from {cyan(data['slot'])} ({dim(data['domain'])})...", end=" ", flush=True)
+        elif event == "candidate_ok":
+            print(f"{green('✔')} {bold(data['name'])}")
+        elif event == "banned":
+            print(f"{yellow('✗')} banned by search")
+        elif event == "invalid":
+            print(f"{yellow('✗')} {data['errors'][0][:40]}")
+        elif event == "gen_fail":
+            print(f"{red('✗')} {data['reason']}")
+        elif event == "judging_start":
+            section(f"Judging ({data['count']} candidates)")
+        elif event == "judging":
+            print(f"  {dim(f'[{data[\"index\"]}/{data[\"total\"]}]')} {data['name']}...", end=" ", flush=True)
+        elif event == "judged":
+            sd_str = green(str(data['sd'])) if data['sd'] >= sd_thr else yellow(str(data['sd']))
+            print(f"SD={sd_str} NV={data['nv']}")
+        elif event == "judge_fail":
+            print(f"{red('FAIL')} {data['error'][:40]}")
+        elif event == "eliminated":
+            warn(f"Eliminated {data['count']} candidates below threshold")
+        elif event == "rendered":
+            success(f"HTML → {data['path']}")
+        elif event == "error":
+            error(data['message'])
+
+    result = run(args.problem, config, on_progress=on_progress)
 
     if result.errors:
         for e in result.errors:
