@@ -112,14 +112,14 @@ JUDGE_MODELS = {
 def load_config() -> dict:
     """Load config from ~/.wildidea/config.json."""
     if CONFIG_FILE.exists():
-        return json.loads(CONFIG_FILE.read_text())
+        return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
     return {}
 
 
 def save_config(config: dict):
     """Save config to ~/.wildidea/config.json."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    CONFIG_FILE.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+    CONFIG_FILE.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\n配置已保存到 {CONFIG_FILE}")
 
 

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Paths relative to project root
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-_SYSTEM_PROMPT = (Path(__file__).parent / "prompts" / "system.txt").read_text()
+_SYSTEM_PROMPT = (Path(__file__).parent / "prompts" / "system.txt").read_text(encoding="utf-8")
 _TEMPLATE = _PROJECT_ROOT / "templates" / "poster.html"
 
 # Problem type keywords

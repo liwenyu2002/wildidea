@@ -15,7 +15,7 @@ from .llm import LLMClient
 
 
 _JUDGE_TEMPLATE = string.Template(
-    (Path(__file__).parent / "prompts" / "judge.txt").read_text()
+    (Path(__file__).parent / "prompts" / "judge.txt").read_text(encoding="utf-8")
 )
 
 
