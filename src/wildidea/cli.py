@@ -61,7 +61,8 @@ def cmd_generate(args):
         elif event == "slots_done":
             info(f"Got {data['count']} domain slots")
         elif event == "generating":
-            print(f"  {dim(f'[{data[\"done\"]}/10]')} Generating from {cyan(data['slot'])} ({dim(data['domain'])})...", end=" ", flush=True)
+            done, slot, domain = data["done"], data["slot"], data["domain"]
+            print(f"  {dim(f'[{done}/10]')} Generating from {cyan(slot)} ({dim(domain)})...", end=" ", flush=True)
         elif event == "candidate_ok":
             print(f"{green('✔')} {bold(data['name'])}")
         elif event == "banned":
@@ -73,7 +74,8 @@ def cmd_generate(args):
         elif event == "judging_start":
             section(f"Judging ({data['count']} candidates)")
         elif event == "judging":
-            print(f"  {dim(f'[{data[\"index\"]}/{data[\"total\"]}]')} {data['name']}...", end=" ", flush=True)
+            idx, total, name = data["index"], data["total"], data["name"]
+            print(f"  {dim(f'[{idx}/{total}]')} {name}...", end=" ", flush=True)
         elif event == "judged":
             sd_str = green(str(data['sd'])) if data['sd'] >= sd_thr else yellow(str(data['sd']))
             print(f"SD={sd_str} NV={data['nv']}")
