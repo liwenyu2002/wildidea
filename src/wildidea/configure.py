@@ -38,8 +38,10 @@ PROVIDERS = {
         "base_url": "https://api.deepseek.com/v1",
         "env_key": "DEEPSEEK_API_KEY",
         "models": [
-            "deepseek-chat",
-            "deepseek-reasoner",
+            "deepseek-v4-pro",
+            "deepseek-v4-flash",
+            "deepseek-v3.2",
+            "deepseek-r1-0528",
         ],
     },
     "3": {
@@ -50,9 +52,7 @@ PROVIDERS = {
         "models": [
             "XiaomiMiMo/MiMo-V2.5-Pro",
             "Qwen/Qwen2.5-72B-Instruct",
-            "deepseek-ai/DeepSeek-V3",
-            "deepseek-ai/DeepSeek-R1",
-            "Pro/deepseek-ai/DeepSeek-V3",
+            "Pro/deepseek-ai/DeepSeek-V4-Pro",
             "Pro/deepseek-ai/DeepSeek-R1",
         ],
     },
