@@ -190,10 +190,11 @@ def save_calibration(result: dict):
 
 
 def get_calibrated_thresholds(model: str, config: dict) -> tuple[int, float]:
-    """Get thresholds for a model, using calibration if available."""
+    """Get thresholds for a model: calibration > default table > fallback."""
+    # 1. Check calibration
     cal = config.get("judge_calibration", {})
     if cal.get("model") == model:
         return cal.get("sd_threshold", 6), cal.get("sd_avg_threshold", 6.0)
-    # Fall back to default table
+    # 2. Check default table
     from .judge import get_thresholds
     return get_thresholds(model)

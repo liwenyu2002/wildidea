@@ -16,7 +16,7 @@ from pathlib import Path
 from . import __version__
 from .style import (
     banner, section, step, score_line, candidate_card,
-    result_box, success, warn, error, info, bold, dim, cyan, green, red,
+    result_box, success, warn, error, info, bold, dim, cyan, green, red, yellow,
 )
 
 
@@ -74,8 +74,7 @@ def cmd_generate(args):
 
     # Dashboard for parallel mode
     dashboard = None
-    worker_map = {}  # maps thread id to worker index
-    next_worker = [0]
+    active_worker = [0]
 
     def on_progress(event, data):
         nonlocal dashboard
@@ -92,22 +91,15 @@ def cmd_generate(args):
                 info(f"Got {data['count']} domain slots")
         elif event == "generating":
             if dashboard:
-                # Assign a worker slot
-                import threading
-                tid = threading.current_thread().ident
-                if tid not in worker_map:
-                    worker_map[tid] = next_worker[0]
-                    next_worker[0] = (next_worker[0] + 1) % dashboard.n_workers
-                wi = worker_map[tid]
-                dashboard.update(wi, status="generating", slot=data["slot"], domain=data["domain"], attempt=data.get("attempt", 1))
+                wi = active_worker[0] % dashboard.n_workers
+                dashboard.update(wi, status="generating", slot=data["slot"], domain=data["domain"])
+                active_worker[0] += 1
             else:
                 done, slot, domain = data["done"], data["slot"], data["domain"]
                 print(f"  {dim(f'[{done}/10]')} Generating from {cyan(slot)} ({dim(domain)})...", end=" ", flush=True)
         elif event == "candidate_ok":
             if dashboard:
-                import threading
-                tid = threading.current_thread().ident
-                wi = worker_map.get(tid, 0)
+                wi = (active_worker[0] - 1) % dashboard.n_workers
                 dashboard.update(wi, status="done", name=data["name"])
             else:
                 print(f"{green('✔')} {bold(data['name'])}")
@@ -119,9 +111,7 @@ def cmd_generate(args):
                 print(f"{yellow('✗')} {data['errors'][0][:40]}")
         elif event == "gen_fail":
             if dashboard:
-                import threading
-                tid = threading.current_thread().ident
-                wi = worker_map.get(tid, 0)
+                wi = (active_worker[0] - 1) % dashboard.n_workers
                 dashboard.update(wi, status="fail", error=data["reason"])
             else:
                 print(f"{red('✗')} {data['reason']}")
