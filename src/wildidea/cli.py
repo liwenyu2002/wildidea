@@ -1,9 +1,9 @@
 """WildIdea CLI entry point.
 
 Usage:
-    wildidea generate "EEG情绪识别的创新方向" --type research
-    wildidea generate "相册App创新" --type product --provider openrouter --model anthropic/claude-sonnet-4.5
-    wildidea validate outputs/topic.html --forbid-proto-term EEG 脑电
+    wildidea configure                    # interactive setup
+    wildidea generate "EEG情绪识别的创新方向"
+    wildidea validate outputs/topic.html
 """
 from __future__ import annotations
 
@@ -14,65 +14,76 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .style import (
+    banner, section, step, score_line, candidate_card,
+    result_box, success, warn, error, info, bold, dim, cyan, green, red,
+)
 
 
 def cmd_generate(args):
-    """Run the WildIdea pipeline."""
+    """Run the WildIdea pipeline with styled output."""
     from .judge import JudgeConfig, get_thresholds
     from .pipeline import Config, run
+
+    banner(f"WildIdea v{__version__}")
 
     # Build judge config
     judge_model = args.judge_model
     sd_thr, sd_avg = get_thresholds(judge_model)
     judge_config = JudgeConfig(
-        model=judge_model,
-        provider=args.provider,
-        api_key=args.api_key,
-        base_url=args.base_url,
-        proxy=args.proxy,
-        sd_threshold=sd_thr,
-        sd_avg_threshold=sd_avg,
+        model=judge_model, provider=args.provider,
+        api_key=args.api_key, base_url=args.base_url, proxy=args.proxy,
+        sd_threshold=sd_thr, sd_avg_threshold=sd_avg,
     )
 
     config = Config(
-        provider=args.provider,
-        model=args.model,
-        api_key=args.api_key,
-        base_url=args.base_url,
-        proxy=args.proxy,
+        provider=args.provider, model=args.model,
+        api_key=args.api_key, base_url=args.base_url, proxy=args.proxy,
         judge_config=judge_config,
         forbid_terms=args.forbid_proto_term or [],
         output_dir=Path(args.output_dir),
         search_enabled=not args.no_search,
     )
 
+    section("Configuration")
+    info(f"Model:  {bold(args.model)}")
+    info(f"Judge:  {bold(judge_model)} (SD threshold: ≥ {sd_thr})")
+    info(f"Search: {'enabled' if config.search_enabled else 'disabled'}")
+
+    section("Generating candidates")
     result = run(args.problem, config)
 
     if result.errors:
         for e in result.errors:
-            print(f"ERROR: {e}", file=sys.stderr)
+            error(e)
+        return
 
-    if result.html_path:
-        print(f"\nHTML: {result.html_path}")
+    # Show candidates
+    section(f"Candidates ({len(result.candidates)})")
+    for i, c in enumerate(result.candidates, 1):
+        scores_dict = {
+            "structural_depth": c.scores.structural_depth,
+            "novelty": c.scores.novelty,
+        } if c.scores else None
+        candidate_card(i, c.name, c.slot, c.source, scores_dict)
 
+    # Show scores
     if result.avg_scores:
-        print(f"Scores: {json.dumps({k: round(v, 2) for k, v in result.avg_scores.items()}, ensure_ascii=False)}")
+        section("Mapping Quality (Shen et al. 2026 G.6)")
+        score_line("Structural Depth", result.avg_scores.get("structural_depth", 0), threshold=sd_avg)
+        score_line("Domain Distance", result.avg_scores.get("domain_distance", 0))
+        score_line("Novelty", result.avg_scores.get("novelty", 0))
+        score_line("Applicability", result.avg_scores.get("applicability", 0))
 
-    print(f"Candidates: {len(result.candidates)}")
-
-    # Save JSON summary
+    # Save JSON
     summary = {
         "problem": args.problem,
         "model": args.model,
         "judge_model": judge_model,
         "candidates": [
             {
-                "name": c.name,
-                "slot": c.slot,
-                "source": c.source,
-                "proto": c.proto,
-                "desc": c.desc,
-                "fail": c.fail,
+                "name": c.name, "slot": c.slot, "source": c.source,
+                "proto": c.proto, "desc": c.desc, "fail": c.fail,
                 "scores": {
                     "structural_depth": c.scores.structural_depth,
                     "domain_distance": c.scores.domain_distance,
@@ -86,23 +97,27 @@ def cmd_generate(args):
     }
     json_path = Path(args.output_dir) / f"{Path(result.html_path).stem if result.html_path else 'result'}.json"
     json_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"JSON: {json_path}")
+
+    # Result summary
+    result_box("Done", [
+        f"HTML:  {result.html_path or 'N/A'}",
+        f"JSON:  {json_path}",
+        f"Candidates: {len(result.candidates)}",
+    ])
 
 
 def cmd_validate(args):
     """Validate an existing HTML poster."""
     from .core.validator import validate
 
-    errors = validate(
-        Path(args.html),
-        forbid_proto_terms=args.forbid_proto_term or [],
-    )
+    section(f"Validating {args.html}")
+    errors = validate(Path(args.html), forbid_proto_terms=args.forbid_proto_term or [])
 
     if errors:
         for e in errors:
-            print(f"FAIL: {e}")
+            error(e)
         return 1
-    print("Poster is valid!")
+    success("Poster is valid!")
     return 0
 
 
@@ -112,7 +127,6 @@ def _apply_config(args):
     config = get_config()
     if not hasattr(args, "provider"):
         return
-    # CLI args override saved config
     if args.provider == "openrouter" and config.get("provider"):
         args.provider = config["provider"]
     if args.model == "anthropic/claude-sonnet-4.5" and config.get("model"):
@@ -130,7 +144,7 @@ def _apply_config(args):
 def main():
     parser = argparse.ArgumentParser(
         prog="wildidea",
-        description="WildIdea: Cross-domain mechanism transfer for innovation ideation",
+        description="Cross-domain mechanism transfer for innovation ideation",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logging")
@@ -145,39 +159,31 @@ def main():
     # --- generate ---
     gen = sub.add_parser("generate", help="Generate innovation candidates")
     gen.add_argument("problem", help="Problem statement")
-    gen.add_argument("--type", dest="problem_type", choices=["algorithm", "research", "product", "strategy"],
+    gen.add_argument("--type", dest="problem_type",
+                     choices=["algorithm", "research", "product", "strategy"],
                      help="Problem type (auto-detected if omitted)")
-    gen.add_argument("--provider", default="openrouter",
-                     help="LLM provider (openrouter/openai/ollama)")
-    gen.add_argument("--model", default="anthropic/claude-sonnet-4.5",
-                     help="LLM model for candidate generation")
-    gen.add_argument("--api-key", help="API key (or set via env var)")
+    gen.add_argument("--provider", default="openrouter", help="LLM provider")
+    gen.add_argument("--model", default="anthropic/claude-sonnet-4.5", help="Generation model")
+    gen.add_argument("--api-key", help="API key")
     gen.add_argument("--base-url", help="Custom API base URL")
     gen.add_argument("--proxy", help="HTTP proxy URL")
-    gen.add_argument("--judge-model", default="anthropic/claude-sonnet-4.5",
-                     help="Judge model for mapping quality evaluation")
-    gen.add_argument("--forbid-proto-term", nargs="+", metavar="TERM",
-                     help="Forbidden terms for de-anchoring (user domain terms)")
-    gen.add_argument("--output-dir", default="outputs",
-                     help="Output directory (default: outputs)")
-    gen.add_argument("--no-search", action="store_true",
-                     help="Disable search dedup")
+    gen.add_argument("--judge-model", default="anthropic/claude-sonnet-4.5", help="Judge model")
+    gen.add_argument("--forbid-proto-term", nargs="+", metavar="TERM", help="De-anchoring terms")
+    gen.add_argument("--output-dir", default="outputs", help="Output directory")
+    gen.add_argument("--no-search", action="store_true", help="Disable search dedup")
 
     # --- validate ---
-    val = sub.add_parser("validate", help="Validate an existing HTML poster")
+    val = sub.add_parser("validate", help="Validate an HTML poster")
     val.add_argument("html", help="Path to HTML file")
-    val.add_argument("--forbid-proto-term", nargs="+", metavar="TERM",
-                     help="Forbidden terms for de-anchoring")
+    val.add_argument("--forbid-proto-term", nargs="+", metavar="TERM", help="De-anchoring terms")
 
     args = parser.parse_args()
 
-    # Setup logging
-    level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)s %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    # Suppress logging when using styled output
+    if not args.verbose:
+        logging.basicConfig(level=logging.WARNING)
+    else:
+        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
 
     if args.command == "configure":
         from .configure import configure, show_config, reset_config
