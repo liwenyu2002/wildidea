@@ -22,14 +22,17 @@ from .style import (
 
 def cmd_generate(args):
     """Run the WildIdea pipeline with styled output."""
-    from .judge import JudgeConfig, get_thresholds
+    from .judge import JudgeConfig
     from .pipeline import Config, run
 
     banner(f"WildIdea v{__version__}")
 
-    # Build judge config
+    # Build judge config (use calibrated thresholds if available)
     judge_model = args.judge_model
-    sd_thr, sd_avg = get_thresholds(judge_model)
+    from .calibrate import get_calibrated_thresholds
+    from .configure import get_config as _get_cfg
+    _cfg = _get_cfg()
+    sd_thr, sd_avg = get_calibrated_thresholds(judge_model, _cfg)
     judge_config = JudgeConfig(
         model=judge_model, provider=args.provider,
         api_key=args.api_key, base_url=args.base_url, proxy=args.proxy,
@@ -156,6 +159,12 @@ def main():
     cfg.add_argument("--show", action="store_true", help="Show current config")
     cfg.add_argument("--reset", action="store_true", help="Reset config")
 
+    # --- calibrate ---
+    cal = sub.add_parser("calibrate", help="Calibrate judge model thresholds")
+    cal.add_argument("--judge-model", help="Model to calibrate (uses config if omitted)")
+    cal.add_argument("--provider", help="Provider for the judge model")
+    cal.add_argument("--save", action="store_true", default=True, help="Save calibration to config")
+
     # --- generate ---
     gen = sub.add_parser("generate", help="Generate innovation candidates")
     gen.add_argument("problem", help="Problem statement")
@@ -193,6 +202,18 @@ def main():
             reset_config()
         else:
             configure()
+    elif args.command == "calibrate":
+        from .calibrate import calibrate_judge, save_calibration
+        from .configure import get_config
+        cfg = get_config()
+        provider = args.provider or cfg.get("provider", "openrouter")
+        model = args.judge_model or cfg.get("judge_model", "anthropic/claude-sonnet-4.5")
+        result = calibrate_judge(
+            provider=provider, model=model,
+            api_key=cfg.get("api_key"), base_url=cfg.get("base_url"), proxy=cfg.get("proxy"),
+        )
+        if args.save and "error" not in result:
+            save_calibration(result)
     elif args.command == "generate":
         _apply_config(args)
         cmd_generate(args)
