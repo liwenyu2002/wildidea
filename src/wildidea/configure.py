@@ -45,18 +45,30 @@ PROVIDERS = {
         ],
     },
     "3": {
-        "name": "硅基流动 SiliconFlow（MiMo / Qwen / 国产模型）",
+        "name": "小米 MiMo（官方直连）",
+        "id": "xiaomi",
+        "base_url": "https://api.xiaomimimo.com/v1",
+        "env_key": "MIMO_API_KEY",
+        "models": [
+            "xiaomi/mimo-v2.5-pro",
+            "xiaomi/mimo-v2.5",
+            "xiaomi/mimo-v2-pro",
+            "xiaomi/mimo-v2-flash",
+            "xiaomi/mimo-v2-omni",
+        ],
+    },
+    "4": {
+        "name": "硅基流动 SiliconFlow（Qwen / 国产模型聚合）",
         "id": "siliconflow",
         "base_url": "https://api.siliconflow.cn/v1",
         "env_key": "SILICONFLOW_API_KEY",
         "models": [
-            "XiaomiMiMo/MiMo-V2.5-Pro",
             "Qwen/Qwen2.5-72B-Instruct",
             "Pro/deepseek-ai/DeepSeek-V4-Pro",
             "Pro/deepseek-ai/DeepSeek-R1",
         ],
     },
-    "4": {
+    "5": {
         "name": "OpenAI（官方直连）",
         "id": "openai",
         "base_url": "https://api.openai.com/v1",
@@ -68,7 +80,7 @@ PROVIDERS = {
             "o3-mini",
         ],
     },
-    "5": {
+    "6": {
         "name": "Ollama（本地部署）",
         "id": "ollama",
         "base_url": "http://localhost:11434/v1",
@@ -78,10 +90,9 @@ PROVIDERS = {
             "qwen2.5:72b",
             "deepseek-r1:70b",
             "mistral-large",
-            "MiMo-V2.5-Pro",
         ],
     },
-    "6": {
+    "7": {
         "name": "自定义 (OpenAI-compatible API)",
         "id": "custom",
         "base_url": None,
@@ -93,7 +104,7 @@ PROVIDERS = {
 JUDGE_MODELS = {
     "1": {"name": "Claude Sonnet 4.5（推荐，论文原版，最稳定）", "model": "anthropic/claude-sonnet-4.5"},
     "2": {"name": "DeepSeek V4 Pro（免费，评分偏高约 +0.5）", "model": "deepseek/deepseek-v4-pro"},
-    "3": {"name": "MiMo V2.5 Pro（国产，性价比高）", "model": "XiaomiMiMo/MiMo-V2.5-Pro"},
+    "3": {"name": "MiMo V2.5 Pro（小米官方，性价比高）", "model": "xiaomi/mimo-v2.5-pro"},
     "4": {"name": "和生成模型相同（最后手段）", "model": "same_as_generation"},
 }
 
@@ -167,7 +178,7 @@ def configure():
 
     # Step 3: Base URL (custom only)
     base_url = provider["base_url"]
-    if provider_key == "4":
+    if provider_key == "7":
         base_url = _input_text("输入 API Base URL", "http://localhost:8080/v1")
 
     # Step 4: Proxy

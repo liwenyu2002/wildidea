@@ -24,6 +24,10 @@ PROVIDERS = {
         "base_url": "https://api.deepseek.com/v1",
         "env_key": "DEEPSEEK_API_KEY",
     },
+    "xiaomi": {
+        "base_url": "https://api.xiaomimimo.com/v1",
+        "env_key": "MIMO_API_KEY",
+    },
     "siliconflow": {
         "base_url": "https://api.siliconflow.cn/v1",
         "env_key": "SILICONFLOW_API_KEY",
