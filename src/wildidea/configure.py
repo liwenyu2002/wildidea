@@ -137,9 +137,8 @@ def _select(options: dict[str, dict], prompt: str, display_key: str = "name") ->
 
 
 def _input_secret(prompt: str) -> str:
-    """Input a secret value (masks display)."""
-    import getpass
-    return getpass.getpass(f"{prompt}: ")
+    """Input a secret value."""
+    return input(f"{prompt}: ").strip()
 
 
 def _input_text(prompt: str, default: str = "") -> str:
