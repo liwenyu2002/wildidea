@@ -18,6 +18,7 @@ class Candidate:
     desc: str
     fail: str
     scores: Optional[JudgeScores] = None
+    reroll_count: int = 0
 
 
 def _card_html(index: int, c: Candidate) -> str:

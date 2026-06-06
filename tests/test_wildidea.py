@@ -149,6 +149,37 @@ class TestValidateCandidate(unittest.TestCase):
         self.assertTrue(any("EEG" in e for e in errors))
 
 
+class TestPipelinePublicSlot(unittest.TestCase):
+    """Test public progress slot payloads."""
+
+    def test_public_slot_repairs_truncated_anchor_from_mechanism(self):
+        from wildidea.pipeline import _public_slot
+
+        slot = {
+            "id": "D2-41",
+            "slot": "D2",
+            "domain": "Seismology",
+            "anchor": (
+                "Earthquake-aftershock model for pandemic spread：Applies the "
+                "earthquake/aftershock model (ETAS) as an analogy to model COVID-19 "
+                "pandemic propagation, treating infection pressure like seismic pressure d"
+            ),
+            "methods": [{
+                "name": "Earthquake-aftershock model for pandemic spread",
+                "mechanism": (
+                    "Applies the earthquake/aftershock model (ETAS) as an analogy to "
+                    "model COVID-19 pandemic propagation, treating infection pressure "
+                    "like seismic pressure diffusing through porous media."
+                ),
+            }],
+        }
+
+        public = _public_slot(slot)
+
+        self.assertIn("diffusing through porous media.", public["source"])
+        self.assertEqual(public["source"], public["source_phenomenon"])
+
+
 class TestRenderer(unittest.TestCase):
     """Test HTML rendering."""
 
@@ -195,13 +226,138 @@ class TestJudgeConfig(unittest.TestCase):
     def test_v4pro_thresholds(self):
         from wildidea.judge import get_thresholds
         thr, avg = get_thresholds("deepseek/deepseek-v4-pro")
-        self.assertEqual(thr, 7)
-        self.assertEqual(avg, 7.0)
+        self.assertEqual(thr, 8)
+        self.assertEqual(avg, 8.0)
 
     def test_unknown_model_defaults(self):
         from wildidea.judge import get_thresholds
         thr, avg = get_thresholds("some/random-model")
         self.assertEqual(thr, 6)
+
+    def test_threshold_requires_novelty(self):
+        from wildidea.judge import JudgeClient, JudgeScores
+
+        judge = JudgeClient.__new__(JudgeClient)
+        judge.sd_threshold = 6
+        judge.novelty_threshold = 7
+        judge.applicability_threshold = 9
+
+        self.assertFalse(judge.passes_threshold(JudgeScores(structural_depth=8, novelty=6, applicability=9)))
+        self.assertTrue(judge.passes_threshold(JudgeScores(structural_depth=8, novelty=7, applicability=9)))
+
+    def test_threshold_requires_applicability_9(self):
+        from wildidea.judge import JudgeClient, JudgeScores
+
+        judge = JudgeClient.__new__(JudgeClient)
+        judge.sd_threshold = 6
+        judge.novelty_threshold = 7
+        judge.applicability_threshold = 9
+
+        self.assertFalse(judge.passes_threshold(JudgeScores(structural_depth=8, novelty=8, applicability=8)))
+        self.assertTrue(judge.passes_threshold(JudgeScores(structural_depth=8, novelty=8, applicability=9)))
+
+    def test_v4pro_rejects_sd_below_8(self):
+        from wildidea.judge import JudgeClient, JudgeScores
+
+        judge = JudgeClient.__new__(JudgeClient)
+        judge.sd_threshold = 8
+        judge.novelty_threshold = 7
+        judge.applicability_threshold = 9
+
+        self.assertFalse(judge.passes_threshold(JudgeScores(structural_depth=7, novelty=9, applicability=9)))
+        self.assertTrue(judge.passes_threshold(JudgeScores(structural_depth=8, novelty=9, applicability=9)))
+
+
+class TestPipelineThresholdReroll(unittest.TestCase):
+    """Test per-card judge threshold reroll behavior."""
+
+    def test_low_novelty_candidate_is_rerolled(self):
+        from wildidea import pipeline
+        from wildidea.judge import JudgeConfig, JudgeScores
+
+        slot = {
+            "id": "D1-test",
+            "slot": "D1",
+            "domain": "测试领域",
+            "anchor": "测试源现象",
+            "methods": [{"mechanism": "测试机制"}],
+        }
+        drafts = iter([
+            {
+                "name": "低新颖方案",
+                "slot": "D1",
+                "source": "测试方法",
+                "proto": "结构足够但太常见",
+                "desc": "低新颖落地方案",
+                "fail": "失败边界",
+            },
+            {
+                "name": "高新颖方案",
+                "slot": "D1",
+                "source": "测试方法",
+                "proto": "结构足够且更意外",
+                "desc": "高新颖落地方案",
+                "fail": "失败边界",
+            },
+        ])
+
+        class FakeLLM:
+            def __init__(self, *args, **kwargs):
+                pass
+
+        class FakeJudge:
+            sd_threshold = 6
+            novelty_threshold = 7
+            applicability_threshold = 9
+
+            def __init__(self, config):
+                pass
+
+            def evaluate(self, problem, source_domain, target_domain, proto, desc):
+                novelty = 5 if "低新颖" in desc else 8
+                return JudgeScores(
+                    structural_depth=8,
+                    domain_distance=8,
+                    applicability=9,
+                    novelty=novelty,
+                )
+
+            def passes_threshold(self, scores):
+                return (
+                    scores.structural_depth >= self.sd_threshold
+                    and scores.novelty >= self.novelty_threshold
+                    and scores.applicability >= self.applicability_threshold
+                )
+
+        events = []
+        with patch.object(pipeline, "LLMClient", FakeLLM), \
+             patch.object(pipeline, "JudgeClient", FakeJudge), \
+             patch.object(pipeline, "_build_target_slots", return_value=[slot]), \
+             patch.object(pipeline, "_generate_candidate", side_effect=lambda problem, slot, llm: next(drafts)):
+            result = pipeline.run(
+                "测试问题",
+                pipeline.Config(
+                    judge_config=JudgeConfig(model="fake-model", provider="fake-provider"),
+                    target_count=1,
+                    max_retries=2,
+                    output_dir=Path("/tmp/wildidea-test-output"),
+                ),
+                on_progress=lambda event, payload: events.append((event, payload)),
+            )
+
+        self.assertEqual([candidate.name for candidate in result.candidates], ["高新颖方案"])
+        self.assertIn("threshold_rejected", [event for event, _ in events])
+        self.assertNotIn("banned", [event for event, _ in events])
+        ok_payload = next(payload for event, payload in events if event == "candidate_ok")
+        self.assertEqual(ok_payload["name"], "高新颖方案")
+        self.assertEqual(ok_payload["attempt"], 2)
+        self.assertEqual(ok_payload["reroll_count"], 1)
+        self.assertEqual(ok_payload["proto"], "结构足够且更意外")
+        self.assertEqual(ok_payload["desc"], "高新颖落地方案")
+        self.assertEqual(ok_payload["fail"], "失败边界")
+        self.assertEqual(ok_payload["scores"]["structural_depth"], 8)
+        self.assertEqual(ok_payload["scores"]["novelty"], 8)
+        self.assertEqual(ok_payload["scores"]["applicability"], 9)
 
 
 # ─── Integration Tests (need API key) ──────────────────────────────────────

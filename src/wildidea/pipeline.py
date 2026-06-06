@@ -1,18 +1,15 @@
-"""Core pipeline: orchestrates slot picking, candidate generation, search, judging, rendering."""
+"""Core pipeline: orchestrates slot picking, candidate generation, judging, and rendering."""
 from __future__ import annotations
 
-import json
 import logging
 import re
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 from .core.domain_pool import build_slots, PoolExhausted
-from .core.search import search_sogou
-from .judge import JudgeClient, JudgeConfig, JudgeScores
+from .judge import JudgeClient, JudgeConfig
 from .llm import LLMClient
 from .renderer import Candidate, render
 
@@ -43,9 +40,10 @@ class Config:
     judge_config: Optional[JudgeConfig] = None
     forbid_terms: list[str] = field(default_factory=list)
     output_dir: Path = field(default_factory=lambda: Path("outputs"))
-    search_enabled: bool = True
+    search_enabled: bool = False  # Deprecated: search dedup is no longer used.
     max_retries: int = 3
-    parallel: int = 1  # Number of parallel generation workers (1 = sequential)
+    parallel: int = 10  # Number of parallel generation workers (1 = sequential)
+    target_count: int = 10
 
 
 @dataclass
@@ -104,19 +102,6 @@ def _generate_candidate(
     return None
 
 
-def _search_dedup(name: str, desc: str) -> bool:
-    """Check if candidate already exists. Returns True if found (should ban)."""
-    try:
-        results = search_sogou(name, top=3)
-        for r in results:
-            title = r.get("title", "").lower()
-            if name.lower() in title or title in name.lower():
-                return True
-    except Exception:
-        pass  # Search failure is not a ban
-    return False
-
-
 def _validate_candidate(candidate: dict, forbid_terms: list[str]) -> list[str]:
     """Basic validation of a candidate dict."""
     errors = []
@@ -134,6 +119,127 @@ def _validate_candidate(candidate: dict, forbid_terms: list[str]) -> list[str]:
             errors.append(f"Proto leaks user-domain term: {term}")
 
     return errors
+
+
+def _slot_id(slot: dict) -> str:
+    """Stable enough per-run identifier for progress events."""
+    return str(slot.get("id") or slot.get("query") or f"{slot.get('slot', 'slot')}:{slot.get('domain', '?')}")
+
+
+def _source_phenomenon(slot: dict) -> str:
+    """Return a concrete source phenomenon, repairing known truncated anchors when possible."""
+    anchor = str(slot.get("anchor") or slot.get("query") or slot.get("domain") or "")
+    methods = slot.get("methods") or []
+    method = methods[0] if methods else {}
+    mechanism = str(method.get("mechanism") or "")
+    method_name = str(method.get("name") or "")
+
+    if anchor and mechanism:
+        for sep in ("：", ":"):
+            if sep in anchor:
+                title, detail = anchor.split(sep, 1)
+                detail = detail.strip()
+                if detail and mechanism.startswith(detail):
+                    return f"{title.strip()}: {mechanism}"
+        if _has_dangling_tail(anchor):
+            return f"{method_name}: {mechanism}" if method_name else mechanism
+    return anchor or mechanism
+
+
+def _has_dangling_tail(text: str) -> bool:
+    """Heuristic for pool rows that were cut mid-word during import."""
+    stripped = text.strip()
+    if len(stripped) < 80:
+        return False
+    last_word = stripped.rsplit(maxsplit=1)[-1]
+    return len(last_word) <= 2 and last_word.isascii() and last_word.isalpha()
+
+
+def _public_slot(slot: dict) -> dict:
+    source_phenomenon = _source_phenomenon(slot)
+    return {
+        "slot_id": _slot_id(slot),
+        "slot": slot.get("slot", "?"),
+        "domain": slot.get("domain") or slot.get("slot_name") or slot.get("query") or "?",
+        "source": source_phenomenon,
+        "source_phenomenon": source_phenomenon,
+    }
+
+
+def _candidate_from_raw(raw: dict, slot: dict) -> Candidate:
+    slot_name = slot.get("slot", "?")
+    domain = slot.get("domain", "?")
+    return Candidate(
+        name=raw["name"],
+        slot=raw.get("slot", slot_name),
+        source=raw.get("source", domain),
+        proto=raw.get("proto", ""),
+        desc=raw.get("desc", ""),
+        fail=raw.get("fail", ""),
+    )
+
+
+def _score_event_payload(candidate: Candidate, judge: JudgeClient, passed: bool) -> dict:
+    scores = candidate.scores
+    return {
+        "name": candidate.name,
+        "source": candidate.source,
+        "sd": scores.structural_depth if scores else None,
+        "dd": scores.domain_distance if scores else None,
+        "nv": scores.novelty if scores else None,
+        "ap": scores.applicability if scores else None,
+        "unexpectedness": scores.unexpectedness if scores else None,
+        "non_obviousness": scores.non_obviousness if scores else None,
+        "pass": passed,
+        "sd_threshold": judge.sd_threshold,
+        "novelty_threshold": judge.novelty_threshold,
+        "applicability_threshold": judge.applicability_threshold,
+    }
+
+
+def _candidate_ok_payload(slot_id: str, candidate: Candidate, done: int, total: int, attempt: int) -> dict:
+    scores = candidate.scores
+    return {
+        "slot_id": slot_id,
+        "index": done,
+        "attempt": attempt,
+        "reroll_count": getattr(candidate, "reroll_count", max(0, attempt - 1)),
+        "name": candidate.name,
+        "slot": candidate.slot,
+        "source": candidate.source,
+        "proto": candidate.proto,
+        "desc": candidate.desc,
+        "fail": candidate.fail,
+        "scores": {
+            "structural_depth": scores.structural_depth,
+            "domain_distance": scores.domain_distance,
+            "applicability": scores.applicability,
+            "novelty": scores.novelty,
+            "unexpectedness": scores.unexpectedness,
+            "non_obviousness": scores.non_obviousness,
+            "raw": scores.raw,
+        } if scores else {},
+        "done": done,
+        "total": total,
+    }
+
+
+def _build_target_slots(problem_type: str, target_count: int) -> list[dict]:
+    """Build approximately target_count slots while preserving the existing quota sampler."""
+    target = max(1, min(int(target_count or 10), 30))
+    slots: list[dict] = []
+    exclude: list[str] = []
+
+    while len(slots) < target:
+        batch = build_slots(problem_type, exclude=exclude)
+        for slot in batch:
+            slots.append(slot)
+            sid = slot.get("id")
+            if sid:
+                exclude.append(sid)
+            if len(slots) >= target:
+                break
+    return slots[:target]
 
 
 def run(problem: str, config: Config, on_progress=None) -> Result:
@@ -167,13 +273,14 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
     # 1. Pick domain slots
     _emit("slots_start")
     try:
-        slots = build_slots(problem_type)
+        slots = _build_target_slots(problem_type, config.target_count)
     except PoolExhausted as e:
         result.errors.append(str(e))
         _emit("error", message=str(e))
         return result
 
-    _emit("slots_done", count=len(slots))
+    target_count = len(slots)
+    _emit("slots_done", count=target_count, target=target_count, slots=[_public_slot(s) for s in slots])
 
     # 2. Generate candidates (parallel or sequential)
     candidates: list[Candidate] = []
@@ -181,20 +288,65 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
     slots_todo = list(slots)
 
     def _try_slot(slot):
-        """Try to generate one candidate from a slot. Returns (slot, raw_dict) or (slot, None)."""
+        """Try to generate and judge one candidate from a slot."""
         slot_name = slot.get("slot", "?")
+        domain = slot.get("domain", "?")
+        slot_id = _slot_id(slot)
+        judge = JudgeClient(config.judge_config) if config.judge_config else None
         for attempt in range(config.max_retries):
+            _emit(
+                "generating",
+                slot_id=slot_id,
+                slot=slot_name,
+                domain=domain,
+                attempt=attempt + 1,
+                total=target_count,
+                done=len(candidates),
+            )
             raw = _generate_candidate(problem, slot, llm)
             if not raw:
                 continue
-            if config.search_enabled:
-                if _search_dedup(raw.get("name", ""), raw.get("desc", "")):
-                    continue
             errors = _validate_candidate(raw, config.forbid_terms)
             if errors:
+                _emit("invalid", slot_id=slot_id, slot=slot_name, errors=errors)
                 continue
-            return slot, raw
-        return slot, None
+            candidate = _candidate_from_raw(raw, slot)
+            if judge:
+                try:
+                    _emit(
+                        "judging",
+                        slot_id=slot_id,
+                        slot=slot_name,
+                        name=candidate.name,
+                        attempt=attempt + 1,
+                        index=min(len(candidates) + 1, target_count),
+                        total=target_count,
+                    )
+                    candidate.scores = judge.evaluate(
+                        problem=problem,
+                        source_domain=candidate.source,
+                        target_domain=problem,
+                        proto=candidate.proto,
+                        desc=candidate.desc,
+                    )
+                    passed = judge.passes_threshold(candidate.scores)
+                    score_payload = _score_event_payload(candidate, judge, passed)
+                    _emit("judged", slot_id=slot_id, slot=slot_name, **score_payload)
+                    if not passed:
+                        _emit(
+                            "threshold_rejected",
+                            slot_id=slot_id,
+                            slot=slot_name,
+                            attempt=attempt + 1,
+                            **score_payload,
+                        )
+                        continue
+                except Exception as e:
+                    _emit("judge_fail", slot_id=slot_id, slot=slot_name, name=candidate.name, error=str(e))
+                    continue
+            candidate.reroll_count = max(0, attempt)
+            return slot, candidate, attempt + 1
+        return slot, None, config.max_retries
 
     if config.parallel > 1:
         # Parallel generation
@@ -203,103 +355,55 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
             with ThreadPoolExecutor(max_workers=config.parallel) as pool:
                 futures = {pool.submit(_try_slot, s): s for s in slots_todo[:config.parallel * 2]}
                 for future in as_completed(futures):
-                    if len(candidates) >= 10:
+                    if len(candidates) >= target_count:
                         break
-                    slot, raw = future.result()
-                    slot_name = slot.get("slot", "?")
-                    domain = slot.get("domain", "?")
-                    if raw:
-                        c = Candidate(
-                            name=raw["name"],
-                            slot=raw.get("slot", slot_name),
-                            source=raw.get("source", domain),
-                            proto=raw.get("proto", ""),
-                            desc=raw.get("desc", ""),
-                            fail=raw.get("fail", ""),
-                        )
-                        candidates.append(c)
+                    slot, candidate, attempt = future.result()
+                    slot_id = _slot_id(slot)
+                    if candidate:
+                        candidates.append(candidate)
                         exclude_ids.append(slot.get("id", ""))
-                        _emit("candidate_ok", name=c.name, slot=c.slot, source=c.source, done=len(candidates))
+                        _emit("candidate_ok", **_candidate_ok_payload(slot_id, candidate, len(candidates), target_count, attempt))
                     else:
-                        _emit("gen_fail", slot=slot_name, reason="exhausted retries")
+                        slot_name = slot.get("slot", "?")
+                        _emit("gen_fail", slot_id=slot_id, slot=slot_name, reason="exhausted retries")
 
                 # If not enough, fill with sequential
                 remaining = [s for s in slots_todo if s.get("id") not in exclude_ids]
                 for slot in remaining:
-                    if len(candidates) >= 10:
+                    if len(candidates) >= target_count:
                         break
-                    slot_name = slot.get("slot", "?")
-                    domain = slot.get("domain", "?")
-                    _emit("generating", slot=slot_name, domain=domain, attempt=1, total=len(slots), done=len(candidates))
-                    _, raw = _try_slot(slot)
-                    if raw:
-                        c = Candidate(
-                            name=raw["name"], slot=raw.get("slot", slot_name),
-                            source=raw.get("source", domain), proto=raw.get("proto", ""),
-                            desc=raw.get("desc", ""), fail=raw.get("fail", ""),
-                        )
-                        candidates.append(c)
-                        _emit("candidate_ok", name=c.name, slot=c.slot, source=c.source, done=len(candidates))
+                    slot_id = _slot_id(slot)
+                    _, candidate, attempt = _try_slot(slot)
+                    if candidate:
+                        candidates.append(candidate)
+                        _emit("candidate_ok", **_candidate_ok_payload(slot_id, candidate, len(candidates), target_count, attempt))
                     else:
-                        _emit("gen_fail", slot=slot_name, reason="exhausted retries")
+                        slot_name = slot.get("slot", "?")
+                        _emit("gen_fail", slot_id=slot_id, slot=slot_name, reason="exhausted retries")
         except KeyboardInterrupt:
             _emit("error", message="Interrupted by user")
     else:
         # Sequential generation (original behavior)
         try:
-            for slot_i, slot in enumerate(slots_todo):
-                if len(candidates) >= 10:
+            for slot in slots_todo:
+                if len(candidates) >= target_count:
                     break
-                slot_name = slot.get("slot", "?")
-                domain = slot.get("domain", "?")
-                for attempt in range(config.max_retries):
-                    _emit("generating", slot=slot_name, domain=domain, attempt=attempt+1, total=len(slots), done=len(candidates))
-                    _, raw = _try_slot(slot)
-                    if raw:
-                        c = Candidate(
-                            name=raw["name"], slot=raw.get("slot", slot_name),
-                            source=raw.get("source", domain), proto=raw.get("proto", ""),
-                            desc=raw.get("desc", ""), fail=raw.get("fail", ""),
-                        )
-                        candidates.append(c)
-                        exclude_ids.append(slot.get("id", ""))
-                        _emit("candidate_ok", name=c.name, slot=c.slot, source=c.source, done=len(candidates))
-                        break
-                    else:
-                        _emit("gen_fail", slot=slot_name, reason="empty response")
+                slot_id = _slot_id(slot)
+                _, candidate, attempt = _try_slot(slot)
+                if candidate:
+                    candidates.append(candidate)
+                    exclude_ids.append(slot.get("id", ""))
+                    _emit("candidate_ok", **_candidate_ok_payload(slot_id, candidate, len(candidates), target_count, attempt))
+                else:
+                    slot_name = slot.get("slot", "?")
+                    _emit("gen_fail", slot_id=slot_id, slot=slot_name, reason="empty response")
         except KeyboardInterrupt:
             _emit("error", message="Interrupted by user")
 
-    _emit("candidates_done", count=len(candidates))
+    _emit("candidates_done", count=len(candidates), target=target_count)
     result.candidates = candidates
 
-    # 5. Independent judge evaluation
-    if candidates and config.judge_config:
-        _emit("judging_start", count=len(candidates))
-        judge = JudgeClient(config.judge_config)
-        for i, c in enumerate(candidates, 1):
-            try:
-                _emit("judging", name=c.name, index=i, total=len(candidates))
-                c.scores = judge.evaluate(
-                    problem=problem,
-                    source_domain=c.source,
-                    target_domain=problem,
-                    proto=c.proto,
-                    desc=c.desc,
-                )
-                _emit("judged", name=c.name, sd=c.scores.structural_depth, nv=c.scores.novelty)
-            except Exception as e:
-                _emit("judge_fail", name=c.name, error=str(e))
-
-        # 6. Eliminate low scores
-        before = len(candidates)
-        candidates = [c for c in candidates if c.scores and judge.passes_threshold(c.scores)]
-        eliminated = before - len(candidates)
-        if eliminated:
-            _emit("eliminated", count=eliminated)
-        result.candidates = candidates
-
-    # 7. Compute average scores
+    # 5. Compute average scores
     scored = [c for c in candidates if c.scores]
     if scored:
         result.avg_scores = {
@@ -309,7 +413,7 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
             "applicability": sum(c.scores.applicability for c in scored) / len(scored),
         }
 
-    # 8. Render HTML
+    # 6. Render HTML
     if candidates and _TEMPLATE.exists():
         title = problem[:40]
         focus = f"{problem_type} · {len(candidates)} candidates"

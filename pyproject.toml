@@ -9,13 +9,18 @@ description = "Cross-domain mechanism transfer for innovation ideation"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "fastapi>=0.111",
+    "sqlalchemy>=2.0",
+    "uvicorn[standard]>=0.30",
+]
 
 [project.scripts]
 wildidea = "wildidea.cli:main"
+wildidea-web = "wildidea.web.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-wildidea = ["prompts/*.txt"]
+wildidea = ["prompts/*.txt", "web/static/*"]

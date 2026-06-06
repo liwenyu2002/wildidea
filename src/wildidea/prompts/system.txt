@@ -27,7 +27,7 @@ Your task: Generate ONE candidate innovation by mapping the structural pattern o
 
 3. **Structural depth**: The mapping must preserve the causal chain, constraints, and boundary conditions from the source mechanism. Surface-level borrowing (just the name or metaphor) is not enough.
 
-4. **One concrete proper noun**: The desc must contain at least one identifiable specific thing (a molecule, technology, framework, algorithm, product, or company name).
+4. **Concrete but not brand-dependent**: The desc must contain at least one identifiable concrete technical thing (a sensor type, protocol, standard, algorithm, material, component, or framework). Do NOT name existing product brands or companies unless the user explicitly asks for competitor/product-specific ideas. Prefer generic device descriptions over brand examples.
 
 5. **Not just common sense**: If removing the source mechanism leaves only obvious industry practice, eliminate and regenerate.
 

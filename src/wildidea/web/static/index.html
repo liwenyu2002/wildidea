@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WildIdea · 想出不一样的点子</title>
+  <link rel="stylesheet" href="/static/styles.css?v=20260606-reroll-count">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark">W</div>
+        <div>
+          <strong>WildIdea</strong>
+          <span>帮你想出不一样的点子</span>
+        </div>
+      </div>
+
+      <section id="authPanel" class="panel auth-panel">
+        <div class="tabs">
+          <button id="loginTab" class="tab active" type="button">登录</button>
+          <button id="registerTab" class="tab" type="button">注册</button>
+        </div>
+        <form id="authForm" class="form">
+          <label>
+            邮箱
+            <input id="email" type="email" autocomplete="email" required>
+          </label>
+          <label>
+            密码
+            <input id="password" type="password" autocomplete="current-password" minlength="6" required>
+          </label>
+          <label id="inviteAtRegisterWrap" class="hidden">
+            邀请码
+            <input id="inviteAtRegister" type="text" autocomplete="off">
+          </label>
+          <label id="improvementConsentWrap" class="check hidden">
+            <input id="improvementConsent" type="checkbox">
+            允许把交互数据用于改进（永久同意）
+          </label>
+          <button id="authSubmit" class="primary" type="submit">登录</button>
+        </form>
+      </section>
+
+      <section id="userPanel" class="panel hidden">
+        <div class="user-row">
+          <div>
+            <span id="userEmail" class="muted"></span>
+            <strong id="creditBalance">0 积分</strong>
+          </div>
+          <button id="logoutBtn" class="ghost" type="button">退出</button>
+        </div>
+        <form id="redeemForm" class="invite-form">
+          <input id="redeemCode" type="text" placeholder="登录后填写邀请码">
+          <button type="submit">兑换</button>
+        </form>
+      </section>
+
+      <section id="historyPanel" class="panel hidden">
+        <div class="panel-head">
+          <strong>历史任务</strong>
+          <button id="refreshRunsBtn" class="ghost" type="button">刷新</button>
+        </div>
+        <div id="runList" class="run-list"></div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <section class="toolbar">
+        <div>
+          <h1>生成工作台</h1>
+          <p>每张卡片消耗 1 积分；系统失败会自动退回本次扣除。</p>
+        </div>
+        <div id="statusPill" class="status-pill">未登录</div>
+      </section>
+
+      <section id="workspace" class="workspace hidden">
+        <form id="runForm" class="composer">
+          <textarea id="problem" rows="5" placeholder="输入你想发散的问题，例如：给相册 App 找非常规设计思路" required></textarea>
+          <div class="composer-grid">
+            <label>
+              禁词
+              <input id="forbidTerms" type="text" placeholder="用空格分隔，例如 EEG 脑电 被试">
+            </label>
+            <label>
+              并行数
+              <input id="parallel" type="number" value="10" min="1" max="10">
+            </label>
+            <label>
+              槽位数
+              <input id="slotCount" type="number" value="10" min="1" max="30">
+            </label>
+            <div class="mode-field">
+              <span>模式</span>
+              <div class="mode-toggle" role="radiogroup" aria-label="生成模式">
+                <label>
+                  <input type="radio" name="generationMode" value="speed" checked>
+                  <span>速度</span>
+                </label>
+                <label>
+                  <input type="radio" name="generationMode" value="strict">
+                  <span>严格</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <button id="runSubmit" class="primary" type="submit">消耗 10 积分生成</button>
+        </form>
+
+        <section class="result-section">
+          <div class="result-head">
+            <div>
+              <strong id="currentRunTitle">还没有选择任务</strong>
+              <span id="currentRunMeta" class="muted"></span>
+            </div>
+          </div>
+          <div id="progressLog" class="progress-log"></div>
+          <div id="candidateGrid" class="candidate-grid"></div>
+        </section>
+
+        <div id="adminEntry" class="admin-entry hidden">
+          <button id="adminToggleBtn" type="button" aria-expanded="false">打开管理员后台</button>
+        </div>
+
+        <section id="adminPanel" class="admin-panel hidden">
+          <div class="panel-head">
+            <strong>管理员后台</strong>
+            <button id="refreshAdminBtn" class="ghost" type="button">刷新</button>
+          </div>
+          <div id="metrics" class="metrics"></div>
+          <div id="syncStatus" class="sync-status"></div>
+          <form id="inviteForm" class="invite-create">
+            <input id="inviteCode" type="text" placeholder="邀请码，留空自动生成">
+            <input id="inviteBonus" type="number" value="20" min="1">
+            <input id="inviteMax" type="number" placeholder="最大兑换次数">
+            <button type="submit">创建邀请码</button>
+          </form>
+          <div class="admin-columns">
+            <div>
+              <h2>邀请码</h2>
+              <div id="inviteList" class="admin-list"></div>
+            </div>
+            <div>
+              <h2>用户</h2>
+              <div id="userList" class="admin-list"></div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title-row">
+              <h2>反馈数据</h2>
+              <button id="exportFeedbackBtn" class="ghost" type="button">导出 Excel</button>
+            </div>
+            <div id="feedbackList" class="admin-list feedback-list"></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="emptyState" class="empty-state">
+        <h2>先登录或注册</h2>
+        <p>注册会自动获得 30 积分。第一位注册用户会成为管理员，用于创建邀请码和查看系统状态。</p>
+      </section>
+    </main>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+  <script src="/static/app.js?v=20260606-reroll-count"></script>
+</body>
+</html>

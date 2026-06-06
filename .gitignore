@@ -3,7 +3,13 @@
 *.pyc
 __pycache__/
 .env
+wildidea.db
+*.db
 *.zip
 outputs/
+data/
+logs/
+dist/
+*.pdf
 .DS_Store
 *.egg-info/

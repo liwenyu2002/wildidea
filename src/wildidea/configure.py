@@ -103,7 +103,7 @@ PROVIDERS = {
 
 JUDGE_MODELS = {
     "1": {"name": "Claude Sonnet 4.5（推荐，论文原版，最稳定）", "model": "anthropic/claude-sonnet-4.5"},
-    "2": {"name": "DeepSeek V4 Pro（免费，评分偏高约 +0.5）", "model": "deepseek/deepseek-v4-pro"},
+    "2": {"name": "DeepSeek V4 Pro（免费，按 8 分结构线校准）", "model": "deepseek/deepseek-v4-pro"},
     "3": {"name": "MiMo V2.5 Pro（小米官方，性价比高）", "model": "xiaomi/mimo-v2.5-pro"},
     "4": {"name": "和生成模型相同（最后手段）", "model": "same_as_generation"},
 }

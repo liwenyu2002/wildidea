@@ -15,8 +15,8 @@ from pathlib import Path
 
 from . import __version__
 from .style import (
-    banner, section, step, score_line, candidate_card,
-    result_box, success, warn, error, info, bold, dim, cyan, green, red, yellow,
+    banner, section, score_line, candidate_card,
+    result_box, success, error, info, bold, dim, cyan, green, red, yellow,
 )
 
 
@@ -61,14 +61,18 @@ def cmd_generate(args):
         judge_config=judge_config,
         forbid_terms=args.forbid_proto_term or [],
         output_dir=Path(args.output_dir),
-        search_enabled=not args.no_search,
+        search_enabled=False,
         parallel=args.parallel,
     )
 
     section("Configuration")
     info(f"Model:  {bold(gen_model)}")
-    info(f"Judge:  {bold(judge_model)} (SD threshold: ≥ {sd_thr})")
-    info(f"Search: {'enabled' if config.search_enabled else 'disabled'}")
+    info(
+        f"Judge:  {bold(judge_model)} "
+        f"(SD threshold: ≥ {sd_thr}, NV threshold: ≥ {judge_config.novelty_threshold}, "
+        f"AP threshold: ≥ {judge_config.applicability_threshold})"
+    )
+    info("Reroll: judge threshold gate")
 
     section("Generating candidates")
 
@@ -103,9 +107,6 @@ def cmd_generate(args):
                 dashboard.update(wi, status="done", name=data["name"])
             else:
                 print(f"{green('✔')} {bold(data['name'])}")
-        elif event == "banned":
-            if not dashboard:
-                print(f"{yellow('✗')} banned by search")
         elif event == "invalid":
             if not dashboard:
                 print(f"{yellow('✗')} {data['errors'][0][:40]}")
@@ -123,10 +124,16 @@ def cmd_generate(args):
         elif event == "judged":
             sd_str = green(str(data['sd'])) if data['sd'] >= sd_thr else yellow(str(data['sd']))
             print(f"SD={sd_str} NV={data['nv']}")
+        elif event == "threshold_rejected":
+            if not dashboard:
+                print(
+                    f"  {yellow('↻')} below threshold "
+                    f"SD={data.get('sd', '-')} / {data.get('sd_threshold', '-')} "
+                    f"NV={data.get('nv', '-')} / {data.get('novelty_threshold', '-')} "
+                    f"AP={data.get('ap', '-')} / {data.get('applicability_threshold', '-')}, rerolling"
+                )
         elif event == "judge_fail":
             print(f"{red('FAIL')} {data['error'][:40]}")
-        elif event == "eliminated":
-            warn(f"Eliminated {data['count']} candidates below threshold")
         elif event == "rendered":
             success(f"HTML → {data['path']}")
         elif event == "done":
@@ -262,8 +269,8 @@ def main():
     gen.add_argument("--judge-model", default="anthropic/claude-sonnet-4.5", help="Judge model")
     gen.add_argument("--forbid-proto-term", nargs="+", metavar="TERM", help="De-anchoring terms")
     gen.add_argument("--output-dir", default="outputs", help="Output directory")
-    gen.add_argument("--no-search", action="store_true", help="Disable search dedup")
-    gen.add_argument("--parallel", type=int, default=1, help="Parallel workers for generation (default: 1)")
+    gen.add_argument("--no-search", action="store_true", help="Deprecated; search dedup is no longer used")
+    gen.add_argument("--parallel", type=int, default=10, help="Parallel workers for generation (default: 10)")
 
     # --- validate ---
     val = sub.add_parser("validate", help="Validate an HTML poster")

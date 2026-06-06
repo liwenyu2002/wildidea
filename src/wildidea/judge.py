@@ -41,14 +41,16 @@ class JudgeConfig:
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     proxy: Optional[str] = None
-    sd_threshold: int = 6  # Claude Sonnet 4.5 default
-    sd_avg_threshold: float = 6.0
+    sd_threshold: Optional[int] = None
+    sd_avg_threshold: Optional[float] = None
+    novelty_threshold: int = 7
+    applicability_threshold: int = 9
 
 
 # Threshold lookup by model prefix
 THRESHOLD_TABLE = {
     "anthropic/claude-sonnet": (6, 6.0),
-    "deepseek/deepseek-v4": (7, 7.0),
+    "deepseek/deepseek-v4": (8, 8.0),
     "deepseek/deepseek-r1": (9, 9.0),  # Known inflated, not recommended
 }
 
@@ -74,7 +76,11 @@ class JudgeClient:
             base_url=config.base_url,
             proxy=config.proxy,
         )
-        self.sd_threshold, self.sd_avg_threshold = get_thresholds(config.model)
+        model_sd_threshold, model_sd_avg_threshold = get_thresholds(config.model)
+        self.sd_threshold = config.sd_threshold if config.sd_threshold is not None else model_sd_threshold
+        self.sd_avg_threshold = config.sd_avg_threshold if config.sd_avg_threshold is not None else model_sd_avg_threshold
+        self.novelty_threshold = config.novelty_threshold
+        self.applicability_threshold = config.applicability_threshold
 
     def evaluate(
         self,
@@ -120,4 +126,8 @@ class JudgeClient:
         return scores
 
     def passes_threshold(self, scores: JudgeScores) -> bool:
-        return scores.structural_depth >= self.sd_threshold
+        return (
+            scores.structural_depth >= self.sd_threshold
+            and scores.novelty >= self.novelty_threshold
+            and scores.applicability >= self.applicability_threshold
+        )
