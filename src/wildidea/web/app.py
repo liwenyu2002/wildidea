@@ -31,11 +31,10 @@ from .models import (
     InviteCode,
     Run,
     RunEvent,
-    SyncOutbox,
     User,
     utcnow,
 )
-from .observability import add_run_log, queue_status
+from .observability import add_run_log, queue_status, run_queue_status
 from .runner import execute_run
 from .schemas import (
     AdminCreditAdjustmentRequest,
@@ -62,7 +61,6 @@ from .services import (
     refund_run_credit,
     require_admin,
 )
-from .sync import dingtalk_sync_status, enqueue_feedback_sync, flush_sync_outbox
 
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -72,19 +70,26 @@ FEEDBACK_LABELS = {
     "useful": "有用",
     "weak": "没用",
     "weak_obscure": "晦涩难懂",
-    "weak_logic": "逻辑混乱",
+    "weak_off_topic": "不够相关",
+    "weak_too_common": "太常规",
+    "weak_unusable": "不可落地",
     "weak_other": "其他",
 }
 
-FEEDBACK_EXPORT_COLUMNS = [
-    ("created_at", "反馈时间"),
-    ("label_text", "反馈类型"),
-    ("rating", "评分"),
-    ("comment", "反馈内容"),
+DATA_EXPORT_COLUMNS = [
+    ("row_type", "数据类型"),
     ("user_email", "用户邮箱"),
+    ("user_id", "用户ID"),
     ("run_problem", "任务"),
     ("run_status", "任务状态"),
     ("run_problem_type", "任务类型"),
+    ("run_created_at", "任务创建时间"),
+    ("run_started_at", "任务开始时间"),
+    ("run_finished_at", "任务完成时间"),
+    ("run_error", "任务错误"),
+    ("run_opt_in_improvement", "允许用于改进"),
+    ("slot_count", "槽位数"),
+    ("credit_cost", "消耗积分"),
     ("candidate_index", "方案序号"),
     ("candidate_name", "方案名称"),
     ("candidate_slot", "槽位"),
@@ -99,11 +104,18 @@ FEEDBACK_EXPORT_COLUMNS = [
     ("score_domain_distance", "距离分"),
     ("score_novelty", "新颖分"),
     ("score_applicability", "可用分"),
-    ("sync_status", "同步状态"),
-    ("sync_error", "同步错误"),
+    ("candidate_search", "搜索数据"),
+    ("candidate_created_at", "卡片创建时间"),
+    ("has_feedback", "是否有反馈"),
+    ("feedback_created_at", "反馈时间"),
+    ("label_text", "反馈类型"),
+    ("rating", "评分"),
+    ("comment", "反馈内容"),
+    ("run_config_snapshot", "任务配置"),
+    ("run_avg_scores", "任务平均分"),
     ("candidate_id", "候选ID"),
     ("run_id", "任务ID"),
-    ("id", "反馈ID"),
+    ("feedback_id", "反馈ID"),
 ]
 
 
@@ -236,6 +248,8 @@ def _run_payload(
         ]
     if include_events:
         payload["events"] = [_event_payload(e) for e in sorted(run.events, key=lambda item: item.id)]
+    if db:
+        payload["queue"] = run_queue_status(db, run)
     return payload
 
 
@@ -473,7 +487,7 @@ def create_run(
         pass
     else:
         background_tasks.add_task(execute_run, run.id)
-    return {"run": _run_payload(run), "credit_balance": user.credit_balance}
+    return {"run": _run_payload(run, db=db), "credit_balance": user.credit_balance}
 
 
 @app.get("/api/runs")
@@ -484,7 +498,7 @@ def list_runs(db: Session = Depends(get_db), user: User = Depends(get_current_us
         .order_by(desc(Run.created_at))
         .limit(100)
     ).all()
-    return {"runs": [_run_payload(row) for row in rows]}
+    return {"runs": [_run_payload(row, db=db) for row in rows]}
 
 
 @app.get("/api/runs/{run_id}")
@@ -530,6 +544,7 @@ def stream_run_events(
     def event_iter() -> Iterable[str]:
         last_id = 0
         idle_ticks = 0
+        queue_tick = 0
         while True:
             local_db = next(get_db())
             try:
@@ -542,6 +557,17 @@ def stream_run_events(
                 for event in events:
                     last_id = event.id
                     yield f"data: {json.dumps(_event_payload(event), ensure_ascii=False)}\n\n"
+                if run and run.status == "queued" and not events:
+                    queue_tick += 1
+                    if queue_tick >= 5:
+                        queue_tick = 0
+                        payload = {
+                            "id": last_id,
+                            "event_type": "queue_tick",
+                            "payload": {"status": "queued"},
+                            "created_at": _utc_iso(utcnow()),
+                        }
+                        yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
                 if run and run.status in {"succeeded", "failed", "deleted"} and not events:
                     idle_ticks += 1
                     if idle_ticks >= 2:
@@ -559,7 +585,6 @@ def stream_run_events(
 def submit_feedback(
     candidate_id: str,
     req: FeedbackRequest,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict:
@@ -568,7 +593,14 @@ def submit_feedback(
         raise HTTPException(status_code=404, detail={"error": "CANDIDATE_NOT_FOUND", "message": "候选不存在"})
     run = get_owned_run(db, candidate.run_id, user)
 
-    allowed_labels = {"useful", "weak", "weak_obscure", "weak_logic", "weak_other"}
+    allowed_labels = {
+        "useful",
+        "weak_obscure",
+        "weak_off_topic",
+        "weak_too_common",
+        "weak_unusable",
+        "weak_other",
+    }
     if req.label not in allowed_labels:
         raise HTTPException(status_code=422, detail={"error": "BAD_FEEDBACK_LABEL", "message": "反馈类型无效"})
     if req.label == "weak_other" and not (req.comment or "").strip():
@@ -603,9 +635,7 @@ def submit_feedback(
             "mode": "updated" if existing else "created",
         },
     ))
-    enqueue_feedback_sync(db, feedback, candidate, run, user)
     db.commit()
-    background_tasks.add_task(flush_sync_outbox)
     return {"ok": True, "feedback_id": feedback.id, "feedback": _feedback_payload(feedback)}
 
 
@@ -683,18 +713,53 @@ def admin_queue(db: Session = Depends(get_db), admin: User = Depends(require_adm
     return {"queue": status}
 
 
+def _slot_contexts_for_runs(db: Session, run_ids: set[str]) -> dict[str, dict]:
+    slot_contexts: dict[str, dict] = {}
+    if not run_ids:
+        return slot_contexts
+    events = db.scalars(
+        select(RunEvent)
+        .where(
+            RunEvent.run_id.in_(run_ids),
+            RunEvent.event_type.in_(["slots_done", "candidate_ok"]),
+        )
+        .order_by(RunEvent.id)
+    ).all()
+    for event in events:
+        context = slot_contexts.setdefault(event.run_id, {"slots": {}, "candidate_slots": {}})
+        payload = event.payload or {}
+        if event.event_type == "slots_done":
+            for slot in payload.get("slots") or []:
+                slot_id = slot.get("slot_id")
+                if slot_id:
+                    context["slots"][slot_id] = slot
+        elif event.event_type == "candidate_ok" and payload.get("name") and payload.get("slot_id"):
+            context["candidate_slots"][payload["name"]] = payload["slot_id"]
+    return slot_contexts
+
+
+def _candidate_export_context(slot_contexts: dict[str, dict], candidate: Candidate | None) -> dict:
+    if not candidate:
+        return {}
+    context = slot_contexts.get(candidate.run_id, {})
+    slot_id = (context.get("candidate_slots") or {}).get(candidate.name)
+    slot = (context.get("slots") or {}).get(slot_id, {})
+    return {
+        "domain": slot.get("domain") or "",
+        "source_phenomenon": slot.get("source_phenomenon") or slot.get("source") or candidate.source,
+    }
+
+
+def _json_export(value: object) -> str:
+    if value in (None, ""):
+        return ""
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return str(value)
+
+
 def _admin_feedback_rows(db: Session, limit: int = 200) -> list[dict]:
     rows = db.scalars(select(Feedback).order_by(desc(Feedback.created_at)).limit(limit)).all()
-    sync_rows = {
-        row.object_id: row
-        for row in db.scalars(
-            select(SyncOutbox).where(
-                SyncOutbox.provider == "dingtalk",
-                SyncOutbox.target == "feedback",
-                SyncOutbox.object_id.in_({item.id for item in rows}),
-            )
-        ).all()
-    } if rows else {}
     users = {
         row.id: row
         for row in db.scalars(
@@ -713,45 +778,14 @@ def _admin_feedback_rows(db: Session, limit: int = 200) -> list[dict]:
             select(Run).where(Run.id.in_({item.run_id for item in candidates.values()}))
         ).all()
     } if candidates else {}
-    slot_contexts: dict[str, dict] = {}
-    if runs:
-        events = db.scalars(
-            select(RunEvent)
-            .where(
-                RunEvent.run_id.in_(runs.keys()),
-                RunEvent.event_type.in_(["slots_done", "candidate_ok"]),
-            )
-            .order_by(RunEvent.id)
-        ).all()
-        for event in events:
-            context = slot_contexts.setdefault(event.run_id, {"slots": {}, "candidate_slots": {}})
-            payload = event.payload or {}
-            if event.event_type == "slots_done":
-                for slot in payload.get("slots") or []:
-                    slot_id = slot.get("slot_id")
-                    if slot_id:
-                        context["slots"][slot_id] = slot
-            elif event.event_type == "candidate_ok" and payload.get("name") and payload.get("slot_id"):
-                context["candidate_slots"][payload["name"]] = payload["slot_id"]
-
-    def candidate_context(candidate: Candidate | None) -> dict:
-        if not candidate:
-            return {}
-        context = slot_contexts.get(candidate.run_id, {})
-        slot_id = (context.get("candidate_slots") or {}).get(candidate.name)
-        slot = (context.get("slots") or {}).get(slot_id, {})
-        return {
-            "domain": slot.get("domain") or "",
-            "source_phenomenon": slot.get("source_phenomenon") or slot.get("source") or candidate.source,
-        }
+    slot_contexts = _slot_contexts_for_runs(db, set(runs.keys()))
 
     result = []
     for item in rows:
         candidate = candidates.get(item.candidate_id)
         run = runs.get(candidate.run_id) if candidate else None
-        context = candidate_context(candidate)
+        context = _candidate_export_context(slot_contexts, candidate)
         scores = candidate.scores_json if candidate else {}
-        sync_row = sync_rows.get(item.id)
         result.append({
             "id": item.id,
             "user_email": users.get(item.user_id).email if users.get(item.user_id) else "",
@@ -781,11 +815,98 @@ def _admin_feedback_rows(db: Session, limit: int = 200) -> list[dict]:
             "label_text": FEEDBACK_LABELS.get(item.label or "", item.label or ""),
             "rating": item.rating,
             "comment": item.comment,
-            "sync_status": sync_row.status if sync_row else None,
-            "sync_error": sync_row.error if sync_row else None,
-            "sync_external_id": sync_row.external_id if sync_row else None,
             "created_at": _utc_iso(item.created_at),
         })
+    return result
+
+
+def _admin_export_rows(db: Session) -> list[dict]:
+    runs = db.scalars(select(Run).order_by(desc(Run.created_at), desc(Run.id))).all()
+    if not runs:
+        return []
+
+    run_ids = {run.id for run in runs}
+    users = {
+        row.id: row
+        for row in db.scalars(select(User).where(User.id.in_({run.user_id for run in runs}))).all()
+    }
+    candidates = db.scalars(
+        select(Candidate)
+        .where(Candidate.run_id.in_(run_ids))
+        .order_by(Candidate.run_id, Candidate.index, Candidate.created_at)
+    ).all()
+    candidates_by_run: dict[str, list[Candidate]] = {}
+    for candidate in candidates:
+        candidates_by_run.setdefault(candidate.run_id, []).append(candidate)
+
+    feedback_by_candidate: dict[str, Feedback] = {}
+    candidate_ids = {candidate.id for candidate in candidates}
+    if candidate_ids:
+        feedback_rows = db.scalars(
+            select(Feedback)
+            .where(Feedback.candidate_id.in_(candidate_ids))
+            .order_by(desc(Feedback.created_at))
+        ).all()
+        for feedback in feedback_rows:
+            feedback_by_candidate.setdefault(feedback.candidate_id, feedback)
+
+    slot_contexts = _slot_contexts_for_runs(db, run_ids)
+
+    def export_row(run: Run, candidate: Candidate | None, feedback: Feedback | None) -> dict:
+        user = users.get(run.user_id)
+        scores = candidate.scores_json if candidate else {}
+        config = run.config_snapshot or {}
+        context = _candidate_export_context(slot_contexts, candidate)
+        return {
+            "row_type": "卡片" if candidate else "任务",
+            "user_email": user.email if user else "",
+            "user_id": run.user_id,
+            "run_problem": run.problem,
+            "run_status": run.status,
+            "run_problem_type": run.problem_type or "",
+            "run_created_at": _utc_iso(run.created_at),
+            "run_started_at": _utc_iso(run.started_at),
+            "run_finished_at": _utc_iso(run.finished_at),
+            "run_error": run.error or "",
+            "run_opt_in_improvement": "是" if run.opt_in_improvement else "否",
+            "slot_count": config.get("slot_count", ""),
+            "credit_cost": config.get("credit_cost", ""),
+            "candidate_index": candidate.index if candidate else "",
+            "candidate_name": candidate.name if candidate else "",
+            "candidate_slot": candidate.slot if candidate else "",
+            "candidate_domain": context.get("domain", ""),
+            "candidate_reroll_count": candidate.reroll_count if candidate else "",
+            "candidate_source_phenomenon": context.get("source_phenomenon", ""),
+            "candidate_source": candidate.source if candidate else "",
+            "candidate_proto": candidate.proto if candidate else "",
+            "candidate_desc": candidate.desc if candidate else "",
+            "candidate_fail": candidate.fail if candidate else "",
+            "score_structural_depth": scores.get("structural_depth", ""),
+            "score_domain_distance": scores.get("domain_distance", ""),
+            "score_novelty": scores.get("novelty", ""),
+            "score_applicability": scores.get("applicability", ""),
+            "candidate_search": _json_export(candidate.search_json if candidate else {}),
+            "candidate_created_at": _utc_iso(candidate.created_at) if candidate else "",
+            "has_feedback": "是" if feedback else "否",
+            "feedback_created_at": _utc_iso(feedback.created_at) if feedback else "",
+            "label_text": FEEDBACK_LABELS.get(feedback.label or "", feedback.label or "") if feedback else "",
+            "rating": feedback.rating if feedback else "",
+            "comment": feedback.comment if feedback else "",
+            "run_config_snapshot": _json_export(config),
+            "run_avg_scores": _json_export(run.avg_scores or {}),
+            "candidate_id": candidate.id if candidate else "",
+            "run_id": run.id,
+            "feedback_id": feedback.id if feedback else "",
+        }
+
+    result: list[dict] = []
+    for run in runs:
+        run_candidates = sorted(candidates_by_run.get(run.id, []), key=lambda item: item.index)
+        if not run_candidates:
+            result.append(export_row(run, None, None))
+            continue
+        for candidate in run_candidates:
+            result.append(export_row(run, candidate, feedback_by_candidate.get(candidate.id)))
     return result
 
 
@@ -799,38 +920,17 @@ def admin_feedback(db: Session = Depends(get_db), admin: User = Depends(require_
 
 @app.get("/api/admin/feedback.xlsx")
 def admin_feedback_excel(db: Session = Depends(get_db), admin: User = Depends(require_admin)) -> Response:
-    rows = _admin_feedback_rows(db, limit=5000)
-    headers = [label for _, label in FEEDBACK_EXPORT_COLUMNS]
-    sheet_rows = [[row.get(key, "") for key, _ in FEEDBACK_EXPORT_COLUMNS] for row in rows]
-    content = build_xlsx("反馈数据", headers, sheet_rows)
-    audit_admin_action(db, admin, "export_feedback_excel", "feedback", "*")
+    rows = _admin_export_rows(db)
+    headers = [label for _, label in DATA_EXPORT_COLUMNS]
+    sheet_rows = [[row.get(key, "") for key, _ in DATA_EXPORT_COLUMNS] for row in rows]
+    content = build_xlsx("全量数据", headers, sheet_rows)
+    audit_admin_action(db, admin, "export_all_data_excel", "data", "*")
     db.commit()
     return Response(
         content=content,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": 'attachment; filename="wildidea-feedback.xlsx"'},
+        headers={"Content-Disposition": 'attachment; filename="wildidea-data.xlsx"'},
     )
-
-
-@app.get("/api/admin/sync")
-def admin_sync_status(db: Session = Depends(get_db), admin: User = Depends(require_admin)) -> dict:
-    audit_admin_action(db, admin, "view_sync_status", "sync", "dingtalk")
-    status = dingtalk_sync_status(db)
-    db.commit()
-    return {"sync": status}
-
-
-@app.post("/api/admin/sync/flush")
-def admin_flush_sync(db: Session = Depends(get_db), admin: User = Depends(require_admin)) -> dict:
-    audit_admin_action(db, admin, "flush_sync", "sync", "dingtalk")
-    db.commit()
-    result = flush_sync_outbox()
-    status_db = next(get_db())
-    try:
-        status = dingtalk_sync_status(status_db)
-    finally:
-        status_db.close()
-    return {"ok": True, "result": result, "sync": status}
 
 
 @app.get("/api/admin/invite-codes")

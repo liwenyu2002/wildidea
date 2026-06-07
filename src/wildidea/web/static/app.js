@@ -240,8 +240,41 @@ function progressLine(run) {
     const refundText = refund ? `未通过质量上限的卡已退回 ${refund.credits} 积分。` : "";
     return `生成完成，共 ${run.candidates?.length || 0} 条候选。${refundText}`;
   }
+  if (run.status === "queued") return queuedSummary(run);
   if (run.status === "running") return runningSummary(run.events || [], run.config_snapshot || {});
   return "任务已提交，等待执行。";
+}
+
+function queuedSummary(run) {
+  const queue = run.queue || {};
+  const waitText = run.created_at ? formatChineseDuration(elapsedMs(Date.parse(run.created_at))) : "--";
+  const usersAhead = Number(queue.users_ahead || 0);
+  const tasksAhead = Number(queue.tasks_ahead || 0);
+  const runningAhead = Number(queue.running_ahead || 0);
+  const queuedAhead = Number(queue.queued_ahead || 0);
+  const estimateText = formatQueueEstimate(queueRemainingSeconds(queue));
+  const aheadText = usersAhead > 0
+    ? `前面还有 ${usersAhead} 位用户、${tasksAhead} 个任务`
+    : (tasksAhead > 0 ? `前面还有 ${tasksAhead} 个任务` : "前面没有其他用户");
+  const detailText = tasksAhead > 0 ? `其中生成中 ${runningAhead} 个、排队 ${queuedAhead} 个。` : "轮到你后会自动开始抽卡。";
+  const workerText = queue.worker_online === false ? "当前 worker 暂未上报心跳，系统会在接管后继续推进。" : "";
+  return `已等待 ${waitText} · ${aheadText}。预计等待约 ${estimateText}。${detailText}${workerText}`;
+}
+
+function queueRemainingSeconds(queue = {}) {
+  if (queue.estimated_wait_seconds === null || queue.estimated_wait_seconds === undefined) return null;
+  const estimated = Number(queue.estimated_wait_seconds);
+  if (!Number.isFinite(estimated)) return null;
+  if (queue.worker_online === false) return Math.max(0, estimated);
+  const calculatedAt = Date.parse(queue.calculated_at || "");
+  if (!Number.isFinite(calculatedAt)) return Math.max(0, estimated);
+  return Math.max(0, estimated - Math.floor(elapsedMs(calculatedAt) / 1000));
+}
+
+function formatQueueEstimate(seconds) {
+  if (seconds === null || seconds === undefined) return "暂无法估计";
+  if (seconds <= 30) return "不到 1 分钟";
+  return formatEstimate(seconds);
 }
 
 function runningSummary(events, config = {}) {
@@ -294,8 +327,12 @@ function renderCurrentRun(run) {
   $("resultSection").dataset.activeRunSnapshot = JSON.stringify(run.config_snapshot || {});
   $("progressLog").innerHTML = `<div class="progress-item" id="runProgressSummary">${escapeHtml(progressLine(run))}</div>`;
   const summary = $("runProgressSummary");
-  if (summary) summary.dataset.events = JSON.stringify(run.events || []);
-  if (run.status === "running") {
+  if (summary) {
+    summary.dataset.events = JSON.stringify(run.events || []);
+    summary.dataset.queue = JSON.stringify(run.queue || {});
+    summary.dataset.runCreatedAt = run.created_at || "";
+  }
+  if (run.status === "running" || run.status === "queued") {
     ensureRuntimeTicker();
   } else {
     stopRuntimeTicker();
@@ -652,11 +689,18 @@ function updateRuntimeLabels() {
 
 function updateRunProgressTimer() {
   const summary = $("runProgressSummary");
-  if (!summary || $("resultSection").dataset.activeRunStatus !== "running") return;
+  if (!summary) return;
+  const status = $("resultSection").dataset.activeRunStatus;
   try {
-    const events = JSON.parse(summary.dataset.events || "[]");
-    const config = JSON.parse($("resultSection").dataset.activeRunSnapshot || "{}");
-    summary.textContent = runningSummary(events, config);
+    if (status === "running") {
+      const events = JSON.parse(summary.dataset.events || "[]");
+      const config = JSON.parse($("resultSection").dataset.activeRunSnapshot || "{}");
+      summary.textContent = runningSummary(events, config);
+    } else if (status === "queued") {
+      const queue = JSON.parse(summary.dataset.queue || "{}");
+      const createdAt = summary.dataset.runCreatedAt || "";
+      summary.textContent = queuedSummary({ status: "queued", queue, created_at: createdAt });
+    }
   } catch {
     return;
   }
@@ -725,7 +769,9 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
       </div>
       <div class="weak-feedback hidden">
         <button type="button" data-label="weak_obscure" aria-pressed="false">晦涩难懂</button>
-        <button type="button" data-label="weak_logic" aria-pressed="false">逻辑混乱</button>
+        <button type="button" data-label="weak_off_topic" aria-pressed="false">不够相关</button>
+        <button type="button" data-label="weak_too_common" aria-pressed="false">太常规</button>
+        <button type="button" data-label="weak_unusable" aria-pressed="false">不可落地</button>
         <form class="weak-other-form">
           <input type="text" name="comment" placeholder="其他原因">
           <button type="submit">其他提交</button>
@@ -1088,13 +1134,12 @@ function startPollingRun(runId) {
 }
 
 async function loadAdmin() {
-  const [metrics, queue, invites, users, feedback, syncStatus] = await Promise.all([
+  const [metrics, queue, invites, users, feedback] = await Promise.all([
     api("/api/admin/metrics"),
     api("/api/admin/queue"),
     api("/api/admin/invite-codes"),
     api("/api/admin/users"),
     api("/api/admin/feedback"),
-    api("/api/admin/sync"),
   ]);
   $("metrics").innerHTML = `
     <div class="metric"><span class="muted">用户</span><strong>${metrics.users}</strong></div>
@@ -1103,7 +1148,6 @@ async function loadAdmin() {
     <div class="metric"><span class="muted">任务</span><strong>${Object.values(metrics.runs_by_status || {}).reduce((a, b) => a + b, 0)}</strong></div>
   `;
   renderQueueStatus(queue.queue);
-  renderSyncStatus(syncStatus.sync);
   $("inviteList").innerHTML = invites.invite_codes.map((item) => `
     <div class="admin-row">
       <strong>${escapeHtml(item.code)}</strong>
@@ -1154,8 +1198,6 @@ async function loadAdmin() {
         </div>
         ${adminScoreRow(item.candidate_scores)}
       </div>
-      ${item.sync_status ? `<span class="sync-chip ${escapeHtml(item.sync_status)}">钉钉：${escapeHtml(syncLabel(item.sync_status))}</span>` : ""}
-      ${item.sync_error ? `<p>${escapeHtml(item.sync_error)}</p>` : ""}
     </div>
   `).join("") || '<div class="muted">暂无反馈数据</div>';
 }
@@ -1251,39 +1293,6 @@ function adminScoreRow(scores) {
   `;
 }
 
-function renderSyncStatus(sync) {
-  const counts = sync?.counts || {};
-  const stateText = !sync?.enabled ? "未启用" : (sync.configured ? "已连接" : "缺少配置");
-  const hint = !sync?.enabled
-    ? "设置 DINGTALK_SYNC_ENABLED=1 后，反馈会进入钉钉同步队列。"
-    : (!sync.configured ? "还需要填写 appKey、appSecret、operatorId、baseId 和反馈 sheetId。" : "用户反馈会实时写入钉钉 AI 表格。");
-  $("syncStatus").innerHTML = `
-    <div>
-      <span class="eyebrow">钉钉同步</span>
-      <strong>${escapeHtml(stateText)}</strong>
-      <p class="muted">${escapeHtml(hint)}</p>
-    </div>
-    <div class="sync-counts">
-      <span>待同步 ${counts.pending || 0}</span>
-      <span>已同步 ${counts.synced || 0}</span>
-      <span>失败 ${counts.failed || 0}</span>
-    </div>
-    <button id="retrySyncBtn" class="ghost" type="button">重试同步</button>
-  `;
-  $("retrySyncBtn").addEventListener("click", flushSync);
-}
-
-async function flushSync() {
-  try {
-    const data = await api("/api/admin/sync/flush", { method: "POST" });
-    renderSyncStatus(data.sync);
-    await loadAdmin();
-    showToast(data.result?.skipped ? "钉钉同步尚未配置完整" : "已触发钉钉同步");
-  } catch (err) {
-    showToast(err.message);
-  }
-}
-
 async function downloadFeedbackExcel() {
   try {
     const response = await fetch("/api/admin/feedback.xlsx", {
@@ -1308,7 +1317,7 @@ async function downloadFeedbackExcel() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    showToast("反馈数据已导出");
+    showToast("全量数据已导出");
   } catch (err) {
     showToast(err.message);
   }
@@ -1318,20 +1327,13 @@ function feedbackLabel(label) {
   const labels = {
     useful: "有用",
     weak_obscure: "晦涩难懂",
-    weak_logic: "逻辑混乱",
+    weak_off_topic: "不够相关",
+    weak_too_common: "太常规",
+    weak_unusable: "不可落地",
     weak_other: "其他",
     weak: "没用",
   };
   return labels[label] || label || "-";
-}
-
-function syncLabel(status) {
-  const labels = {
-    pending: "待同步",
-    synced: "已同步",
-    failed: "失败",
-  };
-  return labels[status] || status || "-";
 }
 
 function escapeHtml(value) {

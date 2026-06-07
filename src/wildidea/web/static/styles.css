@@ -1489,17 +1489,6 @@ h2 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.sync-status {
-  border: 1px solid var(--line);
-  background: #f8fbfb;
-  border-radius: 8px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
-}
-
 .queue-status {
   border: 2px solid var(--line);
   background: #fbfaf0;
@@ -1616,50 +1605,6 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.sync-status strong {
-  display: block;
-  font-size: 18px;
-  margin-top: 2px;
-}
-
-.sync-status p {
-  margin: 4px 0 0;
-  font-size: 13px;
-}
-
-.sync-counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.sync-counts span,
-.sync-chip {
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 6px;
-  padding: 4px 7px;
-}
-
-.sync-chip {
-  color: var(--muted);
-  font-size: 12px;
-  width: fit-content;
-}
-
-.sync-chip.synced {
-  color: var(--ok);
-  border-color: #b6dbc2;
-  background: #eef8f1;
-}
-
-.sync-chip.failed {
-  color: var(--danger);
-  border-color: #eec1b6;
-  background: #fff3ef;
 }
 
 .metric strong {

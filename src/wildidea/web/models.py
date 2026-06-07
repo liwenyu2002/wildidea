@@ -201,25 +201,6 @@ class EmailVerificationCode(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
-class SyncOutbox(Base):
-    __tablename__ = "sync_outbox"
-    __table_args__ = (UniqueConstraint("provider", "target", "object_type", "object_id", name="uq_sync_outbox_object"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    provider: Mapped[str] = mapped_column(String(40), default="dingtalk", index=True)
-    target: Mapped[str] = mapped_column(String(80), default="feedback", index=True)
-    object_type: Mapped[str] = mapped_column(String(80), index=True)
-    object_id: Mapped[str] = mapped_column(String(80), index=True)
-    payload: Mapped[dict] = mapped_column(JSON, default=dict)
-    status: Mapped[str] = mapped_column(String(30), default="pending", index=True)
-    attempts: Mapped[int] = mapped_column(Integer, default=0)
-    external_id: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
-    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-
-
 class AdminAuditLog(Base):
     __tablename__ = "admin_audit_logs"
 

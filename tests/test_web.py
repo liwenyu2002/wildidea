@@ -233,7 +233,7 @@ def test_feedback_is_mutually_exclusive_upsert():
     from sqlalchemy import func, select
 
     from wildidea.web.database import SessionLocal
-    from wildidea.web.models import Candidate, Feedback, InteractionEvent
+    from wildidea.web.models import Candidate, Feedback, InteractionEvent, Run
 
     webapp.execute_run = lambda run_id: None
 
@@ -263,7 +263,25 @@ def test_feedback_is_mutually_exclusive_upsert():
                 fail="失败条件",
                 reroll_count=2,
             )
-            db.add(candidate)
+            silent_candidate = Candidate(
+                run_id=run_id,
+                index=2,
+                name="未反馈方案",
+                slot="D2",
+                source="静默来源",
+                proto="静默机制",
+                desc="静默方案",
+                fail="静默边界",
+            )
+            run_only = Run(
+                user_id=user_resp.json()["user"]["id"],
+                problem="只问问题无候选",
+                status="failed",
+                problem_type="product",
+                error="模型失败",
+                config_snapshot={"slot_count": 10, "credit_cost": 10},
+            )
+            db.add_all([candidate, silent_candidate, run_only])
             db.commit()
             candidate_id = candidate.id
         finally:
@@ -285,16 +303,24 @@ def test_feedback_is_mutually_exclusive_upsert():
         )
         assert missing_other.status_code == 422
 
-        second = client.post(
+        legacy_logic = client.post(
             f"/api/candidates/{candidate_id}/feedback",
             headers=headers,
-            json={"label": "weak_obscure"},
+            json={"label": "weak_logic"},
         )
-        assert second.status_code == 200
-        assert second.json()["feedback_id"] == first.json()["feedback_id"]
-        assert second.json()["feedback"]["label"] == "weak_obscure"
-        assert second.json()["feedback"]["rating"] == 2
-        assert second.json()["feedback"]["adopted"] is False
+        assert legacy_logic.status_code == 422
+
+        for label in ["weak_obscure", "weak_off_topic", "weak_too_common", "weak_unusable"]:
+            weak_resp = client.post(
+                f"/api/candidates/{candidate_id}/feedback",
+                headers=headers,
+                json={"label": label},
+            )
+            assert weak_resp.status_code == 200
+            assert weak_resp.json()["feedback_id"] == first.json()["feedback_id"]
+            assert weak_resp.json()["feedback"]["label"] == label
+            assert weak_resp.json()["feedback"]["rating"] == 2
+            assert weak_resp.json()["feedback"]["adopted"] is False
 
         third = client.post(
             f"/api/candidates/{candidate_id}/feedback",
@@ -349,11 +375,19 @@ def test_feedback_is_mutually_exclusive_upsert():
 
         with ZipFile(BytesIO(export_resp.content)) as archive:
             sheet_xml = archive.read("xl/worksheets/sheet1.xml").decode("utf-8")
+            workbook_xml = archive.read("xl/workbook.xml").decode("utf-8")
+        assert "全量数据" in workbook_xml
+        assert 'filename="wildidea-data.xlsx"' in export_resp.headers["content-disposition"]
+        assert "数据类型" in sheet_xml
         assert "反馈类型" in sheet_xml
+        assert "是否有反馈" in sheet_xml
         assert "重抽次数" in sheet_xml
         assert "不贴合真实相册场景" in sheet_xml
         assert "测试方案" in sheet_xml
+        assert "未反馈方案" in sheet_xml
+        assert "只问问题无候选" in sheet_xml
         assert "具体方案" in sheet_xml
+        assert "静默方案" in sheet_xml
 
         db = SessionLocal()
         try:
@@ -367,7 +401,7 @@ def test_feedback_is_mutually_exclusive_upsert():
                 )
             )
             assert feedback_count == 1
-            assert event_count == 3
+            assert event_count == 6
         finally:
             db.close()
 
@@ -438,6 +472,61 @@ def test_worker_executor_queues_without_background_execution():
             )
             assert blocked_resp.status_code == 429
             assert blocked_resp.json()["detail"]["error"] == "ACTIVE_RUN_LIMIT_REACHED"
+    finally:
+        object.__setattr__(webapp.settings, "run_executor", original_executor)
+        object.__setattr__(webapp.settings, "user_active_run_limit", original_limit)
+
+
+def test_queued_run_reports_position_and_wait_estimate():
+    from wildidea.web.database import SessionLocal
+    from wildidea.web.models import Run, WorkerHeartbeat
+
+    webapp.execute_run = lambda run_id: None
+    original_executor = webapp.settings.run_executor
+    original_limit = webapp.settings.user_active_run_limit
+    object.__setattr__(webapp.settings, "run_executor", "worker")
+    object.__setattr__(webapp.settings, "user_active_run_limit", 1)
+    try:
+        db = SessionLocal()
+        try:
+            for run in db.query(Run).filter(Run.status.in_(["queued", "running"])).all():
+                run.status = "succeeded"
+            db.query(WorkerHeartbeat).delete()
+            db.commit()
+        finally:
+            db.close()
+
+        with TestClient(webapp.app) as client:
+            first_user = register_user(client, "queue-first@example.com")
+            second_user = register_user(client, "queue-second@example.com")
+            first_headers = {"Authorization": f"Bearer {first_user.json()['access_token']}"}
+            second_headers = {"Authorization": f"Bearer {second_user.json()['access_token']}"}
+
+            first_run = client.post(
+                "/api/runs",
+                headers=first_headers,
+                json={"problem": "前序任务", "slot_count": 2},
+            )
+            assert first_run.status_code == 200
+
+            second_run = client.post(
+                "/api/runs",
+                headers=second_headers,
+                json={"problem": "后续任务", "slot_count": 1},
+            )
+            assert second_run.status_code == 200
+            run_id = second_run.json()["run"]["id"]
+
+            detail = client.get(f"/api/runs/{run_id}", headers=second_headers)
+            assert detail.status_code == 200
+            queue = detail.json()["run"]["queue"]
+            assert queue["status"] == "queued"
+            assert queue["queue_position"] == 2
+            assert queue["queued_ahead"] == 1
+            assert queue["tasks_ahead"] == 1
+            assert queue["users_ahead"] == 1
+            assert queue["estimated_wait_seconds"] >= 180
+            assert queue["worker_online"] is False
     finally:
         object.__setattr__(webapp.settings, "run_executor", original_executor)
         object.__setattr__(webapp.settings, "user_active_run_limit", original_limit)
@@ -918,118 +1007,6 @@ def test_production_like_all_cards_fail_gets_full_refund(monkeypatch):
             assert refund.amount == 3
         finally:
             db.close()
-
-
-def test_feedback_syncs_to_dingtalk_outbox(monkeypatch):
-    from wildidea.web import sync as sync_module
-    from wildidea.web.database import SessionLocal
-    from wildidea.web.models import Candidate, SyncOutbox, User
-    from wildidea.web.security import create_access_token, hash_password
-
-    webapp.execute_run = lambda run_id: None
-    monkeypatch.setattr(sync_module, "dingtalk_sync_enabled", lambda: True)
-    monkeypatch.setattr(sync_module, "dingtalk_feedback_configured", lambda: False)
-
-    with TestClient(webapp.app) as client:
-        user_resp = register_user(client, "sync-user@example.com")
-        assert user_resp.status_code == 200
-        headers = {"Authorization": f"Bearer {user_resp.json()['access_token']}"}
-
-        run_resp = client.post(
-            "/api/runs",
-            headers=headers,
-            json={"problem": "给相册 App 找反馈闭环", "slot_count": 1},
-        )
-        assert run_resp.status_code == 200
-        run_id = run_resp.json()["run"]["id"]
-
-        db = SessionLocal()
-        try:
-            admin = User(
-                email="sync-admin@example.com",
-                password_hash=hash_password("secret12"),
-                role="admin",
-                credit_balance=30,
-            )
-            candidate = Candidate(
-                run_id=run_id,
-                index=1,
-                name="记忆池",
-                slot="D2",
-                source="地震余震模型",
-                proto="压力扩散触发二次事件",
-                desc="相册里把浏览、点赞、编辑视为记忆事件",
-                fail="照片数量太少时网络无法成形",
-                reroll_count=1,
-            )
-            db.add_all([admin, candidate])
-            db.commit()
-            admin_headers = {"Authorization": f"Bearer {create_access_token(admin.id)}"}
-            candidate_id = candidate.id
-        finally:
-            db.close()
-
-        first = client.post(
-            f"/api/candidates/{candidate_id}/feedback",
-            headers=headers,
-            json={"label": "weak_obscure"},
-        )
-        assert first.status_code == 200
-
-        db = SessionLocal()
-        try:
-            rows = db.query(SyncOutbox).filter_by(object_id=first.json()["feedback_id"]).all()
-            assert len(rows) == 1
-            assert rows[0].status == "pending"
-            assert rows[0].payload["fields"]["反馈类型"] == "晦涩难懂"
-            assert rows[0].payload["fields"]["任务"] == "给相册 App 找反馈闭环"
-            assert rows[0].payload["fields"]["源现象"] == "地震余震模型"
-            assert rows[0].payload["fields"]["抽象方法名"] == "地震余震模型"
-            assert rows[0].payload["fields"]["领域"] == ""
-            assert rows[0].payload["fields"]["重抽次数"] == 1
-        finally:
-            db.close()
-
-        sync_status = client.get("/api/admin/sync", headers=admin_headers)
-        assert sync_status.status_code == 200
-        assert sync_status.json()["sync"]["counts"]["pending"] == 1
-        assert sync_status.json()["sync"]["configured"] is False
-
-        created_records: list[dict] = []
-        updated_records: list[tuple[str, dict]] = []
-
-        class FakeDingtalkClient:
-            def create_feedback_record(self, fields):
-                created_records.append(fields)
-                return "ding-record-1"
-
-            def update_feedback_record(self, record_id, fields):
-                updated_records.append((record_id, fields))
-                return record_id
-
-        monkeypatch.setattr(sync_module, "dingtalk_feedback_configured", lambda: True)
-        monkeypatch.setattr(sync_module, "DingtalkClient", FakeDingtalkClient)
-
-        flush_resp = client.post("/api/admin/sync/flush", headers=admin_headers)
-        assert flush_resp.status_code == 200
-        assert flush_resp.json()["result"]["synced"] == 1
-        assert created_records[0]["方案名称"] == "记忆池"
-
-        second = client.post(
-            f"/api/candidates/{candidate_id}/feedback",
-            headers=headers,
-            json={"label": "useful"},
-        )
-        assert second.status_code == 200
-        assert second.json()["feedback_id"] == first.json()["feedback_id"]
-        assert updated_records[-1][0] == "ding-record-1"
-        assert updated_records[-1][1]["反馈类型"] == "有用"
-
-        admin_feedback = client.get("/api/admin/feedback", headers=admin_headers)
-        assert admin_feedback.status_code == 200
-        latest = admin_feedback.json()["feedback"][0]
-        assert latest["sync_status"] == "synced"
-        assert latest["sync_external_id"] == "ding-record-1"
 
 
 def test_parallel_progress_events_are_thread_safe(monkeypatch):
