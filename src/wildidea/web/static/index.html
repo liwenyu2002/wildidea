@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>WildIdea · 想出不一样的点子</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20260607-email-code">
+  <link rel="stylesheet" href="/static/styles.css?v=20260607-required-consent">
 </head>
 <body>
   <div class="shell">
@@ -42,9 +42,12 @@
             邀请码
             <input id="inviteAtRegister" type="text" autocomplete="off">
           </label>
-          <label id="improvementConsentWrap" class="check hidden">
+          <label id="improvementConsentWrap" class="check consent-check hidden">
             <input id="improvementConsent" type="checkbox">
-            允许把交互数据用于改进（永久同意）
+            <span>
+              <strong>我同意将交互数据用于改进 WildIdea 结果</strong>
+              <small>我们会保护你的隐私，数据仅用于提升生成质量和产品体验，不会公开个人身份信息。</small>
+            </span>
           </label>
           <button id="authSubmit" class="primary" type="submit">登录</button>
         </form>
@@ -170,6 +173,6 @@
     </main>
   </div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=20260607-email-code"></script>
+  <script src="/static/app.js?v=20260607-required-consent"></script>
 </body>
 </html>

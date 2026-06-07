@@ -32,7 +32,7 @@ def request_email_code(client: TestClient, email: str) -> str:
 
 def register_user(client: TestClient, email: str, password: str = "secret12", **extra):
     code = request_email_code(client, email)
-    payload = {"email": email, "password": password, "verification_code": code}
+    payload = {"email": email, "password": password, "verification_code": code, "opt_in_improvement": True}
     payload.update(extra)
     return client.post("/api/auth/register", json=payload)
 
@@ -65,7 +65,8 @@ def test_register_invite_redeem_and_run_charge():
         assert admin_resp.status_code == 200
         assert admin_resp.json()["user"]["role"] == "admin"
         assert admin_resp.json()["user"]["credit_balance"] == 30
-        assert admin_resp.json()["user"]["improvement_consent"] is False
+        assert admin_resp.json()["user"]["improvement_consent"] is True
+        assert admin_resp.json()["user"]["improvement_consent_at"]
         admin_headers = {"Authorization": f"Bearer {admin_resp.json()['access_token']}"}
 
         invite_resp = client.post(
@@ -161,17 +162,56 @@ def test_registration_requires_email_code_and_smtp_configuration():
         wrong_code = "000000" if code != "000000" else "111111"
         wrong = client.post(
             "/api/auth/register",
-            json={"email": "verified-user@example.com", "password": "secret12", "verification_code": wrong_code},
+            json={
+                "email": "verified-user@example.com",
+                "password": "secret12",
+                "verification_code": wrong_code,
+                "opt_in_improvement": True,
+            },
         )
         assert wrong.status_code == 422
         assert wrong.json()["detail"]["error"] == "EMAIL_CODE_INVALID"
 
         ok = client.post(
             "/api/auth/register",
-            json={"email": "verified-user@example.com", "password": "secret12", "verification_code": code},
+            json={
+                "email": "verified-user@example.com",
+                "password": "secret12",
+                "verification_code": code,
+                "opt_in_improvement": True,
+            },
         )
         assert ok.status_code == 200
         assert ok.json()["user"]["email_verified_at"]
+
+
+def test_registration_requires_improvement_consent_before_consuming_email_code():
+    with TestClient(webapp.app) as client:
+        code = request_email_code(client, "privacy-consent@example.com")
+        no_consent = client.post(
+            "/api/auth/register",
+            json={
+                "email": "privacy-consent@example.com",
+                "password": "secret12",
+                "verification_code": code,
+                "opt_in_improvement": False,
+            },
+        )
+        assert no_consent.status_code == 422
+        assert no_consent.json()["detail"]["error"] == "IMPROVEMENT_CONSENT_REQUIRED"
+
+        ok = client.post(
+            "/api/auth/register",
+            json={
+                "email": "privacy-consent@example.com",
+                "password": "secret12",
+                "verification_code": code,
+                "opt_in_improvement": True,
+            },
+        )
+        assert ok.status_code == 200
+        assert ok.json()["user"]["improvement_consent"] is True
+        assert ok.json()["user"]["improvement_consent_at"]
 
 
 def test_feedback_is_mutually_exclusive_upsert():

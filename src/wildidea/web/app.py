@@ -308,16 +308,23 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)) -> dict:
     email = req.email.strip().lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status_code=409, detail={"error": "EMAIL_EXISTS", "message": "邮箱已注册"})
+    if not req.opt_in_improvement:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "IMPROVEMENT_CONSENT_REQUIRED",
+                "message": "注册需要同意将交互数据用于改进 WildIdea 结果；我们会保护你的隐私，不公开个人身份信息。",
+            },
+        )
     _verify_email_code(db, email, req.verification_code)
     is_first_user = db.scalar(select(func.count()).select_from(User)) == 0
     now = utcnow()
-    consent_at = now if req.opt_in_improvement else None
     user = User(
         email=email,
         password_hash=hash_password(req.password),
         role="admin" if is_first_user else "user",
-        improvement_consent=req.opt_in_improvement,
-        improvement_consent_at=consent_at,
+        improvement_consent=True,
+        improvement_consent_at=now,
         email_verified_at=now,
     )
     db.add(user)

@@ -302,11 +302,36 @@ h2 {
   grid-template-columns: auto 1fr;
   flex-direction: row;
   align-items: center;
+  gap: 8px;
   color: var(--text) !important;
 }
 
 .check input {
   width: auto;
+}
+
+.consent-check {
+  align-items: flex-start;
+  line-height: 1.45;
+}
+
+.consent-check input {
+  margin-top: 4px;
+}
+
+.consent-check span {
+  display: grid;
+  gap: 4px;
+}
+
+.consent-check strong {
+  font-size: 13px;
+}
+
+.consent-check small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .code-row {

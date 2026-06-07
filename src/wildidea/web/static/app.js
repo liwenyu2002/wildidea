@@ -44,6 +44,7 @@ function setAuthMode(mode) {
   $("emailCodeWrap").classList.toggle("hidden", mode !== "register");
   $("inviteAtRegisterWrap").classList.toggle("hidden", mode !== "register");
   $("improvementConsentWrap").classList.toggle("hidden", mode !== "register");
+  $("improvementConsent").required = mode === "register";
   $("authSubmit").textContent = mode === "login" ? "登录" : "注册并获得 30 积分";
   $("password").autocomplete = mode === "login" ? "current-password" : "new-password";
 }
@@ -1107,6 +1108,11 @@ $("authForm").addEventListener("submit", async (event) => {
     password: $("password").value,
   };
   if (state.authMode === "register") {
+    if (!$("improvementConsent").checked) {
+      showToast("请先同意将交互数据用于改进；我们会保护你的隐私");
+      $("improvementConsent").focus();
+      return;
+    }
     payload.invite_code = $("inviteAtRegister").value || null;
     payload.opt_in_improvement = $("improvementConsent").checked;
     payload.verification_code = $("emailCode").value.trim();
