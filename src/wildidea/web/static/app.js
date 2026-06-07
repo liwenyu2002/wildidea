@@ -17,6 +17,8 @@ const state = {
   emailCodeRemaining: 0,
 };
 
+const DRAW_CARD_DELAY_MS = 170;
+
 const $ = (id) => document.getElementById(id);
 
 function showToast(message) {
@@ -295,7 +297,7 @@ function renderSlotProgress(events, target, candidates = []) {
       if (!state.animatedProgressCards.has(animationKey)) {
         state.animatedProgressCards.add(animationKey);
         liveCard.classList.add("draw-enter");
-        liveCard.style.setProperty("--draw-delay", `${Math.min(index, 9) * 90}ms`);
+        liveCard.style.setProperty("--draw-delay", `${Math.min(index, 9) * DRAW_CARD_DELAY_MS}ms`);
       }
       grid.appendChild(liveCard);
       return;
@@ -306,7 +308,7 @@ function renderSlotProgress(events, target, candidates = []) {
     if (!state.animatedProgressCards.has(animationKey)) {
       state.animatedProgressCards.add(animationKey);
       card.classList.add("draw-enter");
-      card.style.setProperty("--draw-delay", `${Math.min(index, 9) * 90}ms`);
+      card.style.setProperty("--draw-delay", `${Math.min(index, 9) * DRAW_CARD_DELAY_MS}ms`);
     }
     card.innerHTML = `
       <div class="candidate-top">
@@ -351,7 +353,7 @@ function renderDrawStage(grid, target, events) {
       <strong>正在从卡池里抽取 ${target} 张灵感卡</strong>
       <p>${escapeHtml(typeEvent ? `已识别为 ${typeEvent.payload?.value || "product"} 类型，正在洗牌匹配源现象。` : (running ? "模型工人已启动，正在抽槽位。" : "任务已进入队列，准备发牌。"))}</p>
       <div class="draw-slots">
-        ${Array.from({ length: target }, (_, index) => `<i style="--draw-delay:${Math.min(index, 9) * 90}ms"></i>`).join("")}
+        ${Array.from({ length: target }, (_, index) => `<i style="--draw-delay:${Math.min(index, 9) * DRAW_CARD_DELAY_MS}ms"></i>`).join("")}
       </div>
     </div>
   `;

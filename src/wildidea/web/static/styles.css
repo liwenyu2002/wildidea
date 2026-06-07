@@ -341,7 +341,7 @@ h2 {
 }
 
 .workspace.launching .composer {
-  animation: searchCollapse 560ms ease forwards;
+  animation: searchCollapse 880ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: none;
 }
 
@@ -357,7 +357,7 @@ h2 {
   border-radius: 8px;
   box-shadow: var(--shadow);
   padding: 12px 14px;
-  animation: queryToWorkbench 680ms ease forwards;
+  animation: queryToWorkbench 980ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: none;
 }
 
@@ -456,23 +456,32 @@ h2 {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+  38% {
+    opacity: 1;
+    transform: translateY(8px) scale(1);
+  }
   100% {
     opacity: 0;
-    transform: translateY(-24px) scale(0.96);
+    transform: translateY(-34px) scale(0.94);
   }
 }
 
 @keyframes queryToWorkbench {
   0% {
     opacity: 0;
-    transform: translate(-50%, 72px) scale(1.04);
+    transform: translate(-50%, 108px) scale(1.02);
   }
-  22% {
+  18% {
     opacity: 1;
+    transform: translate(-50%, 78px) scale(1);
+  }
+  64% {
+    opacity: 1;
+    transform: translate(-50%, 8px) scale(0.98);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -42px) scale(0.92);
+    transform: translate(-50%, -46px) scale(0.94);
   }
 }
 
@@ -816,7 +825,7 @@ h2 {
 }
 
 .draw-deck span {
-  animation: deckShuffle 1.2s ease-in-out infinite;
+  animation: deckShuffle 1.55s ease-in-out infinite;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.1)),
     repeating-linear-gradient(45deg, #f3b17f 0 12px, #f7df89 12px 24px);
@@ -842,12 +851,12 @@ h2 {
 }
 
 .draw-deck span:nth-child(2) {
-  animation-delay: 160ms;
+  animation-delay: 220ms;
   transform: translateX(0) rotate(1deg);
 }
 
 .draw-deck span:nth-child(3) {
-  animation-delay: 320ms;
+  animation-delay: 440ms;
   transform: translateX(24px) rotate(9deg);
 }
 
@@ -874,7 +883,7 @@ h2 {
 }
 
 .draw-slots i {
-  animation: slotBlink 1s ease-in-out infinite;
+  animation: slotBlink 1.35s ease-in-out infinite;
   animation-delay: var(--draw-delay, 0ms);
   background: #edf4f7;
   border: 2px solid var(--line);
@@ -908,12 +917,12 @@ h2 {
 }
 
 .progress-card.draw-enter {
-  animation: cardDealIn 680ms cubic-bezier(0.2, 0.75, 0.18, 1) both;
+  animation: cardDealIn 1080ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--draw-delay, 0ms);
 }
 
 .progress-card.draw-enter::before {
-  animation: cardBackFlip 760ms cubic-bezier(0.2, 0.75, 0.18, 1) both;
+  animation: cardBackFlip 1160ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--draw-delay, 0ms);
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.12)),
@@ -935,11 +944,15 @@ h2 {
 @keyframes cardDealIn {
   0% {
     opacity: 0;
-    transform: translateY(-34px) scale(0.92) rotate(-2deg);
+    transform: translateY(-46px) scale(0.9) rotate(-2deg);
   }
-  56% {
+  58% {
     opacity: 1;
-    transform: translateY(5px) scale(1.02) rotate(1deg);
+    transform: translateY(8px) scale(1.015) rotate(0.75deg);
+  }
+  82% {
+    opacity: 1;
+    transform: translateY(-2px) scale(0.998) rotate(-0.25deg);
   }
   100% {
     opacity: 1;
@@ -952,11 +965,11 @@ h2 {
     opacity: 1;
     transform: scale(0.94) rotateY(0deg);
   }
-  54% {
+  62% {
     opacity: 1;
     transform: scale(1) rotateY(0deg);
   }
-  76% {
+  86% {
     opacity: 1;
     transform: scale(1.02) rotateY(90deg);
   }
