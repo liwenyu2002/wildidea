@@ -11,6 +11,7 @@ Path("/tmp/wildidea-test-web.db").unlink(missing_ok=True)
 from fastapi.testclient import TestClient  # noqa: E402
 
 import wildidea.web.app as webapp  # noqa: E402
+from wildidea.web.emailer import _build_verification_message  # noqa: E402
 
 
 def request_email_code(client: TestClient, email: str) -> str:
@@ -34,6 +35,24 @@ def register_user(client: TestClient, email: str, password: str = "secret12", **
     payload = {"email": email, "password": password, "verification_code": code}
     payload.update(extra)
     return client.post("/api/auth/register", json=payload)
+
+
+def test_verification_email_has_html_and_plaintext_parts():
+    message = _build_verification_message("new-user@example.com", "123456", "no-reply@example.com")
+
+    assert message.is_multipart()
+    assert message["Subject"] == "WildIdea 注册验证码"
+    assert message["To"] == "new-user@example.com"
+    plain = message.get_body(preferencelist=("plain",))
+    html = message.get_body(preferencelist=("html",))
+    assert plain is not None
+    assert html is not None
+    assert "你的 WildIdea 注册验证码是：123456" in plain.get_content()
+    html_content = html.get_content()
+    assert "WildIdea" in html_content
+    assert "邮箱验证" in html_content
+    assert "123456" in html_content
+    assert "分钟内有效" in html_content
 
 
 def test_register_invite_redeem_and_run_charge():
