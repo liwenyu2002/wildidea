@@ -250,6 +250,16 @@ def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.api_route("/favicon.svg", methods=["GET", "HEAD"], include_in_schema=False)
+def favicon_svg() -> FileResponse:
+    return FileResponse(STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
+
+
+@app.api_route("/favicon.ico", methods=["GET", "HEAD"], include_in_schema=False)
+def favicon_ico() -> FileResponse:
+    return FileResponse(STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
+
+
 def _same_timezone_now(value) -> object:
     now = utcnow()
     if value and getattr(value, "tzinfo", None) is None:

@@ -57,6 +57,21 @@ def test_verification_email_has_html_and_plaintext_parts():
     assert "分钟内有效" in html_content
 
 
+def test_homepage_exposes_favicon():
+    with TestClient(webapp.app) as client:
+        home = client.get("/")
+        assert home.status_code == 200
+        assert "/static/favicon.svg" in home.text
+
+        favicon = client.get("/favicon.ico")
+        assert favicon.status_code == 200
+        assert "image/svg+xml" in favicon.headers["content-type"]
+        assert b"WildIdea" in favicon.content
+
+        favicon_head = client.head("/favicon.ico")
+        assert favicon_head.status_code == 200
+
+
 def test_register_invite_redeem_and_run_charge():
     webapp.execute_run = lambda run_id: None
 
