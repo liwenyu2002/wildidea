@@ -106,6 +106,21 @@ textarea {
   align-items: center;
   gap: 12px;
   padding: 6px 2px 10px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+  min-height: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.brand.is-clickable {
+  cursor: pointer;
+}
+
+.brand.is-clickable:hover strong {
+  color: var(--accent);
 }
 
 .brand strong {
@@ -237,10 +252,93 @@ h2 {
 .workspace {
   display: grid;
   gap: 16px;
+  position: relative;
+}
+
+.workspace.search-open {
+  min-height: calc(100vh - 112px);
+  align-content: center;
 }
 
 .composer {
   padding: 16px;
+}
+
+.search-open .composer {
+  width: min(820px, 100%);
+  margin: 0 auto;
+  padding: 22px;
+}
+
+.search-heading {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.search-heading span {
+  color: var(--accent-2);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.search-heading strong {
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.search-open textarea {
+  min-height: 160px;
+}
+
+.workspace.launching .composer {
+  animation: searchCollapse 560ms ease forwards;
+  pointer-events: none;
+}
+
+.launch-ghost {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 96px;
+  width: min(700px, calc(100% - 32px));
+  transform: translateX(-50%);
+  border: 2px solid var(--line);
+  background: #fff4bd;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  animation: queryToWorkbench 680ms ease forwards;
+  pointer-events: none;
+}
+
+.launch-ghost span,
+.query-arrival span {
+  color: var(--accent-2);
+  display: block;
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.launch-ghost strong,
+.query-arrival strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.query-arrival {
+  border: 2px solid var(--line);
+  background: #fff4bd;
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.72);
+  margin: 12px 0;
+  padding: 10px 12px;
+}
+
+.query-arrival.arrived {
+  animation: queryArrive 460ms ease;
 }
 
 .composer-grid {
@@ -302,6 +400,42 @@ h2 {
 
 .composer .primary {
   margin-top: 12px;
+}
+
+@keyframes searchCollapse {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.96);
+  }
+}
+
+@keyframes queryToWorkbench {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 72px) scale(1.04);
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -42px) scale(0.92);
+  }
+}
+
+@keyframes queryArrive {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .result-section,
@@ -1333,6 +1467,24 @@ textarea:focus {
   background: #fff8d8;
   padding: 10px;
   box-shadow: var(--shadow);
+  min-height: auto;
+  color: var(--text);
+  font-weight: 400;
+  text-transform: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.brand:hover {
+  background: #fff8d8;
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+  transform: none;
+}
+
+.brand.is-clickable:hover {
+  background: #fff0b8;
+  box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.78);
+  transform: translate(1px, 1px);
 }
 
 .brand strong,

@@ -9,6 +9,9 @@ const state = {
   runtimeTimer: null,
   authMode: "login",
   adminOpen: false,
+  searchOpen: true,
+  launchingSearch: false,
+  arrivedRunId: null,
   animatedProgressCards: new Set(),
   emailCodeTimer: null,
   emailCodeRemaining: 0,
@@ -52,6 +55,7 @@ function setAuthMode(mode) {
 function renderShell() {
   const loggedIn = Boolean(state.user);
   const isAdmin = loggedIn && state.user.role === "admin";
+  const generationViewActive = loggedIn && (state.searchOpen || state.launchingSearch);
   if (!isAdmin) state.adminOpen = false;
   $("authPanel").classList.toggle("hidden", loggedIn);
   $("userPanel").classList.toggle("hidden", !loggedIn);
@@ -59,19 +63,73 @@ function renderShell() {
   $("workspace").classList.toggle("hidden", !loggedIn);
   $("emptyState").classList.toggle("hidden", loggedIn);
   $("statusPill").textContent = loggedIn ? `${state.user.role === "admin" ? "管理员" : "普通用户"} · ${state.user.credit_balance} 积分` : "未登录";
-  $("adminEntry").classList.toggle("hidden", !isAdmin);
-  $("adminPanel").classList.toggle("hidden", !isAdmin || !state.adminOpen);
+  $("adminEntry").classList.toggle("hidden", !isAdmin || generationViewActive);
+  $("adminPanel").classList.toggle("hidden", !isAdmin || !state.adminOpen || generationViewActive);
   $("adminToggleBtn").textContent = state.adminOpen ? "收起管理员后台" : "打开管理员后台";
   $("adminToggleBtn").setAttribute("aria-expanded", String(state.adminOpen));
+  $("brandHomeBtn").classList.toggle("is-clickable", loggedIn);
+  $("brandHomeBtn").setAttribute("aria-label", loggedIn ? "发起新的 WildIdea 搜索" : "WildIdea");
   if (loggedIn) {
     $("userEmail").textContent = state.user.email;
     $("creditBalance").textContent = `${state.user.credit_balance} 积分`;
   }
+  renderWorkspaceMode();
 }
 
 function updateRunCostLabel() {
   const count = Math.max(1, Math.min(30, Number($("slotCount")?.value || 10)));
   $("runSubmit").textContent = `消耗 ${count} 积分生成`;
+}
+
+function renderWorkspaceMode() {
+  const loggedIn = Boolean(state.user);
+  const showSearch = loggedIn && state.searchOpen && !state.launchingSearch;
+  $("workspace").classList.toggle("search-open", showSearch);
+  $("workspace").classList.toggle("result-open", loggedIn && !showSearch);
+  $("workspace").classList.toggle("launching", Boolean(state.launchingSearch));
+  $("runForm").classList.toggle("hidden", loggedIn && !showSearch && !state.launchingSearch);
+  $("resultSection").classList.toggle("hidden", !loggedIn || (showSearch && !state.launchingSearch));
+  $("launchGhost").classList.toggle("hidden", !state.launchingSearch);
+}
+
+function openSearchPage() {
+  if (!state.user) return;
+  stopWatching();
+  state.currentRunId = null;
+  state.searchOpen = true;
+  state.launchingSearch = false;
+  state.adminOpen = false;
+  state.arrivedRunId = null;
+  state.animatedProgressCards.clear();
+  $("problem").value = "";
+  $("forbidTerms").value = "";
+  $("slotCount").value = "10";
+  updateRunCostLabel();
+  renderRuns();
+  renderCurrentRun(null);
+  renderShell();
+  setTimeout(() => $("problem").focus(), 0);
+}
+
+function beginSearchLaunch(problemText) {
+  state.searchOpen = false;
+  state.launchingSearch = true;
+  $("launchGhostText").textContent = problemText;
+  $("queryArrivalText").textContent = problemText;
+  $("queryArrival").classList.remove("hidden");
+  $("queryArrival").classList.add("arrived");
+  $("currentRunTitle").textContent = "生成工作台";
+  $("currentRunMeta").textContent = "正在提交任务";
+  $("progressLog").innerHTML = '<div class="progress-item">正在把问题送入抽卡流水线。</div>';
+  $("candidateGrid").innerHTML = "";
+  renderShell();
+  setTimeout(() => $("queryArrival").classList.remove("arrived"), 520);
+}
+
+function cancelSearchLaunch() {
+  state.launchingSearch = false;
+  state.searchOpen = true;
+  renderShell();
 }
 
 function statusLabel(status) {
@@ -117,8 +175,10 @@ async function deleteRun(run) {
     await api(`/api/runs/${run.id}`, { method: "DELETE" });
     if (state.currentRunId === run.id) {
       state.currentRunId = null;
+      state.searchOpen = true;
       stopWatching();
       renderCurrentRun(null);
+      renderShell();
     }
     await loadRuns();
     showToast("已从历史中删除");
@@ -150,12 +210,21 @@ function renderCurrentRun(run) {
     stopRuntimeTicker();
     $("currentRunTitle").textContent = "还没有选择任务";
     $("currentRunMeta").textContent = "";
+    $("queryArrivalText").textContent = "";
+    $("queryArrival").classList.add("hidden");
     $("progressLog").innerHTML = "";
     $("candidateGrid").innerHTML = "";
     return;
   }
   $("currentRunTitle").textContent = run.problem;
   $("currentRunMeta").textContent = `${statusLabel(run.status)} · ${run.problem_type || "待判断"} · ${new Date(run.created_at).toLocaleString()}`;
+  $("queryArrivalText").textContent = run.problem;
+  $("queryArrival").classList.remove("hidden");
+  if (state.arrivedRunId !== run.id) {
+    state.arrivedRunId = run.id;
+    $("queryArrival").classList.add("arrived");
+    setTimeout(() => $("queryArrival").classList.remove("arrived"), 520);
+  }
   $("progressLog").innerHTML = `<div class="progress-item">${escapeHtml(progressLine(run))}</div>`;
   if (run.status === "running") {
     ensureRuntimeTicker();
@@ -768,6 +837,8 @@ async function loadMe() {
   try {
     const data = await api("/api/me");
     state.user = data.user;
+    state.searchOpen = true;
+    state.launchingSearch = false;
     renderShell();
     await loadRuns();
   } catch (err) {
@@ -793,7 +864,10 @@ async function refreshMeOnly() {
 async function selectRun(runId) {
   stopWatching();
   state.currentRunId = runId;
+  state.searchOpen = false;
+  state.launchingSearch = false;
   renderRuns();
+  renderShell();
   const data = await api(`/api/runs/${runId}`);
   renderCurrentRun(data.run);
   if (!["succeeded", "failed", "deleted"].includes(data.run.status)) watchRun(runId);
@@ -1121,7 +1195,12 @@ $("authForm").addEventListener("submit", async (event) => {
     const data = await api(path, { method: "POST", body: JSON.stringify(payload) });
     state.token = data.access_token;
     state.user = data.user;
+    state.currentRunId = null;
+    state.searchOpen = true;
+    state.launchingSearch = false;
+    state.arrivedRunId = null;
     localStorage.setItem("wildidea_token", state.token);
+    renderCurrentRun(null);
     renderShell();
     await loadRuns();
     showToast(state.authMode === "login" ? "登录成功" : "注册成功");
@@ -1138,6 +1217,9 @@ $("logoutBtn").addEventListener("click", () => {
   state.runs = [];
   state.currentRunId = null;
   state.adminOpen = false;
+  state.searchOpen = true;
+  state.launchingSearch = false;
+  state.arrivedRunId = null;
   state.animatedProgressCards.clear();
   renderShell();
   renderRuns();
@@ -1163,12 +1245,20 @@ $("redeemForm").addEventListener("submit", async (event) => {
 $("runForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   $("runSubmit").disabled = true;
+  const problemText = $("problem").value.trim();
+  if (!problemText) {
+    showToast("请先填写问题");
+    $("problem").focus();
+    $("runSubmit").disabled = false;
+    return;
+  }
   const forbidTerms = $("forbidTerms").value.split(/\s+/).map((item) => item.trim()).filter(Boolean);
+  beginSearchLaunch(problemText);
   try {
     const data = await api("/api/runs", {
       method: "POST",
       body: JSON.stringify({
-        problem: $("problem").value,
+        problem: problemText,
         slot_count: Number($("slotCount").value || 10),
         forbid_terms: forbidTerms,
       }),
@@ -1179,12 +1269,14 @@ $("runForm").addEventListener("submit", async (event) => {
     await selectRun(data.run.id);
     showToast("任务已提交");
   } catch (err) {
+    cancelSearchLaunch();
     showToast(err.message);
   } finally {
     $("runSubmit").disabled = false;
   }
 });
 
+$("brandHomeBtn").addEventListener("click", openSearchPage);
 $("refreshRunsBtn").addEventListener("click", loadRuns);
 $("adminToggleBtn").addEventListener("click", toggleAdminPanel);
 $("refreshAdminBtn").addEventListener("click", loadAdmin);

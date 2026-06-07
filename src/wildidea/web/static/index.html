@@ -4,18 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>WildIdea · 想出不一样的点子</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20260607-reroll-default">
+  <link rel="stylesheet" href="/static/styles.css?v=20260607-search-transition">
 </head>
 <body>
   <div class="shell">
     <aside class="sidebar">
-      <div class="brand">
+      <button id="brandHomeBtn" class="brand" type="button">
         <div class="mark">W</div>
         <div>
           <strong>WildIdea</strong>
           <span>帮你想出不一样的点子</span>
         </div>
-      </div>
+      </button>
 
       <section id="authPanel" class="panel auth-panel">
         <div class="tabs">
@@ -85,8 +85,12 @@
         <div id="statusPill" class="status-pill">未登录</div>
       </section>
 
-      <section id="workspace" class="workspace hidden">
+      <section id="workspace" class="workspace hidden search-open">
         <form id="runForm" class="composer">
+          <div class="search-heading">
+            <span>开始一次发散</span>
+            <strong>输入问题，抽取 10 张跨域灵感卡</strong>
+          </div>
           <textarea id="problem" rows="5" placeholder="输入你想发散的问题，例如：给相册 App 找非常规设计思路" required></textarea>
           <div class="composer-grid">
             <label>
@@ -101,12 +105,21 @@
           <button id="runSubmit" class="primary" type="submit">消耗 10 积分生成</button>
         </form>
 
-        <section class="result-section">
+        <div id="launchGhost" class="launch-ghost hidden">
+          <span>开始生成</span>
+          <strong id="launchGhostText"></strong>
+        </div>
+
+        <section id="resultSection" class="result-section hidden">
           <div class="result-head">
             <div>
               <strong id="currentRunTitle">还没有选择任务</strong>
               <span id="currentRunMeta" class="muted"></span>
             </div>
+          </div>
+          <div id="queryArrival" class="query-arrival hidden">
+            <span>本次问题</span>
+            <strong id="queryArrivalText"></strong>
           </div>
           <div id="progressLog" class="progress-log"></div>
           <div id="candidateGrid" class="candidate-grid"></div>
@@ -156,6 +169,6 @@
     </main>
   </div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=20260607-reroll-default"></script>
+  <script src="/static/app.js?v=20260607-search-transition"></script>
 </body>
 </html>
