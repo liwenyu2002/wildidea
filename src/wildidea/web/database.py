@@ -23,6 +23,7 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
     _ensure_user_consent_columns()
+    _ensure_user_email_verification_column()
     _ensure_candidate_reroll_column()
 
 
@@ -46,6 +47,14 @@ def _ensure_candidate_reroll_column() -> None:
         return
     with engine.begin() as connection:
         connection.execute(text("ALTER TABLE candidates ADD COLUMN reroll_count INTEGER NOT NULL DEFAULT 0"))
+
+
+def _ensure_user_email_verification_column() -> None:
+    columns = {column["name"] for column in inspect(engine).get_columns("users")}
+    if "email_verified_at" in columns:
+        return
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE users ADD COLUMN email_verified_at DATETIME"))
 
 
 def get_db() -> Generator[Session, None, None]:

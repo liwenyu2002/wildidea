@@ -309,6 +309,17 @@ h2 {
   width: auto;
 }
 
+.code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.code-row button {
+  min-width: 104px;
+  white-space: nowrap;
+}
+
 .composer .primary {
   margin-top: 12px;
 }

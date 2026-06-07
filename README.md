@@ -55,6 +55,8 @@ deploy/macmini/install_launch_agent.sh
 
 Copy `.env.example` or `deploy/macmini/wildidea.env.example` to `.env`.
 
+Registration requires email verification. Configure SMTP in `.env` with `WILDIDEA_SMTP_HOST`, `WILDIDEA_SMTP_USERNAME`, and `WILDIDEA_SMTP_PASSWORD`; otherwise new users cannot request verification codes.
+
 Do not commit `.env`, databases, logs, generated outputs, or zip packages.
 
 ## Useful Commands

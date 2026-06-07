@@ -10,8 +10,13 @@ from pydantic import BaseModel, Field
 class RegisterRequest(BaseModel):
     email: str
     password: str = Field(min_length=6)
+    verification_code: str = Field(min_length=4, max_length=12)
     invite_code: Optional[str] = None
     opt_in_improvement: bool = False
+
+
+class EmailCodeRequest(BaseModel):
+    email: str
 
 
 class LoginRequest(BaseModel):

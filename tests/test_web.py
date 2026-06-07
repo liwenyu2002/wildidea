@@ -13,14 +13,34 @@ from fastapi.testclient import TestClient  # noqa: E402
 import wildidea.web.app as webapp  # noqa: E402
 
 
+def request_email_code(client: TestClient, email: str) -> str:
+    sent: dict[str, str] = {}
+    original = webapp.send_verification_email
+
+    def fake_send(target_email: str, code: str) -> None:
+        sent[target_email] = code
+
+    webapp.send_verification_email = fake_send
+    try:
+        response = client.post("/api/auth/email-code", json={"email": email})
+    finally:
+        webapp.send_verification_email = original
+    assert response.status_code == 200, response.text
+    return sent[email]
+
+
+def register_user(client: TestClient, email: str, password: str = "secret12", **extra):
+    code = request_email_code(client, email)
+    payload = {"email": email, "password": password, "verification_code": code}
+    payload.update(extra)
+    return client.post("/api/auth/register", json=payload)
+
+
 def test_register_invite_redeem_and_run_charge():
     webapp.execute_run = lambda run_id: None
 
     with TestClient(webapp.app) as client:
-        admin_resp = client.post(
-            "/api/auth/register",
-            json={"email": "admin@example.com", "password": "secret12"},
-        )
+        admin_resp = register_user(client, "admin@example.com")
         assert admin_resp.status_code == 200
         assert admin_resp.json()["user"]["role"] == "admin"
         assert admin_resp.json()["user"]["credit_balance"] == 30
@@ -34,10 +54,7 @@ def test_register_invite_redeem_and_run_charge():
         )
         assert invite_resp.status_code == 200
 
-        user_resp = client.post(
-            "/api/auth/register",
-            json={"email": "user@example.com", "password": "secret12", "opt_in_improvement": True},
-        )
+        user_resp = register_user(client, "user@example.com", opt_in_improvement=True)
         assert user_resp.status_code == 200
         assert user_resp.json()["user"]["role"] == "user"
         assert user_resp.json()["user"]["credit_balance"] == 30
@@ -100,6 +117,42 @@ def test_register_invite_redeem_and_run_charge():
             db.close()
 
 
+def test_registration_requires_email_code_and_smtp_configuration():
+    with TestClient(webapp.app) as client:
+        missing_code = client.post(
+            "/api/auth/register",
+            json={"email": "needs-code@example.com", "password": "secret12"},
+        )
+        assert missing_code.status_code == 422
+
+        original_send = webapp.send_verification_email
+        webapp.send_verification_email = lambda email, code: (_ for _ in ()).throw(
+            webapp.EmailNotConfigured("邮件服务未配置，请设置 SMTP 环境变量")
+        )
+        try:
+            no_smtp = client.post("/api/auth/email-code", json={"email": "no-smtp@example.com"})
+        finally:
+            webapp.send_verification_email = original_send
+        assert no_smtp.status_code == 503
+        assert no_smtp.json()["detail"]["error"] == "EMAIL_NOT_CONFIGURED"
+
+        code = request_email_code(client, "verified-user@example.com")
+        wrong_code = "000000" if code != "000000" else "111111"
+        wrong = client.post(
+            "/api/auth/register",
+            json={"email": "verified-user@example.com", "password": "secret12", "verification_code": wrong_code},
+        )
+        assert wrong.status_code == 422
+        assert wrong.json()["detail"]["error"] == "EMAIL_CODE_INVALID"
+
+        ok = client.post(
+            "/api/auth/register",
+            json={"email": "verified-user@example.com", "password": "secret12", "verification_code": code},
+        )
+        assert ok.status_code == 200
+        assert ok.json()["user"]["email_verified_at"]
+
+
 def test_feedback_is_mutually_exclusive_upsert():
     from sqlalchemy import func, select
 
@@ -109,10 +162,7 @@ def test_feedback_is_mutually_exclusive_upsert():
     webapp.execute_run = lambda run_id: None
 
     with TestClient(webapp.app) as client:
-        user_resp = client.post(
-            "/api/auth/register",
-            json={"email": "feedback@example.com", "password": "secret12"},
-        )
+        user_resp = register_user(client, "feedback@example.com")
         assert user_resp.status_code == 200
         headers = {"Authorization": f"Bearer {user_resp.json()['access_token']}"}
 
@@ -250,10 +300,7 @@ def test_create_run_defaults_to_ten_parallel_ten_cards():
     webapp.execute_run = lambda run_id: None
 
     with TestClient(webapp.app) as client:
-        user_resp = client.post(
-            "/api/auth/register",
-            json={"email": "defaults@example.com", "password": "secret12"},
-        )
+        user_resp = register_user(client, "defaults@example.com")
         assert user_resp.status_code == 200
         headers = {"Authorization": f"Bearer {user_resp.json()['access_token']}"}
 
@@ -290,10 +337,7 @@ def test_run_event_stream_accepts_token_query():
     webapp.execute_run = lambda run_id: None
 
     with TestClient(webapp.app) as client:
-        user_resp = client.post(
-            "/api/auth/register",
-            json={"email": "sse-token@example.com", "password": "secret12"},
-        )
+        user_resp = register_user(client, "sse-token@example.com")
         assert user_resp.status_code == 200
         token = user_resp.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
@@ -457,10 +501,7 @@ def test_production_like_default_run_partial_refund_and_reroll_events(monkeypatc
     monkeypatch.setattr(runner, "run_pipeline", fake_run_pipeline)
 
     with TestClient(webapp.app) as client:
-        user_resp = client.post(
-            "/api/auth/register",
-            json={"email": "production-like@example.com", "password": "secret12"},
-        )
+        user_resp = register_user(client, "production-like@example.com")
         assert user_resp.status_code == 200
         headers = {"Authorization": f"Bearer {user_resp.json()['access_token']}"}
 
@@ -652,10 +693,7 @@ def test_production_like_all_cards_fail_gets_full_refund(monkeypatch):
     monkeypatch.setattr(runner, "run_pipeline", fake_run_pipeline)
 
     with TestClient(webapp.app) as client:
-        user_resp = client.post(
-            "/api/auth/register",
-            json={"email": "all-fail@example.com", "password": "secret12"},
-        )
+        user_resp = register_user(client, "all-fail@example.com")
         assert user_resp.status_code == 200
         headers = {"Authorization": f"Bearer {user_resp.json()['access_token']}"}
 
@@ -700,10 +738,7 @@ def test_feedback_syncs_to_dingtalk_outbox(monkeypatch):
     monkeypatch.setattr(sync_module, "dingtalk_feedback_configured", lambda: False)
 
     with TestClient(webapp.app) as client:
-        user_resp = client.post(
-            "/api/auth/register",
-            json={"email": "sync-user@example.com", "password": "secret12"},
-        )
+        user_resp = register_user(client, "sync-user@example.com")
         assert user_resp.status_code == 200
         headers = {"Authorization": f"Bearer {user_resp.json()['access_token']}"}
 

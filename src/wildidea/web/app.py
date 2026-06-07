@@ -5,6 +5,7 @@ import json
 import secrets
 import time
 from contextlib import asynccontextmanager
+from datetime import timedelta
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -17,12 +18,14 @@ from sqlalchemy.orm import Session
 
 from .config import settings
 from .database import get_db, init_db
+from .emailer import EmailNotConfigured, send_verification_email
 from .excel import build_xlsx
 from .models import (
     AdminAuditLog,
     Artifact,
     Candidate,
     CreditTransaction,
+    EmailVerificationCode,
     Feedback,
     InteractionEvent,
     InviteCode,
@@ -37,6 +40,7 @@ from .schemas import (
     AdminCreditAdjustmentRequest,
     CreateInviteCodeRequest,
     CreateRunRequest,
+    EmailCodeRequest,
     FeedbackRequest,
     InteractionEventRequest,
     LoginRequest,
@@ -141,6 +145,7 @@ def _user_payload(user: User) -> dict:
         "credit_balance": user.credit_balance,
         "improvement_consent": user.improvement_consent,
         "improvement_consent_at": user.improvement_consent_at.isoformat() if user.improvement_consent_at else None,
+        "email_verified_at": user.email_verified_at.isoformat() if user.email_verified_at else None,
         "created_at": user.created_at.isoformat(),
     }
 
@@ -234,19 +239,86 @@ def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+def _same_timezone_now(value) -> object:
+    now = utcnow()
+    if value and getattr(value, "tzinfo", None) is None:
+        return now.replace(tzinfo=None)
+    return now
+
+
+def _verify_email_code(db: Session, email: str, code: str) -> EmailVerificationCode:
+    row = db.scalar(
+        select(EmailVerificationCode)
+        .where(
+            EmailVerificationCode.email == email,
+            EmailVerificationCode.purpose == "register",
+            EmailVerificationCode.consumed_at.is_(None),
+        )
+        .order_by(desc(EmailVerificationCode.created_at))
+    )
+    if not row or row.expires_at <= _same_timezone_now(row.expires_at):
+        raise HTTPException(status_code=422, detail={"error": "EMAIL_CODE_EXPIRED", "message": "验证码不存在或已过期"})
+    if row.attempts >= 5:
+        raise HTTPException(status_code=422, detail={"error": "EMAIL_CODE_LOCKED", "message": "验证码错误次数过多，请重新获取"})
+    row.attempts += 1
+    if not verify_password(code.strip(), row.code_hash):
+        db.add(row)
+        db.commit()
+        raise HTTPException(status_code=422, detail={"error": "EMAIL_CODE_INVALID", "message": "验证码错误"})
+    row.consumed_at = utcnow()
+    db.add(row)
+    return row
+
+
+@app.post("/api/auth/email-code")
+def request_email_code(req: EmailCodeRequest, db: Session = Depends(get_db)) -> dict:
+    email = req.email.strip().lower()
+    if db.scalar(select(User).where(User.email == email)):
+        raise HTTPException(status_code=409, detail={"error": "EMAIL_EXISTS", "message": "邮箱已注册"})
+    latest = db.scalar(
+        select(EmailVerificationCode)
+        .where(EmailVerificationCode.email == email, EmailVerificationCode.purpose == "register")
+        .order_by(desc(EmailVerificationCode.created_at))
+    )
+    if latest and latest.created_at + timedelta(seconds=settings.email_code_resend_seconds) > _same_timezone_now(latest.created_at):
+        raise HTTPException(status_code=429, detail={"error": "EMAIL_CODE_TOO_FREQUENT", "message": "验证码发送太频繁，请稍后再试"})
+
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    row = EmailVerificationCode(
+        email=email,
+        purpose="register",
+        code_hash=hash_password(code),
+        expires_at=utcnow() + timedelta(minutes=settings.email_code_ttl_minutes),
+    )
+    db.add(row)
+    try:
+        send_verification_email(email, code)
+    except EmailNotConfigured as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail={"error": "EMAIL_NOT_CONFIGURED", "message": str(exc)}) from exc
+    except Exception as exc:  # noqa: BLE001 - surface mail delivery failures to the user.
+        db.rollback()
+        raise HTTPException(status_code=502, detail={"error": "EMAIL_SEND_FAILED", "message": f"验证码邮件发送失败：{exc}"}) from exc
+    db.commit()
+    return {"ok": True, "expires_in_seconds": settings.email_code_ttl_minutes * 60}
+
+
 @app.post("/api/auth/register")
 def register(req: RegisterRequest, db: Session = Depends(get_db)) -> dict:
     email = req.email.strip().lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status_code=409, detail={"error": "EMAIL_EXISTS", "message": "邮箱已注册"})
+    _verify_email_code(db, email, req.verification_code)
     is_first_user = db.scalar(select(func.count()).select_from(User)) == 0
-    consent_at = utcnow() if req.opt_in_improvement else None
+    now = utcnow()
+    consent_at = now if req.opt_in_improvement else None
     user = User(
         email=email,
         password_hash=hash_password(req.password),
         role="admin" if is_first_user else "user",
         improvement_consent=req.opt_in_improvement,
         improvement_consent_at=consent_at,
+        email_verified_at=now,
     )
     db.add(user)
     db.flush()

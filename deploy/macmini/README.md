@@ -35,6 +35,8 @@ Edit `.env` and fill the real API key and secret:
 nano .env
 ```
 
+Also fill SMTP settings in `.env`; registration verification codes are sent by email.
+
 ## 3. Start Once
 
 ```bash

@@ -10,6 +10,8 @@ const state = {
   authMode: "login",
   adminOpen: false,
   animatedProgressCards: new Set(),
+  emailCodeTimer: null,
+  emailCodeRemaining: 0,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -39,9 +41,11 @@ function setAuthMode(mode) {
   state.authMode = mode;
   $("loginTab").classList.toggle("active", mode === "login");
   $("registerTab").classList.toggle("active", mode === "register");
+  $("emailCodeWrap").classList.toggle("hidden", mode !== "register");
   $("inviteAtRegisterWrap").classList.toggle("hidden", mode !== "register");
   $("improvementConsentWrap").classList.toggle("hidden", mode !== "register");
   $("authSubmit").textContent = mode === "login" ? "登录" : "注册并获得 30 积分";
+  $("password").autocomplete = mode === "login" ? "current-password" : "new-password";
 }
 
 function renderShell() {
@@ -1055,6 +1059,46 @@ function escapeHtml(value) {
 $("loginTab").addEventListener("click", () => setAuthMode("login"));
 $("registerTab").addEventListener("click", () => setAuthMode("register"));
 
+function setEmailCodeCountdown(seconds) {
+  state.emailCodeRemaining = seconds;
+  const button = $("sendEmailCodeBtn");
+  if (state.emailCodeTimer) clearInterval(state.emailCodeTimer);
+  const render = () => {
+    if (state.emailCodeRemaining <= 0) {
+      button.disabled = false;
+      button.textContent = "发送验证码";
+      clearInterval(state.emailCodeTimer);
+      state.emailCodeTimer = null;
+      return;
+    }
+    button.disabled = true;
+    button.textContent = `${state.emailCodeRemaining}s`;
+    state.emailCodeRemaining -= 1;
+  };
+  render();
+  state.emailCodeTimer = setInterval(render, 1000);
+}
+
+$("sendEmailCodeBtn").addEventListener("click", async () => {
+  const email = $("email").value.trim();
+  if (!email) {
+    showToast("请先填写邮箱");
+    return;
+  }
+  $("sendEmailCodeBtn").disabled = true;
+  try {
+    const data = await api("/api/auth/email-code", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+    setEmailCodeCountdown(Math.min(60, Number(data.expires_in_seconds || 60)));
+    showToast("验证码已发送，请查看邮箱");
+  } catch (err) {
+    $("sendEmailCodeBtn").disabled = false;
+    showToast(err.message);
+  }
+});
+
 $("authForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const path = state.authMode === "login" ? "/api/auth/login" : "/api/auth/register";
@@ -1065,6 +1109,7 @@ $("authForm").addEventListener("submit", async (event) => {
   if (state.authMode === "register") {
     payload.invite_code = $("inviteAtRegister").value || null;
     payload.opt_in_improvement = $("improvementConsent").checked;
+    payload.verification_code = $("emailCode").value.trim();
   }
   try {
     const data = await api(path, { method: "POST", body: JSON.stringify(payload) });
