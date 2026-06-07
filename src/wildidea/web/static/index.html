@@ -6,7 +6,7 @@
   <title>WildIdea · 想出不一样的点子</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=20260607-char-outline-3x">
   <link rel="shortcut icon" type="image/svg+xml" href="/static/favicon.svg?v=20260607-char-outline-3x">
-  <link rel="stylesheet" href="/static/styles.css?v=20260607-queue-monitor">
+  <link rel="stylesheet" href="/static/styles.css?v=20260607-admin-view">
 </head>
 <body>
   <div class="shell">
@@ -81,10 +81,10 @@
     <main class="main">
       <section class="toolbar">
         <div>
-          <h1>生成工作台</h1>
-          <p>每张卡片消耗 1 积分；系统失败会自动退回本次扣除。</p>
+          <h1 id="toolbarTitle">生成工作台</h1>
+          <p id="toolbarSubtitle">每张卡片消耗 1 积分；系统失败会自动退回本次扣除。</p>
         </div>
-        <div id="statusPill" class="status-pill">正在加载</div>
+        <button id="statusPill" class="status-pill" type="button" disabled>正在加载</button>
       </section>
 
       <section id="workspace" class="workspace hidden search-open">
@@ -122,43 +122,39 @@
           <div id="progressLog" class="progress-log"></div>
           <div id="candidateGrid" class="candidate-grid"></div>
         </section>
+      </section>
 
-        <div id="adminEntry" class="admin-entry hidden">
-          <button id="adminToggleBtn" type="button" aria-expanded="false">打开管理员后台</button>
+      <section id="adminPanel" class="admin-panel hidden">
+        <div class="panel-head">
+          <strong>管理员后台</strong>
+          <button id="refreshAdminBtn" class="ghost" type="button">刷新</button>
         </div>
-
-        <section id="adminPanel" class="admin-panel hidden">
-          <div class="panel-head">
-            <strong>管理员后台</strong>
-            <button id="refreshAdminBtn" class="ghost" type="button">刷新</button>
-          </div>
-          <div id="metrics" class="metrics"></div>
-          <div id="queueStatus" class="queue-status"></div>
-          <div id="syncStatus" class="sync-status"></div>
-          <form id="inviteForm" class="invite-create">
-            <input id="inviteCode" type="text" placeholder="邀请码，留空自动生成">
-            <input id="inviteBonus" type="number" value="20" min="1">
-            <input id="inviteMax" type="number" placeholder="最大兑换次数">
-            <button type="submit">创建邀请码</button>
-          </form>
-          <div class="admin-columns">
-            <div>
-              <h2>邀请码</h2>
-              <div id="inviteList" class="admin-list"></div>
-            </div>
-            <div>
-              <h2>用户</h2>
-              <div id="userList" class="admin-list"></div>
-            </div>
+        <div id="metrics" class="metrics"></div>
+        <div id="queueStatus" class="queue-status"></div>
+        <div id="syncStatus" class="sync-status"></div>
+        <form id="inviteForm" class="invite-create">
+          <input id="inviteCode" type="text" placeholder="邀请码，留空自动生成">
+          <input id="inviteBonus" type="number" value="20" min="1">
+          <input id="inviteMax" type="number" placeholder="最大兑换次数">
+          <button type="submit">创建邀请码</button>
+        </form>
+        <div class="admin-columns">
+          <div>
+            <h2>邀请码</h2>
+            <div id="inviteList" class="admin-list"></div>
           </div>
           <div>
-            <div class="section-title-row">
-              <h2>反馈数据</h2>
-              <button id="exportFeedbackBtn" class="ghost" type="button">导出 Excel</button>
-            </div>
-            <div id="feedbackList" class="admin-list feedback-list"></div>
+            <h2>用户</h2>
+            <div id="userList" class="admin-list"></div>
           </div>
-        </section>
+        </div>
+        <div>
+          <div class="section-title-row">
+            <h2>反馈数据</h2>
+            <button id="exportFeedbackBtn" class="ghost" type="button">导出 Excel</button>
+          </div>
+          <div id="feedbackList" class="admin-list feedback-list"></div>
+        </div>
       </section>
 
       <section id="emptyState" class="empty-state hidden">
@@ -168,6 +164,6 @@
     </main>
   </div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=20260607-queue-monitor"></script>
+  <script src="/static/app.js?v=20260607-admin-view"></script>
 </body>
 </html>

@@ -54,41 +54,58 @@ function setAuthMode(mode) {
   $("password").autocomplete = mode === "login" ? "current-password" : "new-password";
 }
 
+function isAdminUser() {
+  return Boolean(state.user && state.user.role === "admin");
+}
+
 function renderShell() {
   const booting = !state.authReady;
   const loggedIn = Boolean(state.user);
-  const isAdmin = loggedIn && state.user.role === "admin";
-  const generationViewActive = loggedIn && (state.searchOpen || state.launchingSearch);
+  const isAdmin = isAdminUser();
+  const adminViewActive = loggedIn && isAdmin && state.adminOpen;
   if (!isAdmin) state.adminOpen = false;
   $("authPanel").classList.toggle("hidden", booting || loggedIn);
   $("userPanel").classList.toggle("hidden", !loggedIn);
   $("historyPanel").classList.toggle("hidden", !loggedIn);
-  $("workspace").classList.toggle("hidden", !loggedIn);
+  $("workspace").classList.toggle("hidden", !loggedIn || adminViewActive);
+  $("adminPanel").classList.toggle("hidden", !adminViewActive);
   $("emptyState").classList.toggle("hidden", booting || loggedIn);
-  $("statusPill").textContent = booting ? "正在恢复登录" : (loggedIn ? `${state.user.role === "admin" ? "管理员" : "普通用户"} · ${state.user.credit_balance} 积分` : "未登录");
-  $("adminEntry").classList.toggle("hidden", !isAdmin || generationViewActive);
-  $("adminPanel").classList.toggle("hidden", !isAdmin || !state.adminOpen || generationViewActive);
-  $("adminToggleBtn").textContent = state.adminOpen ? "收起管理员后台" : "打开管理员后台";
-  $("adminToggleBtn").setAttribute("aria-expanded", String(state.adminOpen));
+  $("toolbarTitle").textContent = adminViewActive ? "管理员后台" : "生成工作台";
+  $("toolbarSubtitle").textContent = adminViewActive
+    ? "查看队列、用户、邀请码、反馈和导出数据。"
+    : (isAdmin ? "管理员无限配额；系统失败会自动恢复任务状态。" : "每张卡片消耗 1 积分；系统失败会自动退回本次扣除。");
+  $("statusPill").textContent = statusPillText(booting, loggedIn, isAdmin, adminViewActive);
+  $("statusPill").disabled = !isAdmin;
+  $("statusPill").classList.toggle("is-admin-action", isAdmin);
+  $("statusPill").setAttribute("aria-pressed", String(adminViewActive));
+  $("statusPill").title = isAdmin ? (adminViewActive ? "返回生成工作台" : "打开管理员后台") : "";
   $("brandHomeBtn").classList.toggle("is-clickable", loggedIn);
   $("brandHomeBtn").setAttribute("aria-label", loggedIn ? "发起新的 WildIdea 搜索" : "WildIdea");
   if (loggedIn) {
     $("userEmail").textContent = state.user.email;
-    $("creditBalance").textContent = `${state.user.credit_balance} 积分`;
+    $("creditBalance").textContent = isAdmin ? "管理员" : `${state.user.credit_balance} 积分`;
   }
+  updateRunCostLabel();
   renderWorkspaceMode();
+}
+
+function statusPillText(booting, loggedIn, isAdmin, adminViewActive) {
+  if (booting) return "正在恢复登录";
+  if (!loggedIn) return "未登录";
+  if (isAdmin) return adminViewActive ? "返回工作台" : "管理员后台";
+  return `普通用户 · ${state.user.credit_balance} 积分`;
 }
 
 function updateRunCostLabel() {
   const count = Math.max(1, Math.min(30, Number($("slotCount")?.value || 10)));
-  $("runSubmit").textContent = `消耗 ${count} 积分生成`;
+  $("runSubmit").textContent = isAdminUser() ? `生成 ${count} 张卡` : `消耗 ${count} 积分生成`;
 }
 
 function renderWorkspaceMode() {
   const loggedIn = Boolean(state.user);
-  const showSearch = loggedIn && state.searchOpen && !state.launchingSearch;
+  const showSearch = loggedIn && !state.adminOpen && state.searchOpen && !state.launchingSearch;
   $("workspace").classList.toggle("search-open", showSearch);
-  $("workspace").classList.toggle("result-open", loggedIn && !showSearch);
+  $("workspace").classList.toggle("result-open", loggedIn && !state.adminOpen && !showSearch);
   $("workspace").classList.toggle("launching", Boolean(state.launchingSearch));
   $("runForm").classList.toggle("hidden", loggedIn && !showSearch && !state.launchingSearch);
   $("resultSection").classList.toggle("hidden", !loggedIn || (showSearch && !state.launchingSearch));
@@ -914,6 +931,7 @@ async function selectRun(runId) {
   state.currentRunId = runId;
   state.searchOpen = false;
   state.launchingSearch = false;
+  state.adminOpen = false;
   renderRuns();
   renderShell();
   const data = await api(`/api/runs/${runId}`);
@@ -1001,7 +1019,7 @@ async function loadAdmin() {
   $("metrics").innerHTML = `
     <div class="metric"><span class="muted">用户</span><strong>${metrics.users}</strong></div>
     <div class="metric"><span class="muted">反馈</span><strong>${metrics.feedback}</strong></div>
-    <div class="metric"><span class="muted">总积分</span><strong>${metrics.total_credit_balance}</strong></div>
+    <div class="metric"><span class="muted">邀请码</span><strong>${invites.invite_codes.length}</strong></div>
     <div class="metric"><span class="muted">任务</span><strong>${Object.values(metrics.runs_by_status || {}).reduce((a, b) => a + b, 0)}</strong></div>
   `;
   renderQueueStatus(queue.queue);
@@ -1015,7 +1033,7 @@ async function loadAdmin() {
   $("userList").innerHTML = users.users.map((item) => `
     <div class="admin-row">
       <strong>${escapeHtml(item.email)}</strong>
-      <span class="muted">${escapeHtml(item.role)} · ${item.credit_balance} 积分</span>
+      <span class="muted">${escapeHtml(adminUserLabel(item))}</span>
     </div>
   `).join("");
   $("feedbackList").innerHTML = feedback.feedback.map((item) => `
@@ -1122,12 +1140,18 @@ function workerLabel(status) {
 }
 
 async function toggleAdminPanel() {
+  if (!isAdminUser()) return;
   state.adminOpen = !state.adminOpen;
   renderShell();
   if (state.adminOpen) {
     await loadAdmin();
     $("adminPanel").scrollIntoView({ behavior: "smooth", block: "start" });
   }
+}
+
+function adminUserLabel(user) {
+  if (user.role === "admin") return "管理员 · 无限配额";
+  return `${user.role} · ${user.credit_balance} 积分`;
 }
 
 function formatAdminIndex(value) {
@@ -1385,7 +1409,7 @@ $("runForm").addEventListener("submit", async (event) => {
 
 $("brandHomeBtn").addEventListener("click", openSearchPage);
 $("refreshRunsBtn").addEventListener("click", loadRuns);
-$("adminToggleBtn").addEventListener("click", toggleAdminPanel);
+$("statusPill").addEventListener("click", toggleAdminPanel);
 $("refreshAdminBtn").addEventListener("click", loadAdmin);
 $("exportFeedbackBtn").addEventListener("click", downloadFeedbackExcel);
 $("slotCount").addEventListener("input", updateRunCostLabel);
