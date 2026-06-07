@@ -43,6 +43,8 @@ def test_verification_email_has_html_and_plaintext_parts():
     assert message.is_multipart()
     assert message["Subject"] == "WildIdea 注册验证码"
     assert message["To"] == "new-user@example.com"
+    assert message["Date"]
+    assert message["Message-ID"]
     plain = message.get_body(preferencelist=("plain",))
     html = message.get_body(preferencelist=("html",))
     assert plain is not None

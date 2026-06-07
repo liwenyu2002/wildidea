@@ -4,7 +4,7 @@ from __future__ import annotations
 import smtplib
 from html import escape
 from email.message import EmailMessage
-from email.utils import formataddr
+from email.utils import formataddr, formatdate, make_msgid
 
 from .config import settings
 
@@ -19,6 +19,11 @@ def _build_verification_message(email: str, code: str, sender: str) -> EmailMess
     message["Subject"] = "WildIdea 注册验证码"
     message["From"] = formataddr((settings.smtp_from_name, sender))
     message["To"] = email
+    message["Date"] = formatdate(localtime=True)
+    if "@" in sender:
+        message["Message-ID"] = make_msgid(domain=sender.rsplit("@", 1)[1])
+    else:
+        message["Message-ID"] = make_msgid()
     message.set_content(
         "\n".join([
             f"你的 WildIdea 注册验证码是：{code}",
