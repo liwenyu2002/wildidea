@@ -182,6 +182,10 @@ body.app-boot-finished .boot-curtain {
   body.app-ready .empty-state,
   .history-loading,
   .history-result-skeleton span,
+  .run-list.run-list-loading,
+  .run-list.run-list-arrive,
+  .run-list.run-list-arrive > .muted,
+  .run-list.run-list-arrive .run-row,
   .result-section.result-arrive,
   .result-section.result-arrive .progress-item,
   .result-section.result-arrive .draw-stage,
@@ -1396,6 +1400,21 @@ h2 {
   display: grid;
   gap: 8px;
   margin-top: 10px;
+  transform-origin: top left;
+}
+
+.run-list.run-list-loading {
+  animation: runListContainerIn 0.28s ease both;
+}
+
+.run-list.run-list-arrive {
+  animation: runListContainerIn 0.34s cubic-bezier(0.18, 0.82, 0.24, 1) both;
+}
+
+.run-list.run-list-arrive > .muted,
+.run-list.run-list-arrive .run-row {
+  animation: runRowEnter 0.42s cubic-bezier(0.18, 0.82, 0.24, 1) both;
+  animation-delay: var(--run-delay, 0ms);
 }
 
 .run-row {
@@ -1428,6 +1447,28 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@keyframes runListContainerIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes runRowEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .admin-panel {

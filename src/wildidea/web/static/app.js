@@ -16,6 +16,7 @@ const state = {
   emailCodeTimer: null,
   emailCodeRemaining: 0,
   bootFinished: false,
+  runListSignature: "",
 };
 
 const DRAW_CARD_DELAY_MS = 170;
@@ -182,14 +183,20 @@ function statusLabel(status) {
 
 function renderRuns() {
   const list = $("runList");
+  const signature = state.runs.map((run) => `${run.id}:${run.status}:${run.created_at}`).join("|");
+  const shouldAnimate = signature !== state.runListSignature;
+  state.runListSignature = signature;
+  list.classList.remove("run-list-arrive", "run-list-loading");
   list.innerHTML = "";
   if (!state.runs.length) {
     list.innerHTML = '<div class="muted">暂无历史任务</div>';
+    if (shouldAnimate) requestAnimationFrame(() => list.classList.add("run-list-arrive"));
     return;
   }
-  state.runs.forEach((run) => {
+  state.runs.forEach((run, index) => {
     const row = document.createElement("div");
     row.className = "run-row";
+    row.style.setProperty("--run-delay", `${Math.min(index, 8) * 42}ms`);
     const btn = document.createElement("button");
     btn.className = `run-item ${run.id === state.currentRunId ? "active" : ""}`;
     btn.type = "button";
@@ -204,6 +211,7 @@ function renderRuns() {
     row.append(btn, deleteBtn);
     list.appendChild(row);
   });
+  if (shouldAnimate) requestAnimationFrame(() => list.classList.add("run-list-arrive"));
 }
 
 async function deleteRun(run) {
@@ -950,6 +958,7 @@ async function loadRuns() {
 
 function renderRunsLoading() {
   if (!$("runList") || !state.user) return;
+  $("runList").classList.add("run-list-loading");
   $("runList").innerHTML = '<div class="muted history-loading">正在载入历史任务...</div>';
 }
 
