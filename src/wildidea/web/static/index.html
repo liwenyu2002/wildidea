@@ -6,7 +6,7 @@
   <title>WildIdea · 想出不一样的点子</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=20260607-char-outline-3x">
   <link rel="shortcut icon" type="image/svg+xml" href="/static/favicon.svg?v=20260607-char-outline-3x">
-  <link rel="stylesheet" href="/static/styles.css?v=20260607-no-query-card">
+  <link rel="stylesheet" href="/static/styles.css?v=20260607-auth-boot">
 </head>
 <body>
   <div class="shell">
@@ -19,7 +19,7 @@
         </div>
       </button>
 
-      <section id="authPanel" class="panel auth-panel">
+      <section id="authPanel" class="panel auth-panel hidden">
         <div class="tabs">
           <button id="loginTab" class="tab active" type="button">登录</button>
           <button id="registerTab" class="tab" type="button">注册</button>
@@ -84,7 +84,7 @@
           <h1>生成工作台</h1>
           <p>每张卡片消耗 1 积分；系统失败会自动退回本次扣除。</p>
         </div>
-        <div id="statusPill" class="status-pill">未登录</div>
+        <div id="statusPill" class="status-pill">正在加载</div>
       </section>
 
       <section id="workspace" class="workspace hidden search-open">
@@ -160,13 +160,13 @@
         </section>
       </section>
 
-      <section id="emptyState" class="empty-state">
+      <section id="emptyState" class="empty-state hidden">
         <h2>先登录或注册</h2>
         <p>注册会自动获得 30 积分。第一位注册用户会成为管理员，用于创建邀请码和查看系统状态。</p>
       </section>
     </main>
   </div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=20260607-no-query-card"></script>
+  <script src="/static/app.js?v=20260607-auth-boot"></script>
 </body>
 </html>

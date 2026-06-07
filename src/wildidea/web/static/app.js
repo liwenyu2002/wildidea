@@ -1,5 +1,6 @@
 const state = {
   token: localStorage.getItem("wildidea_token") || "",
+  authReady: !localStorage.getItem("wildidea_token"),
   user: null,
   runs: [],
   currentRunId: null,
@@ -54,16 +55,17 @@ function setAuthMode(mode) {
 }
 
 function renderShell() {
+  const booting = !state.authReady;
   const loggedIn = Boolean(state.user);
   const isAdmin = loggedIn && state.user.role === "admin";
   const generationViewActive = loggedIn && (state.searchOpen || state.launchingSearch);
   if (!isAdmin) state.adminOpen = false;
-  $("authPanel").classList.toggle("hidden", loggedIn);
+  $("authPanel").classList.toggle("hidden", booting || loggedIn);
   $("userPanel").classList.toggle("hidden", !loggedIn);
   $("historyPanel").classList.toggle("hidden", !loggedIn);
   $("workspace").classList.toggle("hidden", !loggedIn);
-  $("emptyState").classList.toggle("hidden", loggedIn);
-  $("statusPill").textContent = loggedIn ? `${state.user.role === "admin" ? "管理员" : "普通用户"} · ${state.user.credit_balance} 积分` : "未登录";
+  $("emptyState").classList.toggle("hidden", booting || loggedIn);
+  $("statusPill").textContent = booting ? "正在恢复登录" : (loggedIn ? `${state.user.role === "admin" ? "管理员" : "普通用户"} · ${state.user.credit_balance} 积分` : "未登录");
   $("adminEntry").classList.toggle("hidden", !isAdmin || generationViewActive);
   $("adminPanel").classList.toggle("hidden", !isAdmin || !state.adminOpen || generationViewActive);
   $("adminToggleBtn").textContent = state.adminOpen ? "收起管理员后台" : "打开管理员后台";
@@ -874,6 +876,7 @@ async function submitFeedback(candidate, label, card, comment = "") {
 
 async function loadMe() {
   if (!state.token) {
+    state.authReady = true;
     renderShell();
     return;
   }
@@ -882,12 +885,14 @@ async function loadMe() {
     state.user = data.user;
     state.searchOpen = true;
     state.launchingSearch = false;
+    state.authReady = true;
     renderShell();
     await loadRuns();
   } catch (err) {
     localStorage.removeItem("wildidea_token");
     state.token = "";
     state.user = null;
+    state.authReady = true;
     renderShell();
   }
 }
