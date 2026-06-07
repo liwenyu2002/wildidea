@@ -72,7 +72,8 @@ class WebSettings:
     worker_poll_seconds: float = float(os.environ.get("WILDIDEA_WORKER_POLL_SECONDS", "2"))
     worker_idle_log_seconds: int = int(os.environ.get("WILDIDEA_WORKER_IDLE_LOG_SECONDS", "60"))
     worker_stale_after_seconds: int = int(os.environ.get("WILDIDEA_WORKER_STALE_AFTER_SECONDS", "7200"))
-    user_active_run_limit: int = int(os.environ.get("WILDIDEA_USER_ACTIVE_RUN_LIMIT", "1"))
+    run_card_capacity: int = int(os.environ.get("WILDIDEA_RUN_CARD_CAPACITY", "50"))
+    user_active_run_limit: int = int(os.environ.get("WILDIDEA_USER_ACTIVE_RUN_LIMIT", "0"))
 
 
 settings = WebSettings()

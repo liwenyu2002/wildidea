@@ -450,9 +450,7 @@ def test_worker_executor_queues_without_background_execution():
     called: list[str] = []
     webapp.execute_run = lambda run_id: called.append(run_id)
     original_executor = webapp.settings.run_executor
-    original_limit = webapp.settings.user_active_run_limit
     object.__setattr__(webapp.settings, "run_executor", "worker")
-    object.__setattr__(webapp.settings, "user_active_run_limit", 1)
     try:
         with TestClient(webapp.app) as client:
             user_resp = register_user(client, "worker-queue@example.com")
@@ -474,11 +472,11 @@ def test_worker_executor_queues_without_background_execution():
                 headers=headers,
                 json={"problem": "第二个 worker 任务", "slot_count": 1},
             )
-            assert blocked_resp.status_code == 429
-            assert blocked_resp.json()["detail"]["error"] == "ACTIVE_RUN_LIMIT_REACHED"
+            assert blocked_resp.status_code == 200
+            assert blocked_resp.json()["run"]["status"] == "queued"
+            assert blocked_resp.json()["credit_balance"] == 28
     finally:
         object.__setattr__(webapp.settings, "run_executor", original_executor)
-        object.__setattr__(webapp.settings, "user_active_run_limit", original_limit)
 
 
 def test_queued_run_reports_position_and_wait_estimate():
@@ -487,9 +485,7 @@ def test_queued_run_reports_position_and_wait_estimate():
 
     webapp.execute_run = lambda run_id: None
     original_executor = webapp.settings.run_executor
-    original_limit = webapp.settings.user_active_run_limit
     object.__setattr__(webapp.settings, "run_executor", "worker")
-    object.__setattr__(webapp.settings, "user_active_run_limit", 1)
     try:
         db = SessionLocal()
         try:
@@ -529,11 +525,67 @@ def test_queued_run_reports_position_and_wait_estimate():
             assert queue["queued_ahead"] == 1
             assert queue["tasks_ahead"] == 1
             assert queue["users_ahead"] == 1
-            assert queue["estimated_wait_seconds"] >= 180
+            assert queue["queued_ahead_cards"] == 2
+            assert queue["cards_ahead"] == 2
+            assert queue["requested_cards"] == 1
+            assert queue["card_capacity"] == 50
+            assert queue["estimated_wait_seconds"] == 0
             assert queue["worker_online"] is False
     finally:
         object.__setattr__(webapp.settings, "run_executor", original_executor)
-        object.__setattr__(webapp.settings, "user_active_run_limit", original_limit)
+
+
+def test_worker_claims_by_card_capacity():
+    from wildidea.web import worker
+    from wildidea.web.database import SessionLocal
+    from wildidea.web.models import Run, User, utcnow
+
+    original_capacity = webapp.settings.run_card_capacity
+    object.__setattr__(webapp.settings, "run_card_capacity", 50)
+    try:
+        db = SessionLocal()
+        try:
+            for run in db.query(Run).filter(Run.status.in_(["queued", "running"])).all():
+                run.status = "succeeded"
+            user = User(email="capacity-worker@example.com", password_hash="x", credit_balance=100)
+            db.add(user)
+            db.flush()
+            running = Run(
+                user_id=user.id,
+                problem="已有任务",
+                status="running",
+                started_at=utcnow(),
+                config_snapshot={"slot_count": 40, "credit_cost": 40},
+            )
+            fits = Run(
+                user_id=user.id,
+                problem="刚好可运行",
+                status="queued",
+                config_snapshot={"slot_count": 10, "credit_cost": 10},
+            )
+            blocked = Run(
+                user_id=user.id,
+                problem="容量已满后继续等待",
+                status="queued",
+                config_snapshot={"slot_count": 1, "credit_cost": 1},
+            )
+            db.add_all([running, fits, blocked])
+            db.commit()
+            fits_id = fits.id
+            blocked_id = blocked.id
+
+            claimed = worker.claim_next_run(db, "capacity-test-worker")
+            assert claimed == (fits_id, 10)
+            assert db.get(Run, fits_id).status == "running"
+
+            blocked_claim = worker.claim_next_run(db, "capacity-test-worker")
+            assert blocked_claim is None
+            assert db.get(Run, blocked_id).status == "queued"
+        finally:
+            db.rollback()
+            db.close()
+    finally:
+        object.__setattr__(webapp.settings, "run_card_capacity", original_capacity)
 
 
 def test_admin_queue_status_and_worker_once(monkeypatch):
@@ -609,6 +661,9 @@ def test_admin_queue_status_and_worker_once(monkeypatch):
         assert queue_resp.status_code == 200
         payload = queue_resp.json()["queue"]
         assert "counts" in payload
+        assert payload["card_capacity"] == webapp.settings.run_card_capacity
+        assert "queued_cards" in payload
+        assert "running_cards" in payload
         assert payload["workers"][0]["id"] == "pytest-worker"
         assert any(item["message"] == "worker released run" for item in payload["recent_logs"])
 

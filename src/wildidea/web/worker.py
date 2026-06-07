@@ -6,6 +6,7 @@ import logging
 import os
 import socket
 import time
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from datetime import timedelta
 
 from sqlalchemy import or_, select, update
@@ -14,7 +15,7 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .database import SessionLocal, init_db
 from .models import Run, RunEvent, User, WorkerHeartbeat, utcnow
-from .observability import add_run_log
+from .observability import active_run_card_count, add_run_log, run_slot_count
 from .runner import execute_run
 from .services import refund_run_credit
 
@@ -55,13 +56,17 @@ def update_worker_heartbeat(
 def recover_stale_worker_runs(db: Session, worker_id: str) -> int:
     """Fail and refund old running jobs that no active worker still owns."""
     cutoff = utcnow() - timedelta(seconds=settings.worker_stale_after_seconds)
-    active_run_ids = set(db.scalars(
-        select(WorkerHeartbeat.current_run_id)
-        .where(
-            WorkerHeartbeat.current_run_id.is_not(None),
-            WorkerHeartbeat.updated_at >= cutoff,
-        )
-    ).all())
+    active_heartbeats = db.scalars(
+        select(WorkerHeartbeat)
+        .where(WorkerHeartbeat.updated_at >= cutoff)
+    ).all()
+    active_run_ids: set[str] = set()
+    for heartbeat in active_heartbeats:
+        if heartbeat.current_run_id:
+            active_run_ids.add(heartbeat.current_run_id)
+        for run_id in (heartbeat.meta or {}).get("active_run_ids") or []:
+            if run_id:
+                active_run_ids.add(str(run_id))
 
     query = select(Run).where(
         Run.status == "running",
@@ -92,15 +97,34 @@ def recover_stale_worker_runs(db: Session, worker_id: str) -> int:
     return recovered
 
 
-def claim_next_run(db: Session, worker_id: str) -> str | None:
+def claim_next_run(db: Session, worker_id: str, *, update_idle: bool = True) -> tuple[str, int] | None:
     run = db.scalar(
         select(Run)
         .where(Run.status == "queued")
-        .order_by(Run.created_at)
+        .order_by(Run.created_at, Run.id)
         .limit(1)
     )
     if not run:
-        update_worker_heartbeat(db, worker_id, "idle")
+        if update_idle:
+            update_worker_heartbeat(db, worker_id, "idle", meta={"card_capacity": settings.run_card_capacity})
+        return None
+
+    requested_cards = run_slot_count(run)
+    running_cards = active_run_card_count(db)
+    card_capacity = max(1, settings.run_card_capacity)
+    if running_cards + requested_cards > card_capacity:
+        if update_idle:
+            update_worker_heartbeat(
+                db,
+                worker_id,
+                "capacity_wait",
+                meta={
+                    "running_cards": running_cards,
+                    "next_run_cards": requested_cards,
+                    "card_capacity": card_capacity,
+                    "next_run_id": run.id,
+                },
+            )
         return None
 
     now = utcnow()
@@ -115,8 +139,19 @@ def claim_next_run(db: Session, worker_id: str) -> str | None:
 
     update_worker_heartbeat(db, worker_id, "running", current_run_id=run.id)
     db.add(RunEvent(run_id=run.id, event_type="status", payload={"status": "running", "worker_id": worker_id}))
-    add_run_log(db, run.id, "info", "worker claimed run", {"worker_id": worker_id})
-    return run.id
+    add_run_log(
+        db,
+        run.id,
+        "info",
+        "worker claimed run",
+        {
+            "worker_id": worker_id,
+            "slot_count": requested_cards,
+            "running_cards_before_claim": running_cards,
+            "card_capacity": card_capacity,
+        },
+    )
+    return run.id, requested_cards
 
 
 def mark_worker_exception(run_id: str, worker_id: str, exc: Exception) -> None:
@@ -138,25 +173,62 @@ def mark_worker_exception(run_id: str, worker_id: str, exc: Exception) -> None:
         db.close()
 
 
+def _execute_claimed_run(run_id: str, worker_id: str) -> None:
+    logger.info("worker %s running %s", worker_id, run_id)
+    try:
+        execute_run(run_id)
+    except Exception as exc:  # noqa: BLE001 - keep the worker alive across task failures.
+        logger.exception("worker %s failed run %s", worker_id, run_id)
+        mark_worker_exception(run_id, worker_id, exc)
+
+
+def _release_claimed_run(run_id: str, worker_id: str) -> None:
+    db = SessionLocal()
+    try:
+        add_run_log(db, run_id, "info", "worker released run", {"worker_id": worker_id})
+        db.commit()
+    finally:
+        db.close()
+
+
+def _update_worker_pool_heartbeat(worker_id: str, active_runs: dict[Future, tuple[str, int]]) -> None:
+    db = SessionLocal()
+    try:
+        active_run_ids = [run_id for run_id, _cards in active_runs.values()]
+        active_cards = sum(cards for _run_id, cards in active_runs.values())
+        update_worker_heartbeat(
+            db,
+            worker_id,
+            "running" if active_runs else "idle",
+            current_run_id=active_run_ids[0] if active_run_ids else None,
+            meta={
+                "active_run_ids": active_run_ids,
+                "active_run_count": len(active_run_ids),
+                "active_cards": active_cards,
+                "card_capacity": settings.run_card_capacity,
+            },
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
 def run_worker_once(worker_id: str | None = None) -> bool:
     identity = worker_identity(worker_id)
     db = SessionLocal()
     try:
         recovered = recover_stale_worker_runs(db, identity)
-        run_id = claim_next_run(db, identity)
+        claimed = claim_next_run(db, identity)
         db.commit()
     finally:
         db.close()
 
-    if not run_id:
+    if not claimed:
         return False
 
-    logger.info("worker %s running %s", identity, run_id)
+    run_id, _cards = claimed
     try:
-        execute_run(run_id)
-    except Exception as exc:  # noqa: BLE001 - keep the worker alive across task failures.
-        logger.exception("worker %s failed run %s", identity, run_id)
-        mark_worker_exception(run_id, identity, exc)
+        _execute_claimed_run(run_id, identity)
     finally:
         db = SessionLocal()
         try:
@@ -175,16 +247,60 @@ def run_worker_forever(worker_id: str | None = None, poll_seconds: float | None 
     identity = worker_identity(worker_id)
     poll = poll_seconds if poll_seconds is not None else settings.worker_poll_seconds
     last_idle_log = 0.0
-    logger.info("WildIdea worker %s started; poll=%ss", identity, poll)
-    while True:
-        ran = run_worker_once(identity)
-        if ran:
-            continue
-        now = time.monotonic()
-        if now - last_idle_log >= settings.worker_idle_log_seconds:
-            logger.info("worker %s idle", identity)
-            last_idle_log = now
-        time.sleep(max(0.5, poll))
+    max_workers = max(1, settings.run_card_capacity)
+    logger.info(
+        "WildIdea worker %s started; poll=%ss card_capacity=%s",
+        identity,
+        poll,
+        settings.run_card_capacity,
+    )
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="wildidea-run") as pool:
+        active_runs: dict[Future, tuple[str, int]] = {}
+        while True:
+            finished = [future for future in active_runs if future.done()]
+            for future in finished:
+                run_id, _cards = active_runs.pop(future)
+                _release_claimed_run(run_id, identity)
+                if future.exception():
+                    logger.error("worker %s run %s ended with exception", identity, run_id)
+            if finished:
+                _update_worker_pool_heartbeat(identity, active_runs)
+
+            claimed_any = False
+            while sum(cards for _run_id, cards in active_runs.values()) < max(1, settings.run_card_capacity):
+                db = SessionLocal()
+                try:
+                    recovered = recover_stale_worker_runs(db, identity)
+                    claimed = claim_next_run(db, identity, update_idle=False)
+                    db.commit()
+                finally:
+                    db.close()
+                if not claimed:
+                    if recovered:
+                        logger.warning("worker %s recovered %s stale runs", identity, recovered)
+                    break
+                run_id, cards = claimed
+                future = pool.submit(_execute_claimed_run, run_id, identity)
+                active_runs[future] = (run_id, cards)
+                claimed_any = True
+                _update_worker_pool_heartbeat(identity, active_runs)
+
+            if active_runs:
+                wait(active_runs.keys(), timeout=max(0.5, poll), return_when=FIRST_COMPLETED)
+                continue
+
+            db = SessionLocal()
+            try:
+                update_worker_heartbeat(db, identity, "idle", meta={"card_capacity": settings.run_card_capacity})
+                db.commit()
+            finally:
+                db.close()
+            now = time.monotonic()
+            if now - last_idle_log >= settings.worker_idle_log_seconds:
+                logger.info("worker %s idle", identity)
+                last_idle_log = now
+            if not claimed_any:
+                time.sleep(max(0.5, poll))
 
 
 def main() -> None:

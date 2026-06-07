@@ -30,7 +30,7 @@ class RedeemInviteRequest(BaseModel):
 
 class CreateRunRequest(BaseModel):
     problem: str = Field(min_length=2)
-    slot_count: int = Field(default=10, ge=1, le=30)
+    slot_count: int = Field(default=10, ge=1, le=50)
     forbid_terms: list[str] = Field(default_factory=list)
     search_enabled: bool = False
 

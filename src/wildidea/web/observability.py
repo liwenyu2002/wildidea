@@ -69,15 +69,19 @@ def _age_seconds(value: datetime | None) -> int | None:
     return max(0, int((now - value).total_seconds()))
 
 
-def _run_slot_count(run: Run) -> int:
+def run_slot_count(run: Run) -> int:
     try:
         return max(1, int((run.config_snapshot or {}).get("slot_count") or 10))
     except (TypeError, ValueError):
         return 10
 
 
-def _run_estimated_seconds(run: Run) -> int:
-    return max(QUEUE_CARD_ESTIMATE_SECONDS, _run_slot_count(run) * QUEUE_CARD_ESTIMATE_SECONDS)
+def run_estimated_seconds(run: Run) -> int:
+    return max(QUEUE_CARD_ESTIMATE_SECONDS, run_slot_count(run) * QUEUE_CARD_ESTIMATE_SECONDS)
+
+
+def active_run_card_count(db: Session) -> int:
+    return sum(run_slot_count(run) for run in db.scalars(select(Run).where(Run.status == "running")).all())
 
 
 def _elapsed_seconds_since(value: datetime | None) -> int:
@@ -89,7 +93,7 @@ def _elapsed_seconds_since(value: datetime | None) -> int:
     return max(0, int((now - value).total_seconds()))
 
 
-def _active_worker_capacity(db: Session) -> tuple[int, bool]:
+def _active_worker_count(db: Session) -> tuple[int, bool]:
     if settings.run_executor != "worker":
         return 1, True
     workers = db.scalars(select(WorkerHeartbeat).order_by(desc(WorkerHeartbeat.updated_at)).limit(50)).all()
@@ -101,12 +105,45 @@ def _active_worker_capacity(db: Session) -> tuple[int, bool]:
     return max(1, len(active_workers)), bool(active_workers)
 
 
+def _estimate_start_wait_seconds(running_runs: list[Run], queued_runs: list[Run], target: Run) -> int:
+    capacity = max(1, settings.run_card_capacity)
+    running_jobs: list[dict[str, int]] = []
+    now_used_cards = 0
+    for item in running_runs:
+        cards = min(capacity, run_slot_count(item))
+        estimate = run_estimated_seconds(item)
+        elapsed = _elapsed_seconds_since(item.started_at or item.created_at)
+        remaining = max(60, estimate - elapsed)
+        running_jobs.append({"cards": cards, "finish": remaining})
+        now_used_cards += cards
+
+    current_time = 0
+    used_cards = now_used_cards
+    for item in [*queued_runs, target]:
+        cards = min(capacity, run_slot_count(item))
+        while running_jobs and used_cards + cards > capacity:
+            current_time = min(job["finish"] for job in running_jobs)
+            finished = [job for job in running_jobs if job["finish"] <= current_time]
+            running_jobs = [job for job in running_jobs if job["finish"] > current_time]
+            used_cards = max(0, used_cards - sum(job["cards"] for job in finished))
+        if item.id == target.id:
+            return current_time if used_cards + cards <= capacity else max(current_time, QUEUE_CARD_ESTIMATE_SECONDS)
+        finish = current_time + run_estimated_seconds(item)
+        running_jobs.append({"cards": cards, "finish": finish})
+        used_cards += cards
+
+    return 0
+
+
 def run_queue_status(db: Session, run: Run) -> dict[str, Any] | None:
     if run.status not in {"queued", "running"}:
         return None
 
-    worker_capacity, worker_online = _active_worker_capacity(db)
+    worker_count, worker_online = _active_worker_count(db)
+    card_capacity = max(1, settings.run_card_capacity)
     if run.status == "running":
+        running_runs = db.scalars(select(Run).where(Run.status == "running")).all()
+        running_cards = sum(run_slot_count(item) for item in running_runs)
         return {
             "status": "running",
             "queue_position": 0,
@@ -114,8 +151,14 @@ def run_queue_status(db: Session, run: Run) -> dict[str, Any] | None:
             "running_ahead": 0,
             "tasks_ahead": 0,
             "users_ahead": 0,
+            "requested_cards": run_slot_count(run),
+            "queued_ahead_cards": 0,
+            "running_cards": running_cards,
+            "cards_ahead": 0,
+            "card_capacity": card_capacity,
+            "available_cards": max(0, card_capacity - running_cards),
             "estimated_wait_seconds": 0,
-            "worker_capacity": worker_capacity,
+            "worker_count": worker_count,
             "worker_online": worker_online,
             "estimate_card_seconds": QUEUE_CARD_ESTIMATE_SECONDS,
             "calculated_at": utc_iso(utcnow()),
@@ -138,19 +181,11 @@ def run_queue_status(db: Session, run: Run) -> dict[str, Any] | None:
         .order_by(Run.started_at, Run.created_at, Run.id)
     ).all()
 
-    lane_finish_seconds = [0] * worker_capacity
-    for item in running_runs:
-        estimate = _run_estimated_seconds(item)
-        elapsed = _elapsed_seconds_since(item.started_at or item.created_at)
-        remaining = max(60, estimate - elapsed)
-        lane = lane_finish_seconds.index(min(lane_finish_seconds))
-        lane_finish_seconds[lane] += remaining
-    for item in queued_before:
-        lane = lane_finish_seconds.index(min(lane_finish_seconds))
-        lane_finish_seconds[lane] += _run_estimated_seconds(item)
-
     ahead_runs = [*running_runs, *queued_before]
     users_ahead = {item.user_id for item in ahead_runs if item.user_id != run.user_id}
+    running_cards = sum(run_slot_count(item) for item in running_runs)
+    queued_ahead_cards = sum(run_slot_count(item) for item in queued_before)
+    requested_cards = run_slot_count(run)
     return {
         "status": "queued",
         "queue_position": len(queued_before) + 1,
@@ -158,8 +193,14 @@ def run_queue_status(db: Session, run: Run) -> dict[str, Any] | None:
         "running_ahead": len(running_runs),
         "tasks_ahead": len(ahead_runs),
         "users_ahead": len(users_ahead),
-        "estimated_wait_seconds": int(min(lane_finish_seconds) if lane_finish_seconds else 0),
-        "worker_capacity": worker_capacity,
+        "requested_cards": requested_cards,
+        "queued_ahead_cards": queued_ahead_cards,
+        "running_cards": running_cards,
+        "cards_ahead": running_cards + queued_ahead_cards,
+        "card_capacity": card_capacity,
+        "available_cards": max(0, card_capacity - running_cards),
+        "estimated_wait_seconds": _estimate_start_wait_seconds(running_runs, queued_before, run),
+        "worker_count": worker_count,
         "worker_online": worker_online,
         "estimate_card_seconds": QUEUE_CARD_ESTIMATE_SECONDS,
         "calculated_at": utc_iso(utcnow()),
@@ -171,6 +212,10 @@ def queue_status(db: Session) -> dict[str, Any]:
     queued = int(status_counts.get("queued") or 0)
     running = int(status_counts.get("running") or 0)
     oldest_queued_at = db.scalar(select(func.min(Run.created_at)).where(Run.status == "queued"))
+    queued_runs = db.scalars(select(Run).where(Run.status == "queued")).all()
+    running_runs = db.scalars(select(Run).where(Run.status == "running")).all()
+    queued_cards = sum(run_slot_count(run) for run in queued_runs)
+    running_cards = sum(run_slot_count(run) for run in running_runs)
 
     workers = db.scalars(
         select(WorkerHeartbeat)
@@ -195,10 +240,15 @@ def queue_status(db: Session) -> dict[str, Any]:
         "worker_poll_seconds": settings.worker_poll_seconds,
         "worker_stale_after_seconds": settings.worker_stale_after_seconds,
         "user_active_run_limit": settings.user_active_run_limit,
+        "card_capacity": max(1, settings.run_card_capacity),
         "counts": status_counts,
         "queued": queued,
         "running": running,
         "active": queued + running,
+        "queued_cards": queued_cards,
+        "running_cards": running_cards,
+        "active_cards": queued_cards + running_cards,
+        "available_cards": max(0, settings.run_card_capacity - running_cards),
         "oldest_queued_at": utc_iso(oldest_queued_at),
         "workers": [
             {

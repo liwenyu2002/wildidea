@@ -120,7 +120,7 @@ function statusPillText(booting, loggedIn, isAdmin, adminViewActive) {
 }
 
 function updateRunCostLabel() {
-  const count = Math.max(1, Math.min(30, Number($("slotCount")?.value || 10)));
+  const count = Math.max(1, Math.min(50, Number($("slotCount")?.value || 10)));
   $("runSubmit").textContent = isAdminUser() ? `生成 ${count} 张卡` : `消耗 ${count} 积分生成`;
 }
 
@@ -252,11 +252,18 @@ function queuedSummary(run) {
   const tasksAhead = Number(queue.tasks_ahead || 0);
   const runningAhead = Number(queue.running_ahead || 0);
   const queuedAhead = Number(queue.queued_ahead || 0);
+  const cardsAhead = Number(queue.cards_ahead || 0);
+  const runningCards = Number(queue.running_cards || 0);
+  const queuedAheadCards = Number(queue.queued_ahead_cards || 0);
+  const requestedCards = Number(queue.requested_cards || 0);
+  const cardCapacity = Number(queue.card_capacity || 50);
   const estimateText = formatQueueEstimate(queueRemainingSeconds(queue));
   const aheadText = usersAhead > 0
-    ? `前面还有 ${usersAhead} 位用户、${tasksAhead} 个任务`
-    : (tasksAhead > 0 ? `前面还有 ${tasksAhead} 个任务` : "前面没有其他用户");
-  const detailText = tasksAhead > 0 ? `其中生成中 ${runningAhead} 个、排队 ${queuedAhead} 个。` : "轮到你后会自动开始抽卡。";
+    ? `前面还有 ${usersAhead} 位用户、${cardsAhead} 张卡`
+    : (cardsAhead > 0 ? `前面还有 ${cardsAhead} 张卡` : "前面没有其他用户");
+  const detailText = tasksAhead > 0
+    ? `当前生成中 ${runningCards}/${cardCapacity} 张卡，前序排队 ${queuedAheadCards} 张卡。`
+    : `当前生成中 ${runningCards}/${cardCapacity} 张卡，你这次需要 ${requestedCards || "若干"} 张卡。`;
   const workerText = queue.worker_online === false ? "当前 worker 暂未上报心跳，系统会在接管后继续推进。" : "";
   return `已等待 ${waitText} · ${aheadText}。预计等待约 ${estimateText}。${detailText}${workerText}`;
 }
@@ -1228,11 +1235,12 @@ function renderQueueStatus(queue) {
       <div>
         <span class="eyebrow">系统运行</span>
         <strong>${escapeHtml(executorText)}</strong>
-        <p class="muted">排队 ${Number(queue?.queued || 0)} · 生成中 ${Number(queue?.running || 0)} · 活跃 worker ${activeWorkers}/${workers.length}</p>
+        <p class="muted">排队 ${Number(queue?.queued || 0)} 个任务/${Number(queue?.queued_cards || 0)} 张卡 · 生成中 ${Number(queue?.running || 0)} 个任务/${Number(queue?.running_cards || 0)}/${Number(queue?.card_capacity || 50)} 张卡 · 活跃 worker ${activeWorkers}/${workers.length}</p>
       </div>
       <div class="queue-chips">
         <span>Queued ${counts.queued || 0}</span>
         <span>Running ${counts.running || 0}</span>
+        <span>Cards ${Number(queue?.running_cards || 0)}/${Number(queue?.card_capacity || 50)}</span>
         <span>Done ${counts.succeeded || 0}</span>
         <span>Failed ${counts.failed || 0}</span>
       </div>
@@ -1240,7 +1248,8 @@ function renderQueueStatus(queue) {
     <div class="queue-meta">
       <span>最早排队 ${escapeHtml(oldestQueued)}</span>
       <span>轮询 ${escapeHtml(queue?.worker_poll_seconds ?? "-")}s</span>
-      <span>用户活跃任务上限 ${escapeHtml(queue?.user_active_run_limit ?? "-")}</span>
+      <span>卡片容量 ${escapeHtml(queue?.card_capacity ?? "-")}</span>
+      <span>可用容量 ${escapeHtml(queue?.available_cards ?? "-")}</span>
     </div>
     <div class="queue-workers">
       ${workers.map((worker) => `
@@ -1490,11 +1499,12 @@ $("runForm").addEventListener("submit", async (event) => {
   const forbidTerms = $("forbidTerms").value.split(/\s+/).map((item) => item.trim()).filter(Boolean);
   beginSearchLaunch(problemText);
   try {
+    const slotCount = Math.max(1, Math.min(50, Number($("slotCount").value || 10)));
     const data = await api("/api/runs", {
       method: "POST",
       body: JSON.stringify({
         problem: problemText,
-        slot_count: Number($("slotCount").value || 10),
+        slot_count: slotCount,
         forbid_terms: forbidTerms,
       }),
     });
