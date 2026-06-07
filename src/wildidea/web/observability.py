@@ -240,6 +240,7 @@ def queue_status(db: Session) -> dict[str, Any]:
         "worker_poll_seconds": settings.worker_poll_seconds,
         "worker_stale_after_seconds": settings.worker_stale_after_seconds,
         "user_active_run_limit": settings.user_active_run_limit,
+        "user_run_card_limit": settings.user_run_card_limit,
         "card_capacity": max(1, settings.run_card_capacity),
         "counts": status_counts,
         "queued": queued,

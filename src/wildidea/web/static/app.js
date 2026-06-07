@@ -128,7 +128,7 @@ function statusPillText(booting, loggedIn, isAdmin, adminViewActive) {
 }
 
 function updateRunCostLabel() {
-  const count = Math.max(1, Math.min(50, Number($("slotCount")?.value || 10)));
+  const count = Math.max(1, Math.min(10, Number($("slotCount")?.value || 10)));
   $("runSubmit").textContent = isAdminUser() ? `生成 ${count} 张卡` : `消耗 ${count} 积分生成`;
 }
 
@@ -1271,6 +1271,7 @@ function renderQueueStatus(queue) {
       <span>最早排队 ${escapeHtml(oldestQueued)}</span>
       <span>轮询 ${escapeHtml(queue?.worker_poll_seconds ?? "-")}s</span>
       <span>卡片容量 ${escapeHtml(queue?.card_capacity ?? "-")}</span>
+      <span>单用户上限 ${escapeHtml(queue?.user_run_card_limit ?? "-")} 张</span>
       <span>可用容量 ${escapeHtml(queue?.available_cards ?? "-")}</span>
     </div>
     <div class="queue-workers">
@@ -1523,7 +1524,7 @@ $("runForm").addEventListener("submit", async (event) => {
   const forbidTerms = $("forbidTerms").value.split(/\s+/).map((item) => item.trim()).filter(Boolean);
   beginSearchLaunch(problemText);
   try {
-    const slotCount = Math.max(1, Math.min(50, Number($("slotCount").value || 10)));
+    const slotCount = Math.max(1, Math.min(10, Number($("slotCount").value || 10)));
     const data = await api("/api/runs", {
       method: "POST",
       body: JSON.stringify({

@@ -431,7 +431,33 @@ def create_run(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict:
-    credit_cost = req.slot_count * settings.run_credit_cost
+    if req.slot_count > settings.user_run_card_limit:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "USER_CARD_LIMIT_EXCEEDED",
+                "message": f"单次最多生成 {settings.user_run_card_limit} 张卡片",
+                "requested_cards": req.slot_count,
+                "limit": settings.user_run_card_limit,
+            },
+        )
+    if settings.user_active_run_limit > 0:
+        active_count = db.scalar(
+            select(func.count())
+            .select_from(Run)
+            .where(Run.user_id == user.id, Run.status.in_(["queued", "running"]))
+        ) or 0
+        if active_count >= settings.user_active_run_limit:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "ACTIVE_RUN_LIMIT_REACHED",
+                    "message": "已有任务在排队或生成中，请等当前任务结束后再提交。",
+                    "active_runs": active_count,
+                    "limit": settings.user_active_run_limit,
+                },
+            )
+    credit_cost = 0 if user.role == "admin" else req.slot_count * settings.run_credit_cost
     snapshot = {
         "provider": settings.default_provider,
         "model": settings.default_model,

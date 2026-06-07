@@ -73,7 +73,8 @@ class WebSettings:
     worker_idle_log_seconds: int = int(os.environ.get("WILDIDEA_WORKER_IDLE_LOG_SECONDS", "60"))
     worker_stale_after_seconds: int = int(os.environ.get("WILDIDEA_WORKER_STALE_AFTER_SECONDS", "7200"))
     run_card_capacity: int = int(os.environ.get("WILDIDEA_RUN_CARD_CAPACITY", "50"))
-    user_active_run_limit: int = int(os.environ.get("WILDIDEA_USER_ACTIVE_RUN_LIMIT", "0"))
+    user_run_card_limit: int = int(os.environ.get("WILDIDEA_USER_RUN_CARD_LIMIT", "10"))
+    user_active_run_limit: int = int(os.environ.get("WILDIDEA_USER_ACTIVE_RUN_LIMIT", "1"))
 
 
 settings = WebSettings()

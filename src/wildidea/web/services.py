@@ -52,6 +52,8 @@ def grant_signup_bonus(db: Session, user: User) -> None:
 
 
 def charge_run_credit(db: Session, user: User, run_id: str, amount: int) -> None:
+    if user.role == "admin" or amount <= 0:
+        return
     if user.credit_balance < amount:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
@@ -68,7 +70,14 @@ def charge_run_credit(db: Session, user: User, run_id: str, amount: int) -> None
 def refund_run_credit(db: Session, user: User, run: Run, reason: str = "run_refund") -> None:
     if run.credits_refunded:
         return
-    amount = int((run.config_snapshot or {}).get("credit_cost") or settings.run_credit_cost)
+    if user.role == "admin":
+        run.credits_refunded = True
+        return
+    raw_amount = (run.config_snapshot or {}).get("credit_cost")
+    amount = int(settings.run_credit_cost if raw_amount is None else raw_amount)
+    if amount <= 0:
+        run.credits_refunded = True
+        return
     add_credit_transaction(db, user, amount, reason, run_id=run.id)
     run.credits_refunded = True
 

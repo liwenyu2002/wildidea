@@ -417,6 +417,16 @@ def test_create_run_defaults_to_ten_parallel_ten_cards():
         user_resp = register_user(client, "defaults@example.com")
         assert user_resp.status_code == 200
         headers = {"Authorization": f"Bearer {user_resp.json()['access_token']}"}
+        from wildidea.web.database import SessionLocal
+        from wildidea.web.models import Run, User
+
+        db = SessionLocal()
+        try:
+            user = db.get(User, user_resp.json()["user"]["id"])
+            user.role = "user"
+            db.commit()
+        finally:
+            db.close()
 
         run_resp = client.post(
             "/api/runs",
@@ -439,11 +449,83 @@ def test_create_run_defaults_to_ten_parallel_ten_cards():
             headers=headers,
             json={"problem": "旧前端配置不应改变策略", "slot_count": 1, "parallel": 1, "generation_mode": "speed"},
         )
+        assert legacy_config_resp.status_code == 429
+        assert legacy_config_resp.json()["detail"]["error"] == "ACTIVE_RUN_LIMIT_REACHED"
+
+        db = SessionLocal()
+        try:
+            db.get(Run, run_resp.json()["run"]["id"]).status = "succeeded"
+            db.commit()
+        finally:
+            db.close()
+
+        legacy_config_resp = client.post(
+            "/api/runs",
+            headers=headers,
+            json={"problem": "旧前端配置不应改变策略", "slot_count": 1, "parallel": 1, "generation_mode": "speed"},
+        )
         assert legacy_config_resp.status_code == 200
         legacy_snapshot = legacy_config_resp.json()["run"]["config_snapshot"]
         assert legacy_snapshot["parallel"] == 10
         assert "generation_mode" not in legacy_snapshot
         assert legacy_snapshot["max_retries"] == 3
+
+
+def test_admin_run_does_not_require_or_consume_credits():
+    webapp.execute_run = lambda run_id: None
+
+    with TestClient(webapp.app) as client:
+        admin_resp = register_user(client, "admin-no-charge@example.com")
+        assert admin_resp.status_code == 200
+        headers = {"Authorization": f"Bearer {admin_resp.json()['access_token']}"}
+
+        from wildidea.web.database import SessionLocal
+        from wildidea.web.models import CreditTransaction, User
+
+        db = SessionLocal()
+        try:
+            admin = db.get(User, admin_resp.json()["user"]["id"])
+            admin.role = "admin"
+            admin.credit_balance = 0
+            db.commit()
+        finally:
+            db.close()
+
+        run_resp = client.post(
+            "/api/runs",
+            headers=headers,
+            json={"problem": "管理员零积分生成", "slot_count": 10},
+        )
+
+        assert run_resp.status_code == 200
+        run = run_resp.json()["run"]
+        assert run["config_snapshot"]["slot_count"] == 10
+        assert run["config_snapshot"]["credit_cost"] == 0
+        assert run_resp.json()["credit_balance"] == 0
+
+        db = SessionLocal()
+        try:
+            charges = db.query(CreditTransaction).filter_by(run_id=run["id"], reason="run_charge").all()
+            assert charges == []
+        finally:
+            db.close()
+
+
+def test_create_run_enforces_user_card_limit():
+    webapp.execute_run = lambda run_id: None
+
+    with TestClient(webapp.app) as client:
+        user_resp = register_user(client, "card-limit@example.com")
+        assert user_resp.status_code == 200
+        headers = {"Authorization": f"Bearer {user_resp.json()['access_token']}"}
+
+        over_limit = client.post(
+            "/api/runs",
+            headers=headers,
+            json={"problem": "超过单用户卡片上限", "slot_count": 11},
+        )
+        assert over_limit.status_code == 400
+        assert over_limit.json()["detail"]["error"] == "USER_CARD_LIMIT_EXCEEDED"
 
 
 def test_worker_executor_queues_without_background_execution():
@@ -472,9 +554,8 @@ def test_worker_executor_queues_without_background_execution():
                 headers=headers,
                 json={"problem": "第二个 worker 任务", "slot_count": 1},
             )
-            assert blocked_resp.status_code == 200
-            assert blocked_resp.json()["run"]["status"] == "queued"
-            assert blocked_resp.json()["credit_balance"] == 28
+            assert blocked_resp.status_code == 429
+            assert blocked_resp.json()["detail"]["error"] == "ACTIVE_RUN_LIMIT_REACHED"
     finally:
         object.__setattr__(webapp.settings, "run_executor", original_executor)
 
