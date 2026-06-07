@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="WildIdea">
+  <rect x="8" y="26" width="40" height="2" fill="#e8505b" opacity=".5"/>
+  <rect x="10" y="34" width="34" height="2" fill="#55e6ff" opacity=".55"/>
+  <rect x="20" y="47" width="36" height="2" fill="#e8505b" opacity=".42"/>
+
+  <g transform="rotate(8 15 41)">
+    <rect x="7" y="36" width="15" height="10" rx="1" fill="#fff8d8" stroke="#2a2a2a" stroke-width="2"/>
+    <rect x="10" y="39" width="8" height="2" fill="#e8505b"/>
+  </g>
+  <g transform="rotate(-8 45 44)">
+    <rect x="38" y="39" width="15" height="10" rx="1" fill="#fff8d8" stroke="#2a2a2a" stroke-width="2"/>
+    <rect x="41" y="42" width="8" height="2" fill="#55e6ff"/>
+  </g>
+
+  <text x="30" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#fff8d8" stroke="#2a2a2a" stroke-width="3.3" paint-order="stroke">W</text>
+</svg>

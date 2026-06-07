@@ -29,7 +29,7 @@
     <rect x="53" y="52" width="4" height="4" fill="#55e6ff" opacity=".78"/>
     <rect x="43" y="54" width="4" height="4" fill="#e8505b" opacity=".78"/>
 
-    <text x="30" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#fff8d8" stroke="#2a2a2a" stroke-width="1.1" paint-order="stroke">W</text>
+    <text x="30" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#fff8d8" stroke="#2a2a2a" stroke-width="3.3" paint-order="stroke">W</text>
   </g>
 
   <rect x="6" y="6" width="48" height="48" rx="5" fill="none" stroke="#2a2a2a" stroke-width="4"/>

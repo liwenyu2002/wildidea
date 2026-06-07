@@ -128,6 +128,51 @@ textarea {
   font-size: 20px;
 }
 
+.brand-copy {
+  min-width: 0;
+}
+
+.glitch-text {
+  position: relative;
+  display: block;
+  isolation: isolate;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.32;
+  z-index: 1;
+  mix-blend-mode: multiply;
+}
+
+.glitch-text::before {
+  color: #e8505b;
+  transform: translate(1px, 0);
+  clip-path: inset(0 0 52% 0);
+}
+
+.glitch-text::after {
+  color: #55e6ff;
+  transform: translate(-1px, 0);
+  clip-path: inset(48% 0 0 0);
+}
+
+.glitch-subtitle::before,
+.glitch-subtitle::after {
+  opacity: 0.24;
+}
+
+.brand-logo {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: block;
+}
+
 .brand span,
 .muted {
   color: var(--muted);
@@ -137,12 +182,16 @@ textarea {
 .mark {
   width: 42px;
   height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: var(--text);
-  color: #fff;
-  font-weight: 900;
+  flex: 0 0 42px;
+  display: block;
+  border-radius: 6px;
+  overflow: visible;
+}
+
+.mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .panel,
@@ -1498,10 +1547,27 @@ h2,
 }
 
 .mark {
-  border: 2px solid var(--line);
-  background: #496fae;
-  color: #fff8d8;
-  box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.85);
+  border: 0 !important;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  padding: 0;
+}
+
+.brand .glitch-text {
+  text-shadow: 1px 0 0 rgba(232, 80, 91, 0.4), -1px 0 0 rgba(85, 230, 255, 0.42);
+}
+
+.brand.is-clickable:hover .glitch-text {
+  color: var(--text);
+}
+
+.brand.is-clickable:hover .glitch-text::before {
+  transform: translate(2px, -1px);
+}
+
+.brand.is-clickable:hover .glitch-text::after {
+  transform: translate(-2px, 1px);
 }
 
 .panel,
