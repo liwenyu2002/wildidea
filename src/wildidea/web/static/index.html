@@ -6,7 +6,7 @@
   <title>WildIdea · 想出不一样的点子</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=20260607-char-outline-3x">
   <link rel="shortcut icon" type="image/svg+xml" href="/static/favicon.svg?v=20260607-char-outline-3x">
-  <link rel="stylesheet" href="/static/styles.css?v=20260607-advantage">
+  <link rel="stylesheet" href="/static/styles.css?v=20260607-mobile-ui-2">
 </head>
 <body class="app-booting">
   <div id="bootCurtain" class="boot-curtain" aria-hidden="true">
@@ -18,6 +18,7 @@
   </div>
   <div class="shell">
     <aside class="sidebar">
+      <button id="historyCloseBtn" class="drawer-close ghost" type="button" aria-label="关闭历史侧边栏">关闭</button>
       <button id="brandHomeBtn" class="brand" type="button">
         <img class="brand-logo" src="/static/brand-logo.svg?v=20260607-blue-outline-2x" alt="" aria-hidden="true">
         <div class="brand-copy">
@@ -91,7 +92,10 @@
           <h1 id="toolbarTitle">生成工作台</h1>
           <p id="toolbarSubtitle">每张卡片消耗 1 积分；系统失败会自动退回本次扣除。</p>
         </div>
-        <button id="statusPill" class="status-pill" type="button" disabled>正在加载</button>
+        <div class="toolbar-actions">
+          <button id="historyDrawerBtn" class="mobile-history-trigger ghost" type="button" aria-expanded="false">历史</button>
+          <button id="statusPill" class="status-pill" type="button" disabled>正在加载</button>
+        </div>
       </section>
 
       <section id="workspace" class="workspace hidden search-open">
@@ -169,7 +173,8 @@
       </section>
     </main>
   </div>
+  <button id="historyBackdrop" class="history-backdrop hidden" type="button" aria-label="关闭历史侧边栏"></button>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=20260607-advantage"></script>
+  <script src="/static/app.js?v=20260607-mobile-ui-2"></script>
 </body>
 </html>

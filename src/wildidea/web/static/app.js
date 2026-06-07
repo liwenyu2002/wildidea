@@ -17,6 +17,7 @@ const state = {
   emailCodeRemaining: 0,
   bootFinished: false,
   runListSignature: "",
+  historyDrawerOpen: false,
 };
 
 const DRAW_CARD_DELAY_MS = 170;
@@ -87,9 +88,16 @@ function renderShell() {
   const isAdmin = isAdminUser();
   const adminViewActive = loggedIn && isAdmin && state.adminOpen;
   if (!isAdmin) state.adminOpen = false;
+  if (!loggedIn || adminViewActive) state.historyDrawerOpen = false;
+  document.body.classList.toggle("app-logged-in", loggedIn);
+  document.body.classList.toggle("admin-view-open", adminViewActive);
   $("authPanel").classList.toggle("hidden", booting || loggedIn);
   $("userPanel").classList.toggle("hidden", !loggedIn);
   $("historyPanel").classList.toggle("hidden", !loggedIn);
+  $("historyDrawerBtn").classList.toggle("hidden", !loggedIn || adminViewActive);
+  $("historyDrawerBtn").setAttribute("aria-expanded", String(state.historyDrawerOpen));
+  $("historyBackdrop").classList.toggle("hidden", !state.historyDrawerOpen);
+  document.body.classList.toggle("history-drawer-open", state.historyDrawerOpen);
   $("workspace").classList.toggle("hidden", !loggedIn || adminViewActive);
   $("adminPanel").classList.toggle("hidden", !adminViewActive);
   $("emptyState").classList.toggle("hidden", booting || loggedIn);
@@ -142,6 +150,7 @@ function openSearchPage() {
   state.searchOpen = true;
   state.launchingSearch = false;
   state.adminOpen = false;
+  state.historyDrawerOpen = false;
   state.animatedProgressCards.clear();
   $("problem").value = "";
   $("forbidTerms").value = "";
@@ -771,6 +780,18 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
       <div class="section-label">失败边界</div>
       <p class="fail">${escapeHtml(candidate.fail)}</p>
     </section>
+    <details class="mobile-card-details">
+      <summary>更多细节</summary>
+      <div>
+        <span>抽象方法</span>
+        <strong>${escapeHtml(candidate.source)}</strong>
+        <p>${escapeHtml(candidate.proto)}</p>
+      </div>
+      <div>
+        <span>失败边界</span>
+        <p>${escapeHtml(candidate.fail)}</p>
+      </div>
+    </details>
     <div class="score-row">
       <span class="score-item"><small>结构</small><strong>${scores.structural_depth ?? "-"}</strong></span>
       <span class="score-item"><small>距离</small><strong>${scores.domain_distance ?? "-"}</strong></span>
@@ -1035,6 +1056,7 @@ async function selectRun(runId) {
   state.searchOpen = false;
   state.launchingSearch = false;
   state.adminOpen = false;
+  state.historyDrawerOpen = false;
   const runSummary = state.runs.find((item) => item.id === runId);
   renderRuns();
   renderShell();
@@ -1287,6 +1309,7 @@ function workerLabel(status) {
 async function toggleAdminPanel() {
   if (!isAdminUser()) return;
   state.adminOpen = !state.adminOpen;
+  state.historyDrawerOpen = false;
   renderShell();
   if (state.adminOpen) {
     await loadAdmin();
@@ -1464,6 +1487,7 @@ $("logoutBtn").addEventListener("click", () => {
   state.adminOpen = false;
   state.searchOpen = true;
   state.launchingSearch = false;
+  state.historyDrawerOpen = false;
   state.animatedProgressCards.clear();
   renderShell();
   renderRuns();
@@ -1524,6 +1548,18 @@ $("runForm").addEventListener("submit", async (event) => {
 $("brandHomeBtn").addEventListener("click", openSearchPage);
 $("refreshRunsBtn").addEventListener("click", loadRuns);
 $("statusPill").addEventListener("click", toggleAdminPanel);
+$("historyDrawerBtn").addEventListener("click", () => {
+  state.historyDrawerOpen = !state.historyDrawerOpen;
+  renderShell();
+});
+$("historyCloseBtn").addEventListener("click", () => {
+  state.historyDrawerOpen = false;
+  renderShell();
+});
+$("historyBackdrop").addEventListener("click", () => {
+  state.historyDrawerOpen = false;
+  renderShell();
+});
 $("refreshAdminBtn").addEventListener("click", loadAdmin);
 $("exportFeedbackBtn").addEventListener("click", downloadFeedbackExcel);
 $("slotCount").addEventListener("input", updateRunCostLabel);
