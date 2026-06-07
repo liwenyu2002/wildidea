@@ -179,7 +179,13 @@ body.app-boot-finished .boot-curtain {
   body.app-ready .composer,
   body.app-ready .result-section,
   body.app-ready .admin-panel,
-  body.app-ready .empty-state {
+  body.app-ready .empty-state,
+  .history-loading,
+  .history-result-skeleton span,
+  .result-section.result-arrive,
+  .result-section.result-arrive .progress-item,
+  .result-section.result-arrive .draw-stage,
+  .result-section.result-arrive .candidate {
     animation: none;
   }
 
@@ -700,11 +706,91 @@ h2 {
   padding: 8px 10px;
 }
 
+.history-loading {
+  animation: historySoftPulse 1.1s ease-in-out infinite alternate;
+}
+
+.result-section.result-switching {
+  transform: translateY(2px);
+  opacity: 0.9;
+}
+
+.result-section.result-arrive {
+  animation: resultPanelArrive 0.36s cubic-bezier(0.18, 0.82, 0.24, 1) both;
+}
+
+.result-section.result-arrive .progress-item,
+.result-section.result-arrive .draw-stage,
+.result-section.result-arrive .candidate {
+  animation: historyCardEnter 0.46s cubic-bezier(0.18, 0.82, 0.24, 1) both;
+}
+
+.result-section.result-arrive .candidate:nth-child(1) {
+  animation-delay: 0.03s;
+}
+
+.result-section.result-arrive .candidate:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.result-section.result-arrive .candidate:nth-child(3) {
+  animation-delay: 0.13s;
+}
+
+.result-section.result-arrive .candidate:nth-child(4) {
+  animation-delay: 0.18s;
+}
+
+.result-section.result-arrive .candidate:nth-child(5) {
+  animation-delay: 0.23s;
+}
+
+.result-section.result-arrive .candidate:nth-child(6) {
+  animation-delay: 0.28s;
+}
+
 .candidate-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 14px;
+}
+
+.history-result-skeleton {
+  grid-column: 1 / -1;
+  border: 2px solid var(--line);
+  background: #fffdf0;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.history-result-skeleton strong {
+  color: var(--accent-2);
+  font-size: 14px;
+}
+
+.history-result-skeleton span {
+  height: 16px;
+  border: 2px solid rgba(42, 42, 42, 0.72);
+  background: linear-gradient(90deg, #edf4f7, #fff8d8, #edf4f7);
+  background-size: 220% 100%;
+  animation: historySkeletonSweep 1.15s ease-in-out infinite;
+}
+
+.history-result-skeleton span:nth-child(2) {
+  width: 74%;
+}
+
+.history-result-skeleton span:nth-child(3) {
+  width: 92%;
+  animation-delay: 0.12s;
+}
+
+.history-result-skeleton span:nth-child(4) {
+  width: 58%;
+  animation-delay: 0.24s;
 }
 
 .candidate {
@@ -1082,6 +1168,46 @@ h2 {
   }
   45% {
     background: #f7df89;
+  }
+}
+
+@keyframes historySoftPulse {
+  from {
+    opacity: 0.68;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes historySkeletonSweep {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes resultPanelArrive {
+  from {
+    opacity: 0.72;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes historyCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 

@@ -22,6 +22,15 @@ const DRAW_CARD_DELAY_MS = 170;
 
 const $ = (id) => document.getElementById(id);
 
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function withMinimumDelay(promise, ms) {
+  const [value] = await Promise.all([promise, delay(ms)]);
+  return value;
+}
+
 function finishBoot() {
   if (state.bootFinished) return;
   state.bootFinished = true;
@@ -918,8 +927,11 @@ async function loadMe() {
     state.launchingSearch = false;
     state.authReady = true;
     renderShell();
-    await loadRuns();
     finishBoot();
+    renderRunsLoading();
+    loadRuns().catch((err) => {
+      $("runList").innerHTML = `<div class="muted">历史任务加载失败：${escapeHtml(err.message)}</div>`;
+    });
   } catch (err) {
     localStorage.removeItem("wildidea_token");
     state.token = "";
@@ -936,6 +948,11 @@ async function loadRuns() {
   renderRuns();
 }
 
+function renderRunsLoading() {
+  if (!$("runList") || !state.user) return;
+  $("runList").innerHTML = '<div class="muted history-loading">正在载入历史任务...</div>';
+}
+
 async function refreshMeOnly() {
   const data = await api("/api/me");
   state.user = data.user;
@@ -948,11 +965,49 @@ async function selectRun(runId) {
   state.searchOpen = false;
   state.launchingSearch = false;
   state.adminOpen = false;
+  const runSummary = state.runs.find((item) => item.id === runId);
   renderRuns();
   renderShell();
-  const data = await api(`/api/runs/${runId}`);
-  renderCurrentRun(data.run);
-  if (!["succeeded", "failed", "deleted"].includes(data.run.status)) watchRun(runId);
+  renderRunTransition(runSummary);
+  try {
+    const data = await withMinimumDelay(api(`/api/runs/${runId}`), 320);
+    renderCurrentRun(data.run);
+    animateResultArrival();
+    if (!["succeeded", "failed", "deleted"].includes(data.run.status)) watchRun(runId);
+  } catch (err) {
+    $("resultSection").classList.remove("result-switching");
+    $("progressLog").innerHTML = `<div class="progress-item danger">${escapeHtml(err.message)}</div>`;
+    showToast(err.message);
+  }
+}
+
+function renderRunTransition(run) {
+  const section = $("resultSection");
+  section.classList.remove("result-arrive");
+  section.classList.add("result-switching");
+  $("currentRunTitle").textContent = run?.problem || "正在调取记录";
+  $("currentRunMeta").textContent = run ? `${statusLabel(run.status)} · 正在打开历史任务` : "正在打开历史任务";
+  $("resultSection").dataset.activeRunStatus = "";
+  $("resultSection").dataset.activeRunSnapshot = "{}";
+  $("progressLog").innerHTML = '<div class="progress-item history-loading">正在调取这次发散记录。</div>';
+  $("candidateGrid").innerHTML = `
+    <div class="history-result-skeleton">
+      <strong>正在整理卡片</strong>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  `;
+}
+
+function animateResultArrival() {
+  const section = $("resultSection");
+  section.classList.remove("result-switching", "result-arrive");
+  void section.offsetWidth;
+  window.requestAnimationFrame(() => {
+    section.classList.add("result-arrive");
+    window.setTimeout(() => section.classList.remove("result-arrive"), 900);
+  });
 }
 
 function stopWatching() {
