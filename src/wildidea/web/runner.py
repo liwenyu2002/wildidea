@@ -141,6 +141,7 @@ def _refund_missing_cards(db, user: User, run: Run, generated_count: int) -> int
     refund_amount = max(0, charged - earned)
     if refund_amount <= 0:
         return 0
+    missing_cards = refund_amount // max(1, settings.run_credit_cost)
     add_credit_transaction(
         db,
         user,
@@ -151,6 +152,8 @@ def _refund_missing_cards(db, user: User, run: Run, generated_count: int) -> int
             "requested_slots": snapshot.get("slot_count"),
             "generated_candidates": generated_count,
             "charged": charged,
+            "missing_cards": missing_cards,
+            "reason": "reroll_limit_or_quality_gate",
         },
     )
     db.add(RunEvent(
@@ -159,6 +162,7 @@ def _refund_missing_cards(db, user: User, run: Run, generated_count: int) -> int
         payload={
             "credits": refund_amount,
             "reason": "partial_card_refund",
+            "missing_cards": missing_cards,
             "generated_candidates": generated_count,
             "requested_slots": snapshot.get("slot_count"),
         },

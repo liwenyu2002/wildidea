@@ -190,7 +190,11 @@ async function deleteRun(run) {
 function progressLine(run) {
   if (!run) return "";
   if (run.status === "failed") return `任务失败：${run.error || "未知错误"}。积分已自动退回。`;
-  if (run.status === "succeeded") return `生成完成，共 ${run.candidates?.length || 0} 条候选。`;
+  if (run.status === "succeeded") {
+    const refund = latestRefundEvent(run.events || []);
+    const refundText = refund ? `未通过质量上限的卡已退回 ${refund.credits} 积分。` : "";
+    return `生成完成，共 ${run.candidates?.length || 0} 条候选。${refundText}`;
+  }
   if (run.status === "running") return runningSummary(run.events || [], run.config_snapshot || {});
   return "任务已提交，等待执行。";
 }
@@ -198,11 +202,35 @@ function progressLine(run) {
 function runningSummary(events, config = {}) {
   const target = config.slot_count || 10;
   const ok = events.filter((event) => event.event_type === "candidate_ok").length;
-  const current = [...events].reverse().find((event) => event.event_type === "generating");
   const maxRetries = config.max_retries || 3;
   const maxRerolls = Math.max(0, maxRetries - 1);
-  if (!current) return `正在准备槽位，目标 ${target} 张卡片。`;
-  return `最多重抽 ${maxRerolls} 次 · 正在生成和评分，已得到 ${ok}/${target} 条候选。当前：${current.payload.slot || "-"} · 第 ${current.payload.attempt || 1}/${maxRetries} 次尝试。`;
+  const rerolls = events.filter((event) => event.event_type === "threshold_rejected").length;
+  const remainingCards = Math.max(0, target - ok);
+  const estimateSeconds = Math.max(90, (remainingCards + rerolls) * 90);
+  const estimateText = formatEstimate(estimateSeconds);
+  const startedAt = runStartMs(events);
+  const elapsedText = startedAt ? formatChineseDuration(elapsedMs(startedAt)) : "--";
+  if (!events.some((event) => event.event_type === "generating")) {
+    return `已用时 ${elapsedText} · 正在抽取源现象并准备生成，目标 ${target} 张卡片。每张卡大约 90 秒；为保证质量可能重抽，触达上限仍不通过会退回该卡积分。`;
+  }
+  return `已用时 ${elapsedText} · 正在生成和评分，已得到 ${ok}/${target} 条候选。预计还需约 ${estimateText}；每张卡大约 90 秒，最多重抽 ${maxRerolls} 次。系统会为了保证结果质量自动重抽，触达上限仍不通过会退回该卡积分。`;
+}
+
+function formatEstimate(seconds) {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  if (minutes < 3) return `${minutes} 分钟`;
+  const rounded = Math.ceil(minutes / 5) * 5;
+  return `${rounded} 分钟`;
+}
+
+function runStartMs(events) {
+  const firstRuntimeEvent = events.find((event) => ["status", "type", "slots_done", "generating"].includes(event.event_type));
+  return eventTimeMs(firstRuntimeEvent);
+}
+
+function latestRefundEvent(events) {
+  const refund = [...events].reverse().find((event) => event.event_type === "refund" && event.payload?.reason === "partial_card_refund");
+  return refund?.payload || null;
 }
 
 function renderCurrentRun(run) {
@@ -210,6 +238,8 @@ function renderCurrentRun(run) {
     stopRuntimeTicker();
     $("currentRunTitle").textContent = "还没有选择任务";
     $("currentRunMeta").textContent = "";
+    $("resultSection").dataset.activeRunStatus = "";
+    $("resultSection").dataset.activeRunSnapshot = "{}";
     $("queryArrivalText").textContent = "";
     $("queryArrival").classList.add("hidden");
     $("progressLog").innerHTML = "";
@@ -218,6 +248,8 @@ function renderCurrentRun(run) {
   }
   $("currentRunTitle").textContent = run.problem;
   $("currentRunMeta").textContent = `${statusLabel(run.status)} · ${run.problem_type || "待判断"} · ${new Date(run.created_at).toLocaleString()}`;
+  $("resultSection").dataset.activeRunStatus = run.status || "";
+  $("resultSection").dataset.activeRunSnapshot = JSON.stringify(run.config_snapshot || {});
   $("queryArrivalText").textContent = run.problem;
   $("queryArrival").classList.remove("hidden");
   if (state.arrivedRunId !== run.id) {
@@ -225,7 +257,9 @@ function renderCurrentRun(run) {
     $("queryArrival").classList.add("arrived");
     setTimeout(() => $("queryArrival").classList.remove("arrived"), 520);
   }
-  $("progressLog").innerHTML = `<div class="progress-item">${escapeHtml(progressLine(run))}</div>`;
+  $("progressLog").innerHTML = `<div class="progress-item" id="runProgressSummary">${escapeHtml(progressLine(run))}</div>`;
+  const summary = $("runProgressSummary");
+  if (summary) summary.dataset.events = JSON.stringify(run.events || []);
   if (run.status === "running") {
     ensureRuntimeTicker();
   } else {
@@ -504,10 +538,11 @@ function buildSlotStates(slots, events, candidates = []) {
       item.percent = 100;
       item.finishedAt = eventAt;
       item.apiStep = "已停止";
-      item.message = `生成失败：${payload.reason || "重试耗尽"}`;
+      item.message = "该卡已触达重抽上限，仍未通过质量阈值；最终结算时会退回这张卡的 1 积分。";
       item.stream = [
-        "> retries exhausted",
-        `> error: ${payload.reason || "empty response"}`,
+        "> reroll limit reached",
+        "> quality gate still not passed",
+        "> this card credit will be refunded",
       ];
     }
   });
@@ -541,6 +576,15 @@ function formatDuration(ms) {
   return `${minutes}m ${String(rest).padStart(2, "0")}s`;
 }
 
+function formatChineseDuration(ms) {
+  if (ms === null || ms === undefined) return "--";
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  if (seconds < 60) return `${seconds} 秒`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${minutes} 分 ${String(rest).padStart(2, "0")} 秒`;
+}
+
 function runtimeMeta(item) {
   return {
     start: item.startedAt,
@@ -568,6 +612,19 @@ function updateRuntimeLabels() {
     if (!start) return;
     node.textContent = formatDuration(elapsedMs(start, finish || null));
   });
+  updateRunProgressTimer();
+}
+
+function updateRunProgressTimer() {
+  const summary = $("runProgressSummary");
+  if (!summary || $("resultSection").dataset.activeRunStatus !== "running") return;
+  try {
+    const events = JSON.parse(summary.dataset.events || "[]");
+    const config = JSON.parse($("resultSection").dataset.activeRunSnapshot || "{}");
+    summary.textContent = runningSummary(events, config);
+  } catch {
+    return;
+  }
 }
 
 function ensureRuntimeTicker() {

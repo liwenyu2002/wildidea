@@ -5,7 +5,7 @@ import json
 import secrets
 import time
 from contextlib import asynccontextmanager
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -118,6 +118,17 @@ app = FastAPI(title="WildIdea Web", version="0.1.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
+def _utc_iso(value: datetime | None) -> str | None:
+    """Serialize DB datetimes as explicit UTC so browsers render local time correctly."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    else:
+        value = value.astimezone(timezone.utc)
+    return value.isoformat().replace("+00:00", "Z")
+
+
 def recover_interrupted_runs() -> None:
     db = next(get_db())
     try:
@@ -144,9 +155,9 @@ def _user_payload(user: User) -> dict:
         "status": user.status,
         "credit_balance": user.credit_balance,
         "improvement_consent": user.improvement_consent,
-        "improvement_consent_at": user.improvement_consent_at.isoformat() if user.improvement_consent_at else None,
-        "email_verified_at": user.email_verified_at.isoformat() if user.email_verified_at else None,
-        "created_at": user.created_at.isoformat(),
+        "improvement_consent_at": _utc_iso(user.improvement_consent_at),
+        "email_verified_at": _utc_iso(user.email_verified_at),
+        "created_at": _utc_iso(user.created_at),
     }
 
 
@@ -159,7 +170,7 @@ def _feedback_payload(feedback: Feedback | None) -> dict | None:
         "label": feedback.label,
         "comment": feedback.comment,
         "adopted": feedback.adopted,
-        "created_at": feedback.created_at.isoformat(),
+        "created_at": _utc_iso(feedback.created_at),
     }
 
 
@@ -198,9 +209,9 @@ def _run_payload(
         "error": run.error,
         "html_path": run.html_path,
         "avg_scores": run.avg_scores or {},
-        "created_at": run.created_at.isoformat(),
-        "started_at": run.started_at.isoformat() if run.started_at else None,
-        "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+        "created_at": _utc_iso(run.created_at),
+        "started_at": _utc_iso(run.started_at),
+        "finished_at": _utc_iso(run.finished_at),
     }
     if include_candidates:
         candidates = sorted(run.candidates, key=lambda item: item.index)
@@ -230,7 +241,7 @@ def _event_payload(event: RunEvent) -> dict:
         "id": event.id,
         "event_type": event.event_type,
         "payload": event.payload or {},
-        "created_at": event.created_at.isoformat(),
+        "created_at": _utc_iso(event.created_at),
     }
 
 
@@ -377,7 +388,7 @@ def my_credits(db: Session = Depends(get_db), user: User = Depends(get_current_u
                 "run_id": row.run_id,
                 "invite_code_id": row.invite_code_id,
                 "metadata": row.meta or {},
-                "created_at": row.created_at.isoformat(),
+                "created_at": _utc_iso(row.created_at),
             }
             for row in rows
         ],
@@ -709,7 +720,7 @@ def _admin_feedback_rows(db: Session, limit: int = 200) -> list[dict]:
             "candidate_fail": candidate.fail if candidate else "",
             "candidate_scores": scores,
             "candidate_search": candidate.search_json if candidate else {},
-            "candidate_created_at": candidate.created_at.isoformat() if candidate else None,
+            "candidate_created_at": _utc_iso(candidate.created_at) if candidate else None,
             "score_structural_depth": scores.get("structural_depth"),
             "score_domain_distance": scores.get("domain_distance"),
             "score_novelty": scores.get("novelty"),
@@ -721,7 +732,7 @@ def _admin_feedback_rows(db: Session, limit: int = 200) -> list[dict]:
             "sync_status": sync_row.status if sync_row else None,
             "sync_error": sync_row.error if sync_row else None,
             "sync_external_id": sync_row.external_id if sync_row else None,
-            "created_at": item.created_at.isoformat(),
+            "created_at": _utc_iso(item.created_at),
         })
     return result
 
@@ -781,9 +792,9 @@ def admin_invite_codes(db: Session = Depends(get_db), admin: User = Depends(requ
                 "bonus_credits": row.bonus_credits,
                 "max_redemptions": row.max_redemptions,
                 "redeemed_count": row.redeemed_count,
-                "expires_at": row.expires_at.isoformat() if row.expires_at else None,
+                "expires_at": _utc_iso(row.expires_at),
                 "status": row.status,
-                "created_at": row.created_at.isoformat(),
+                "created_at": _utc_iso(row.created_at),
             }
             for row in rows
         ]
@@ -851,7 +862,7 @@ def admin_audit_logs(db: Session = Depends(get_db), admin: User = Depends(requir
                 "target_type": row.target_type,
                 "target_id": row.target_id,
                 "reason": row.reason,
-                "created_at": row.created_at.isoformat(),
+                "created_at": _utc_iso(row.created_at),
             }
             for row in rows
         ]

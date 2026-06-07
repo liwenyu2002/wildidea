@@ -373,6 +373,7 @@ def test_create_run_defaults_to_ten_parallel_ten_cards():
 
         assert run_resp.status_code == 200
         snapshot = run_resp.json()["run"]["config_snapshot"]
+        assert run_resp.json()["run"]["created_at"].endswith("Z")
         assert snapshot["parallel"] == 10
         assert snapshot["slot_count"] == 10
         assert snapshot["credit_cost"] == 10
@@ -607,7 +608,10 @@ def test_production_like_default_run_partial_refund_and_reroll_events(monkeypatc
             ).filter(RunEvent.payload["reason"].as_string() == "partial_card_refund").one()
             assert partial_refund.amount == 2
             assert partial_refund.meta["generated_candidates"] == 8
+            assert partial_refund.meta["missing_cards"] == 2
+            assert partial_refund.meta["reason"] == "reroll_limit_or_quality_gate"
             assert refund_event.payload["credits"] == 2
+            assert refund_event.payload["missing_cards"] == 2
         finally:
             db.close()
 
@@ -1034,7 +1038,9 @@ def test_execute_run_refunds_missing_cards(monkeypatch):
         assert user.credit_balance == 4
         assert partial_refund.amount == 2
         assert partial_refund.meta["generated_candidates"] == 1
+        assert partial_refund.meta["missing_cards"] == 2
         assert refund_event.payload["credits"] == 2
+        assert refund_event.payload["missing_cards"] == 2
     finally:
         db.close()
 
