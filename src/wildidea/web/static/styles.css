@@ -361,8 +361,7 @@ h2 {
   pointer-events: none;
 }
 
-.launch-ghost span,
-.query-arrival span {
+.launch-ghost span {
   color: var(--accent-2);
   display: block;
   font-size: 12px;
@@ -370,24 +369,10 @@ h2 {
   margin-bottom: 4px;
 }
 
-.launch-ghost strong,
-.query-arrival strong {
+.launch-ghost strong {
   display: block;
   font-size: 15px;
   line-height: 1.45;
-}
-
-.query-arrival {
-  border: 2px solid var(--line);
-  background: #fff4bd;
-  border-radius: 6px;
-  box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.72);
-  margin: 12px 0;
-  padding: 10px 12px;
-}
-
-.query-arrival.arrived {
-  animation: queryArrive 460ms ease;
 }
 
 .composer-grid {

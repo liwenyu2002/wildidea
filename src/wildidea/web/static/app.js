@@ -11,7 +11,6 @@ const state = {
   adminOpen: false,
   searchOpen: true,
   launchingSearch: false,
-  arrivedRunId: null,
   animatedProgressCards: new Set(),
   emailCodeTimer: null,
   emailCodeRemaining: 0,
@@ -101,7 +100,6 @@ function openSearchPage() {
   state.searchOpen = true;
   state.launchingSearch = false;
   state.adminOpen = false;
-  state.arrivedRunId = null;
   state.animatedProgressCards.clear();
   $("problem").value = "";
   $("forbidTerms").value = "";
@@ -117,15 +115,11 @@ function beginSearchLaunch(problemText) {
   state.searchOpen = false;
   state.launchingSearch = true;
   $("launchGhostText").textContent = problemText;
-  $("queryArrivalText").textContent = problemText;
-  $("queryArrival").classList.remove("hidden");
-  $("queryArrival").classList.add("arrived");
   $("currentRunTitle").textContent = "生成工作台";
   $("currentRunMeta").textContent = "正在提交任务";
   $("progressLog").innerHTML = '<div class="progress-item">正在把问题送入抽卡流水线。</div>';
   $("candidateGrid").innerHTML = "";
   renderShell();
-  setTimeout(() => $("queryArrival").classList.remove("arrived"), 520);
 }
 
 function cancelSearchLaunch() {
@@ -207,15 +201,14 @@ function runningSummary(events, config = {}) {
   const maxRetries = config.max_retries || 3;
   const maxRerolls = Math.max(0, maxRetries - 1);
   const rerolls = events.filter((event) => event.event_type === "threshold_rejected").length;
-  const remainingCards = Math.max(0, target - ok);
-  const estimateSeconds = Math.max(90, (remainingCards + rerolls) * 90);
+  const estimateSeconds = Math.max(90, (target + rerolls) * 90);
   const estimateText = formatEstimate(estimateSeconds);
   const startedAt = runStartMs(events);
   const elapsedText = startedAt ? formatChineseDuration(elapsedMs(startedAt)) : "--";
   if (!events.some((event) => event.event_type === "generating")) {
     return `已用时 ${elapsedText} · 正在抽取源现象并准备生成，目标 ${target} 张卡片。每张卡大约 90 秒；为保证质量可能重抽，触达上限仍不通过会退回该卡积分。`;
   }
-  return `已用时 ${elapsedText} · 正在生成和评分，已得到 ${ok}/${target} 条候选。预计还需约 ${estimateText}；每张卡大约 90 秒，最多重抽 ${maxRerolls} 次。系统会为了保证结果质量自动重抽，触达上限仍不通过会退回该卡积分。`;
+  return `已用时 ${elapsedText} · 正在生成和评分，已得到 ${ok}/${target} 条候选。预计共需约 ${estimateText}；每张卡大约 90 秒，最多重抽 ${maxRerolls} 次。系统会为了保证结果质量自动重抽，触达上限仍不通过会退回该卡积分。`;
 }
 
 function formatEstimate(seconds) {
@@ -242,8 +235,6 @@ function renderCurrentRun(run) {
     $("currentRunMeta").textContent = "";
     $("resultSection").dataset.activeRunStatus = "";
     $("resultSection").dataset.activeRunSnapshot = "{}";
-    $("queryArrivalText").textContent = "";
-    $("queryArrival").classList.add("hidden");
     $("progressLog").innerHTML = "";
     $("candidateGrid").innerHTML = "";
     return;
@@ -252,13 +243,6 @@ function renderCurrentRun(run) {
   $("currentRunMeta").textContent = `${statusLabel(run.status)} · ${run.problem_type || "待判断"} · ${new Date(run.created_at).toLocaleString()}`;
   $("resultSection").dataset.activeRunStatus = run.status || "";
   $("resultSection").dataset.activeRunSnapshot = JSON.stringify(run.config_snapshot || {});
-  $("queryArrivalText").textContent = run.problem;
-  $("queryArrival").classList.remove("hidden");
-  if (state.arrivedRunId !== run.id) {
-    state.arrivedRunId = run.id;
-    $("queryArrival").classList.add("arrived");
-    setTimeout(() => $("queryArrival").classList.remove("arrived"), 520);
-  }
   $("progressLog").innerHTML = `<div class="progress-item" id="runProgressSummary">${escapeHtml(progressLine(run))}</div>`;
   const summary = $("runProgressSummary");
   if (summary) summary.dataset.events = JSON.stringify(run.events || []);
@@ -1257,7 +1241,6 @@ $("authForm").addEventListener("submit", async (event) => {
     state.currentRunId = null;
     state.searchOpen = true;
     state.launchingSearch = false;
-    state.arrivedRunId = null;
     localStorage.setItem("wildidea_token", state.token);
     renderCurrentRun(null);
     renderShell();
@@ -1278,7 +1261,6 @@ $("logoutBtn").addEventListener("click", () => {
   state.adminOpen = false;
   state.searchOpen = true;
   state.launchingSearch = false;
-  state.arrivedRunId = null;
   state.animatedProgressCards.clear();
   renderShell();
   renderRuns();
