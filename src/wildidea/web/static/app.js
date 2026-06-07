@@ -15,11 +15,24 @@ const state = {
   animatedProgressCards: new Set(),
   emailCodeTimer: null,
   emailCodeRemaining: 0,
+  bootFinished: false,
 };
 
 const DRAW_CARD_DELAY_MS = 170;
 
 const $ = (id) => document.getElementById(id);
+
+function finishBoot() {
+  if (state.bootFinished) return;
+  state.bootFinished = true;
+  window.requestAnimationFrame(() => {
+    document.body.classList.remove("app-booting");
+    document.body.classList.add("app-ready");
+    window.setTimeout(() => {
+      document.body.classList.add("app-boot-finished");
+    }, 720);
+  });
+}
 
 function showToast(message) {
   const toast = $("toast");
@@ -895,6 +908,7 @@ async function loadMe() {
   if (!state.token) {
     state.authReady = true;
     renderShell();
+    finishBoot();
     return;
   }
   try {
@@ -905,12 +919,14 @@ async function loadMe() {
     state.authReady = true;
     renderShell();
     await loadRuns();
+    finishBoot();
   } catch (err) {
     localStorage.removeItem("wildidea_token");
     state.token = "";
     state.user = null;
     state.authReady = true;
     renderShell();
+    finishBoot();
   }
 }
 

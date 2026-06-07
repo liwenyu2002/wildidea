@@ -25,6 +25,169 @@ body {
   letter-spacing: 0;
 }
 
+.boot-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 250, 240, 0.92), rgba(243, 236, 216, 0.78) 44%, rgba(243, 236, 216, 0.96) 72%),
+    var(--bg);
+  transition: opacity 0.42s ease, transform 0.52s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.boot-mark {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  transform: translateY(4px);
+  animation: bootFloat 1.2s ease-in-out infinite alternate;
+}
+
+.boot-mark img {
+  width: 54px;
+  height: 54px;
+  image-rendering: auto;
+}
+
+.boot-mark strong {
+  font-size: 20px;
+}
+
+.boot-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.boot-dots i {
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--line);
+  background: #f7df89;
+  box-shadow: 1px 1px 0 rgba(42, 42, 42, 0.75);
+  animation: bootDot 0.9s ease-in-out infinite;
+}
+
+.boot-dots i:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.boot-dots i:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+body.app-booting .shell {
+  opacity: 0;
+  transform: translateY(12px) scale(0.992);
+}
+
+body.app-ready .shell {
+  animation: shellEnter 0.62s cubic-bezier(0.18, 0.82, 0.24, 1) both;
+}
+
+body.app-ready .brand,
+body.app-ready .toolbar,
+body.app-ready .panel,
+body.app-ready .composer,
+body.app-ready .result-section,
+body.app-ready .admin-panel,
+body.app-ready .empty-state {
+  animation: surfaceEnter 0.52s cubic-bezier(0.18, 0.82, 0.24, 1) both;
+}
+
+body.app-ready .toolbar {
+  animation-delay: 0.05s;
+}
+
+body.app-ready .panel:nth-of-type(1),
+body.app-ready .composer,
+body.app-ready .result-section,
+body.app-ready .admin-panel,
+body.app-ready .empty-state {
+  animation-delay: 0.1s;
+}
+
+body.app-ready .panel:nth-of-type(2) {
+  animation-delay: 0.16s;
+}
+
+body.app-ready .panel:nth-of-type(3) {
+  animation-delay: 0.22s;
+}
+
+body.app-ready .boot-curtain {
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+}
+
+body.app-boot-finished .boot-curtain {
+  display: none;
+}
+
+@keyframes bootFloat {
+  from {
+    transform: translateY(4px);
+  }
+  to {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes bootDot {
+  0%,
+  100% {
+    transform: translateY(0);
+    background: #f7df89;
+  }
+  50% {
+    transform: translateY(-4px);
+    background: #6fcf97;
+  }
+}
+
+@keyframes shellEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes surfaceEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-mark,
+  .boot-dots i,
+  body.app-ready .shell,
+  body.app-ready .brand,
+  body.app-ready .toolbar,
+  body.app-ready .panel,
+  body.app-ready .composer,
+  body.app-ready .result-section,
+  body.app-ready .admin-panel,
+  body.app-ready .empty-state {
+    animation: none;
+  }
+
+  .boot-curtain {
+    transition: opacity 0.18s ease;
+  }
+}
+
 button,
 input,
 textarea {
