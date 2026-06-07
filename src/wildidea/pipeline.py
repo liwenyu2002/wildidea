@@ -105,7 +105,7 @@ def _generate_candidate(
 def _validate_candidate(candidate: dict, forbid_terms: list[str]) -> list[str]:
     """Basic validation of a candidate dict."""
     errors = []
-    for key in ("name", "proto", "desc", "fail"):
+    for key in ("name", "proto", "advantage", "desc", "fail"):
         if not candidate.get(key):
             errors.append(f"Missing field: {key}")
 
@@ -176,7 +176,18 @@ def _candidate_from_raw(raw: dict, slot: dict) -> Candidate:
         proto=raw.get("proto", ""),
         desc=raw.get("desc", ""),
         fail=raw.get("fail", ""),
+        advantage=_normalize_advantage(raw.get("advantage", "")),
     )
+
+
+def _normalize_advantage(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    prefix = "这种方案的优势在于，"
+    if text.startswith(prefix) or text.startswith("这种方案的优势在于"):
+        return text
+    return f"{prefix}{text}"
 
 
 def _score_event_payload(candidate: Candidate, judge: JudgeClient, passed: bool) -> dict:
@@ -208,6 +219,7 @@ def _candidate_ok_payload(slot_id: str, candidate: Candidate, done: int, total: 
         "slot": candidate.slot,
         "source": candidate.source,
         "proto": candidate.proto,
+        "advantage": candidate.advantage,
         "desc": candidate.desc,
         "fail": candidate.fail,
         "scores": {

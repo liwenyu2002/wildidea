@@ -961,6 +961,18 @@ h2 {
   border-width: 2px;
 }
 
+.advantage-section {
+  background: #edf8f1;
+  border-width: 2px;
+}
+
+.advantage-section .advantage {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.65;
+  font-weight: 800;
+}
+
 .idea-section .desc {
   color: var(--text);
   font-size: 17px;
@@ -1712,6 +1724,10 @@ h2 {
   background: #fff6c5;
 }
 
+.admin-card-block.advantage {
+  background: #edf8f1;
+}
+
 .admin-card-block.risk {
   background: #fff3ef;
 }
@@ -2086,6 +2102,11 @@ h2,
 .idea-section {
   background: #fff4bd;
   box-shadow: inset 4px 0 0 #6fcf97;
+}
+
+.advantage-section {
+  background: #eaf6ea;
+  box-shadow: inset 4px 0 0 #8fd7a0;
 }
 
 .risk-section {

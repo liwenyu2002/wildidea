@@ -125,6 +125,7 @@ class TestValidateCandidate(unittest.TestCase):
         candidate = {
             "name": "测试候选",
             "proto": "通用机制描述",
+            "advantage": "这种方案的优势在于，用户能先看到收益",
             "desc": "具体实施方案",
             "fail": "失败条件",
         }
@@ -142,6 +143,7 @@ class TestValidateCandidate(unittest.TestCase):
         candidate = {
             "name": "测试",
             "proto": "用EEG信号检测情绪",  # leaks "EEG"
+            "advantage": "这种方案的优势在于，能快速解释价值",
             "desc": "描述",
             "fail": "失败条件",
         }
@@ -195,6 +197,7 @@ class TestRenderer(unittest.TestCase):
                 slot="D1",
                 source="测试来源",
                 proto="通用机制",
+                advantage="这种方案的优势在于，能快速解释价值",
                 desc="具体方案",
                 fail="失败条件",
             )
@@ -288,6 +291,7 @@ class TestPipelineThresholdReroll(unittest.TestCase):
                 "slot": "D1",
                 "source": "测试方法",
                 "proto": "结构足够但太常见",
+                "advantage": "这种方案的优势在于，能快速解释价值",
                 "desc": "低新颖落地方案",
                 "fail": "失败边界",
             },
@@ -296,6 +300,7 @@ class TestPipelineThresholdReroll(unittest.TestCase):
                 "slot": "D1",
                 "source": "测试方法",
                 "proto": "结构足够且更意外",
+                "advantage": "让用户先看懂为什么值得采用",
                 "desc": "高新颖落地方案",
                 "fail": "失败边界",
             },
@@ -353,6 +358,7 @@ class TestPipelineThresholdReroll(unittest.TestCase):
         self.assertEqual(ok_payload["attempt"], 2)
         self.assertEqual(ok_payload["reroll_count"], 1)
         self.assertEqual(ok_payload["proto"], "结构足够且更意外")
+        self.assertEqual(ok_payload["advantage"], "这种方案的优势在于，让用户先看懂为什么值得采用")
         self.assertEqual(ok_payload["desc"], "高新颖落地方案")
         self.assertEqual(ok_payload["fail"], "失败边界")
         self.assertEqual(ok_payload["scores"]["structural_depth"], 8)

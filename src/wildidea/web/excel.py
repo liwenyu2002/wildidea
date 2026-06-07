@@ -50,7 +50,7 @@ def _xml_text(value: Any) -> str:
 
 
 def _widths(headers: list[str]) -> list[int]:
-    long_fields = {"任务", "源现象", "抽象方法", "落地方案", "失败边界", "反馈内容", "任务错误", "任务配置", "任务平均分", "搜索数据"}
+    long_fields = {"任务", "源现象", "抽象方法", "优势", "落地方案", "失败边界", "反馈内容", "任务错误", "任务配置", "任务平均分", "搜索数据"}
     medium_fields = {"用户邮箱", "方案名称", "抽象方法名"}
     widths = []
     for header in headers:

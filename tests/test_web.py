@@ -259,6 +259,7 @@ def test_feedback_is_mutually_exclusive_upsert():
                 slot="D1",
                 source="测试来源",
                 proto="通用机制",
+                advantage="这种方案的优势在于，先解释为什么值得用",
                 desc="具体方案",
                 fail="失败条件",
                 reroll_count=2,
@@ -270,6 +271,7 @@ def test_feedback_is_mutually_exclusive_upsert():
                 slot="D2",
                 source="静默来源",
                 proto="静默机制",
+                advantage="这种方案的优势在于，沉默样本也可分析",
                 desc="静默方案",
                 fail="静默边界",
             )
@@ -360,6 +362,7 @@ def test_feedback_is_mutually_exclusive_upsert():
         assert latest["candidate_source_phenomenon"] == "测试来源"
         assert latest["candidate_source"] == "测试来源"
         assert latest["candidate_proto"] == "通用机制"
+        assert latest["candidate_advantage"] == "这种方案的优势在于，先解释为什么值得用"
         assert latest["candidate_desc"] == "具体方案"
         assert latest["candidate_fail"] == "失败条件"
         assert latest["candidate_scores"] == {}
@@ -386,6 +389,7 @@ def test_feedback_is_mutually_exclusive_upsert():
         assert "测试方案" in sheet_xml
         assert "未反馈方案" in sheet_xml
         assert "只问问题无候选" in sheet_xml
+        assert "先解释为什么值得用" in sheet_xml
         assert "具体方案" in sheet_xml
         assert "静默方案" in sheet_xml
 

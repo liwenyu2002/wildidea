@@ -175,7 +175,7 @@ def cmd_generate(args):
         "candidates": [
             {
                 "name": c.name, "slot": c.slot, "source": c.source,
-                "proto": c.proto, "desc": c.desc, "fail": c.fail,
+                "proto": c.proto, "advantage": c.advantage, "desc": c.desc, "fail": c.fail,
                 "scores": {
                     "structural_depth": c.scores.structural_depth,
                     "domain_distance": c.scores.domain_distance,

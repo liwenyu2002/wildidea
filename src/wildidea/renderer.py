@@ -17,6 +17,7 @@ class Candidate:
     proto: str
     desc: str
     fail: str
+    advantage: str = ""
     scores: Optional[JudgeScores] = None
     reroll_count: int = 0
 
@@ -31,11 +32,13 @@ def _card_html(index: int, c: Candidate) -> str:
             f'NV:{c.scores.novelty} AP:{c.scores.applicability}'
             f"</div>"
         )
+    advantage_html = f'<div class="advantage">{html.escape(c.advantage)}</div>' if c.advantage else ""
 
     return f"""<article class="card">
   <div class="id"><span>P{index:02d}</span><span class="slot">{html.escape(c.slot)}</span></div>
   <div class="source"><strong>{html.escape(c.source)}</strong></div>
   <div class="proto">{html.escape(c.proto)}</div>
+  {advantage_html}
   <div class="name">{html.escape(c.name)}</div>
   <div class="desc">{html.escape(c.desc)}</div>
   <div class="fail">{html.escape(c.fail)}</div>

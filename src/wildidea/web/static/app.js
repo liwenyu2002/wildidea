@@ -524,6 +524,7 @@ function buildSlotStates(slots, events, candidates = []) {
         slot: payload.slot || item.slot,
         source: payload.source || "",
         proto: payload.proto || "",
+        advantage: payload.advantage || "",
         desc: payload.desc || "",
         fail: payload.fail || "",
         reroll_count: payload.reroll_count ?? item.rerollCount ?? 0,
@@ -725,6 +726,7 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
   const showFeedback = options.feedback !== false && candidate.id;
   const rerollCount = Number(candidate.reroll_count ?? candidate.rerollCount ?? slotInfo.rerollCount ?? 0);
   const runtime = options.runtime || {};
+  const advantage = normalizeAdvantage(candidate.advantage);
   const card = document.createElement("article");
   card.className = "candidate";
   card.innerHTML = `
@@ -748,6 +750,12 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
       </div>
       <p class="proto">${escapeHtml(candidate.proto)}</p>
     </section>
+    ${advantage ? `
+      <section class="candidate-section advantage-section">
+        <div class="section-label">优势</div>
+        <p class="advantage">${escapeHtml(advantage)}</p>
+      </section>
+    ` : ""}
     <section class="candidate-section idea-section">
       <div class="section-label">落地方案</div>
       <p class="desc">${escapeHtml(candidate.desc)}</p>
@@ -1188,6 +1196,12 @@ async function loadAdmin() {
           ${item.candidate_source ? `<strong>${escapeHtml(item.candidate_source)}</strong>` : ""}
           <p>${escapeHtml(item.candidate_proto || "-")}</p>
         </div>
+        ${item.candidate_advantage ? `
+          <div class="admin-card-block advantage">
+            <span>优势</span>
+            <p>${escapeHtml(normalizeAdvantage(item.candidate_advantage))}</p>
+          </div>
+        ` : ""}
         <div class="admin-card-block idea">
           <span>落地方案</span>
           <p>${escapeHtml(item.candidate_desc || "-")}</p>
@@ -1334,6 +1348,14 @@ function feedbackLabel(label) {
     weak: "没用",
   };
   return labels[label] || label || "-";
+}
+
+function normalizeAdvantage(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const prefix = "这种方案的优势在于，";
+  if (text.startsWith(prefix) || text.startsWith("这种方案的优势在于")) return text;
+  return `${prefix}${text}`;
 }
 
 function escapeHtml(value) {

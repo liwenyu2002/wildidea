@@ -67,6 +67,7 @@ def _candidate_from_payload(db, run_id: str, data: dict) -> Candidate | None:
     candidate.slot = _truncate(data.get("slot") or "?", 40)
     candidate.source = _truncate(data.get("source") or "", 255)
     candidate.proto = str(data.get("proto") or "")
+    candidate.advantage = str(data.get("advantage") or "")
     candidate.desc = str(data.get("desc") or "")
     candidate.fail = str(data.get("fail") or "")
     candidate.scores_json = _payload_scores(data)
@@ -86,6 +87,7 @@ def _candidate_from_result(db, run_id: str, index: int, item) -> Candidate:
     candidate.slot = _truncate(item.slot, 40)
     candidate.source = _truncate(item.source, 255)
     candidate.proto = item.proto
+    candidate.advantage = item.advantage
     candidate.desc = item.desc
     candidate.fail = item.fail
     candidate.scores_json = _score_payload(item.scores)
@@ -113,7 +115,7 @@ def _progress_log_message(event: str, data: dict) -> str:
 def _progress_log_payload(event: str, data: dict) -> dict:
     keys = {
         "slots_done": ("count", "target"),
-        "candidate_ok": ("index", "done", "total", "attempt", "reroll_count", "name", "slot", "slot_id"),
+        "candidate_ok": ("index", "done", "total", "attempt", "reroll_count", "name", "slot", "slot_id", "advantage"),
         "threshold_rejected": (
             "attempt",
             "name",

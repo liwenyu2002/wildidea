@@ -25,6 +25,7 @@ def init_db() -> None:
     _ensure_user_consent_columns()
     _ensure_user_email_verification_column()
     _ensure_candidate_reroll_column()
+    _ensure_candidate_advantage_column()
 
 
 def _ensure_user_consent_columns() -> None:
@@ -47,6 +48,14 @@ def _ensure_candidate_reroll_column() -> None:
         return
     with engine.begin() as connection:
         connection.execute(text("ALTER TABLE candidates ADD COLUMN reroll_count INTEGER NOT NULL DEFAULT 0"))
+
+
+def _ensure_candidate_advantage_column() -> None:
+    columns = {column["name"] for column in inspect(engine).get_columns("candidates")}
+    if "advantage" in columns:
+        return
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE candidates ADD COLUMN advantage TEXT NOT NULL DEFAULT ''"))
 
 
 def _ensure_user_email_verification_column() -> None:

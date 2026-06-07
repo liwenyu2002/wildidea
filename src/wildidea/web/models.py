@@ -69,6 +69,7 @@ class Candidate(Base):
     slot: Mapped[str] = mapped_column(String(40))
     source: Mapped[str] = mapped_column(String(255))
     proto: Mapped[str] = mapped_column(Text)
+    advantage: Mapped[str] = mapped_column(Text, default="")
     desc: Mapped[str] = mapped_column(Text)
     fail: Mapped[str] = mapped_column(Text)
     scores_json: Mapped[dict] = mapped_column(JSON, default=dict)
