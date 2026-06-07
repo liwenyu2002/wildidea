@@ -77,6 +77,12 @@ class WebSettings:
     dingtalk_feedback_field_map: str = os.environ.get("DINGTALK_FEEDBACK_FIELD_MAP", "")
     dingtalk_timeout_seconds: int = int(os.environ.get("DINGTALK_TIMEOUT_SECONDS", "15"))
     dingtalk_sync_batch_size: int = int(os.environ.get("DINGTALK_SYNC_BATCH_SIZE", "20"))
+    run_executor: str = os.environ.get("WILDIDEA_RUN_EXECUTOR", "background").strip().lower()
+    worker_id: Optional[str] = os.environ.get("WILDIDEA_WORKER_ID")
+    worker_poll_seconds: float = float(os.environ.get("WILDIDEA_WORKER_POLL_SECONDS", "2"))
+    worker_idle_log_seconds: int = int(os.environ.get("WILDIDEA_WORKER_IDLE_LOG_SECONDS", "60"))
+    worker_stale_after_seconds: int = int(os.environ.get("WILDIDEA_WORKER_STALE_AFTER_SECONDS", "7200"))
+    user_active_run_limit: int = int(os.environ.get("WILDIDEA_USER_ACTIVE_RUN_LIMIT", "1"))
 
 
 settings = WebSettings()

@@ -990,8 +990,9 @@ function startPollingRun(runId) {
 }
 
 async function loadAdmin() {
-  const [metrics, invites, users, feedback, syncStatus] = await Promise.all([
+  const [metrics, queue, invites, users, feedback, syncStatus] = await Promise.all([
     api("/api/admin/metrics"),
+    api("/api/admin/queue"),
     api("/api/admin/invite-codes"),
     api("/api/admin/users"),
     api("/api/admin/feedback"),
@@ -1003,6 +1004,7 @@ async function loadAdmin() {
     <div class="metric"><span class="muted">总积分</span><strong>${metrics.total_credit_balance}</strong></div>
     <div class="metric"><span class="muted">任务</span><strong>${Object.values(metrics.runs_by_status || {}).reduce((a, b) => a + b, 0)}</strong></div>
   `;
+  renderQueueStatus(queue.queue);
   renderSyncStatus(syncStatus.sync);
   $("inviteList").innerHTML = invites.invite_codes.map((item) => `
     <div class="admin-row">
@@ -1058,6 +1060,65 @@ async function loadAdmin() {
       ${item.sync_error ? `<p>${escapeHtml(item.sync_error)}</p>` : ""}
     </div>
   `).join("") || '<div class="muted">暂无反馈数据</div>';
+}
+
+function renderQueueStatus(queue) {
+  const counts = queue?.counts || {};
+  const workers = queue?.workers || [];
+  const logs = queue?.recent_logs || [];
+  const executorText = queue?.executor === "worker" ? "Worker 队列" : "本进程后台";
+  const activeWorkers = workers.filter((worker) => worker.active).length;
+  const oldestQueued = queue?.oldest_queued_at ? new Date(queue.oldest_queued_at).toLocaleString() : "无";
+  $("queueStatus").innerHTML = `
+    <div class="queue-head">
+      <div>
+        <span class="eyebrow">系统运行</span>
+        <strong>${escapeHtml(executorText)}</strong>
+        <p class="muted">排队 ${Number(queue?.queued || 0)} · 生成中 ${Number(queue?.running || 0)} · 活跃 worker ${activeWorkers}/${workers.length}</p>
+      </div>
+      <div class="queue-chips">
+        <span>Queued ${counts.queued || 0}</span>
+        <span>Running ${counts.running || 0}</span>
+        <span>Done ${counts.succeeded || 0}</span>
+        <span>Failed ${counts.failed || 0}</span>
+      </div>
+    </div>
+    <div class="queue-meta">
+      <span>最早排队 ${escapeHtml(oldestQueued)}</span>
+      <span>轮询 ${escapeHtml(queue?.worker_poll_seconds ?? "-")}s</span>
+      <span>用户活跃任务上限 ${escapeHtml(queue?.user_active_run_limit ?? "-")}</span>
+    </div>
+    <div class="queue-workers">
+      ${workers.map((worker) => `
+        <div class="queue-worker ${worker.active ? "active" : "stale"}">
+          <strong>${escapeHtml(worker.id)}</strong>
+          <span>${escapeHtml(workerLabel(worker.status))} · ${worker.age_seconds ?? "-"}s 前</span>
+          ${worker.current_run_id ? `<small>Run ${escapeHtml(worker.current_run_id)}</small>` : "<small>空闲</small>"}
+        </div>
+      `).join("") || '<div class="muted">暂无 worker 心跳</div>'}
+    </div>
+    <div class="queue-logs">
+      <strong>最近日志</strong>
+      ${logs.slice(0, 8).map((log) => `
+        <div class="queue-log-row ${escapeHtml(log.level)}">
+          <span>${escapeHtml(new Date(log.created_at).toLocaleTimeString())}</span>
+          <div>
+            <strong>${escapeHtml(log.message)}</strong>
+            <small>${escapeHtml(log.run_problem || log.run_id || "system")}</small>
+          </div>
+        </div>
+      `).join("") || '<div class="muted">暂无运行日志</div>'}
+    </div>
+  `;
+}
+
+function workerLabel(status) {
+  const labels = {
+    idle: "空闲",
+    running: "执行中",
+    stopped: "已停止",
+  };
+  return labels[status] || status || "-";
 }
 
 async function toggleAdminPanel() {

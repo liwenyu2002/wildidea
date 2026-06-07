@@ -408,6 +408,118 @@ def test_create_run_defaults_to_ten_parallel_ten_cards():
         assert legacy_snapshot["max_retries"] == 3
 
 
+def test_worker_executor_queues_without_background_execution():
+    called: list[str] = []
+    webapp.execute_run = lambda run_id: called.append(run_id)
+    original_executor = webapp.settings.run_executor
+    original_limit = webapp.settings.user_active_run_limit
+    object.__setattr__(webapp.settings, "run_executor", "worker")
+    object.__setattr__(webapp.settings, "user_active_run_limit", 1)
+    try:
+        with TestClient(webapp.app) as client:
+            user_resp = register_user(client, "worker-queue@example.com")
+            assert user_resp.status_code == 200
+            headers = {"Authorization": f"Bearer {user_resp.json()['access_token']}"}
+
+            run_resp = client.post(
+                "/api/runs",
+                headers=headers,
+                json={"problem": "worker 模式入队", "slot_count": 1},
+            )
+            assert run_resp.status_code == 200
+            assert run_resp.json()["run"]["status"] == "queued"
+            assert run_resp.json()["credit_balance"] == 29
+            assert called == []
+
+            blocked_resp = client.post(
+                "/api/runs",
+                headers=headers,
+                json={"problem": "第二个 worker 任务", "slot_count": 1},
+            )
+            assert blocked_resp.status_code == 429
+            assert blocked_resp.json()["detail"]["error"] == "ACTIVE_RUN_LIMIT_REACHED"
+    finally:
+        object.__setattr__(webapp.settings, "run_executor", original_executor)
+        object.__setattr__(webapp.settings, "user_active_run_limit", original_limit)
+
+
+def test_admin_queue_status_and_worker_once(monkeypatch):
+    from datetime import datetime, timezone
+
+    from wildidea.web import worker
+    from wildidea.web.database import SessionLocal, init_db
+    from wildidea.web.models import Run, RunEvent, RunLog, User, WorkerHeartbeat, utcnow
+
+    init_db()
+    db = SessionLocal()
+    try:
+        user = User(email="worker-once@example.com", password_hash="x", credit_balance=10)
+        db.add(user)
+        db.flush()
+        run = Run(
+            user_id=user.id,
+            problem="worker 消费队列",
+            status="queued",
+            config_snapshot={"parallel": 1, "slot_count": 1, "credit_cost": 1},
+            created_at=datetime(2000, 1, 1, tzinfo=timezone.utc),
+        )
+        db.add(run)
+        db.commit()
+        run_id = run.id
+    finally:
+        db.close()
+
+    consumed: list[str] = []
+
+    def fake_execute_run(target_run_id: str) -> None:
+        consumed.append(target_run_id)
+        local_db = SessionLocal()
+        try:
+            target_run = local_db.get(Run, target_run_id)
+            target_run.status = "succeeded"
+            target_run.finished_at = utcnow()
+            local_db.add(RunEvent(run_id=target_run_id, event_type="status", payload={"status": "succeeded"}))
+            local_db.commit()
+        finally:
+            local_db.close()
+
+    monkeypatch.setattr(worker, "execute_run", fake_execute_run)
+
+    assert worker.run_worker_once("pytest-worker") is True
+    assert consumed == [run_id]
+
+    db = SessionLocal()
+    try:
+        run = db.get(Run, run_id)
+        heartbeat = db.get(WorkerHeartbeat, "pytest-worker")
+        logs = db.query(RunLog).filter_by(run_id=run_id).all()
+        assert run.status == "succeeded"
+        assert heartbeat.status == "idle"
+        assert heartbeat.current_run_id is None
+        assert {row.message for row in logs} >= {"worker claimed run", "worker released run"}
+    finally:
+        db.close()
+
+    with TestClient(webapp.app) as client:
+        admin_resp = register_user(client, "queue-admin@example.com")
+        assert admin_resp.status_code == 200
+        admin_headers = {"Authorization": f"Bearer {admin_resp.json()['access_token']}"}
+        db = SessionLocal()
+        try:
+            admin = db.get(User, admin_resp.json()["user"]["id"])
+            admin.role = "admin"
+            db.commit()
+        finally:
+            db.close()
+
+        queue_resp = client.get("/api/admin/queue", headers=admin_headers)
+        assert queue_resp.status_code == 200
+        payload = queue_resp.json()["queue"]
+        assert "counts" in payload
+        assert payload["workers"][0]["id"] == "pytest-worker"
+        assert any(item["message"] == "worker released run" for item in payload["recent_logs"])
+
+
 def test_run_event_stream_accepts_token_query():
     from wildidea.web.database import SessionLocal
     from wildidea.web.models import Run, RunEvent

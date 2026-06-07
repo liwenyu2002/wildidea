@@ -18,6 +18,7 @@ dependencies = [
 [project.scripts]
 wildidea = "wildidea.cli:main"
 wildidea-web = "wildidea.web.app:main"
+wildidea-worker = "wildidea.web.worker:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

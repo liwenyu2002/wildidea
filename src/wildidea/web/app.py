@@ -35,6 +35,7 @@ from .models import (
     User,
     utcnow,
 )
+from .observability import add_run_log, queue_status
 from .runner import execute_run
 from .schemas import (
     AdminCreditAdjustmentRequest,
@@ -130,6 +131,8 @@ def _utc_iso(value: datetime | None) -> str | None:
 
 
 def recover_interrupted_runs() -> None:
+    if settings.run_executor == "worker":
+        return
     db = next(get_db())
     try:
         rows = db.scalars(select(Run).where(Run.status.in_(["queued", "running"]))).all()
@@ -413,6 +416,22 @@ def create_run(
     user: User = Depends(get_current_user),
 ) -> dict:
     credit_cost = req.slot_count * settings.run_credit_cost
+    if settings.run_executor == "worker" and settings.user_active_run_limit > 0:
+        active_count = db.scalar(
+            select(func.count())
+            .select_from(Run)
+            .where(Run.user_id == user.id, Run.status.in_(["queued", "running"]))
+        ) or 0
+        if active_count >= settings.user_active_run_limit:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "ACTIVE_RUN_LIMIT_REACHED",
+                    "message": "已有任务在排队或生成中，请等当前任务结束后再提交。",
+                    "active_runs": active_count,
+                    "limit": settings.user_active_run_limit,
+                },
+            )
     snapshot = {
         "provider": settings.default_provider,
         "model": settings.default_model,
@@ -437,8 +456,23 @@ def create_run(
     db.flush()
     charge_run_credit(db, user, run.id, amount=credit_cost)
     db.add(RunEvent(run_id=run.id, event_type="status", payload={"status": "queued", "credit_cost": credit_cost}))
+    add_run_log(
+        db,
+        run.id,
+        "info",
+        "run queued",
+        {
+            "executor": settings.run_executor,
+            "credit_cost": credit_cost,
+            "slot_count": req.slot_count,
+            "user_id": user.id,
+        },
+    )
     db.commit()
-    background_tasks.add_task(execute_run, run.id)
+    if settings.run_executor == "worker":
+        pass
+    else:
+        background_tasks.add_task(execute_run, run.id)
     return {"run": _run_payload(run), "credit_balance": user.credit_balance}
 
 
@@ -639,6 +673,14 @@ def admin_metrics(db: Session = Depends(get_db), admin: User = Depends(require_a
         "feedback": feedback_count,
         "total_credit_balance": total_credits,
     }
+
+
+@app.get("/api/admin/queue")
+def admin_queue(db: Session = Depends(get_db), admin: User = Depends(require_admin)) -> dict:
+    status = queue_status(db)
+    audit_admin_action(db, admin, "view_queue_status", "queue", "*")
+    db.commit()
+    return {"queue": status}
 
 
 def _admin_feedback_rows(db: Session, limit: int = 200) -> list[dict]:

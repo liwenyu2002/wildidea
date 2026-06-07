@@ -91,6 +91,30 @@ class RunEvent(Base):
     run: Mapped[Run] = relationship(back_populates="events")
 
 
+class RunLog(Base):
+    __tablename__ = "run_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("runs.id"), nullable=True, index=True)
+    level: Mapped[str] = mapped_column(String(20), default="info", index=True)
+    message: Mapped[str] = mapped_column(Text)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class WorkerHeartbeat(Base):
+    __tablename__ = "worker_heartbeats"
+
+    id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    hostname: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    pid: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="idle", index=True)
+    current_run_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("runs.id"), nullable=True, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
 class InteractionEvent(Base):
     __tablename__ = "interaction_events"
 

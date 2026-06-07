@@ -57,13 +57,21 @@ In another terminal on the Mac mini:
 deploy/macmini/install_launch_agent.sh
 ```
 
+This installs two launch agents:
+
+- `com.wildidea.web`: FastAPI web/API service for Hermes.
+- `com.wildidea.worker`: queue worker that consumes generation runs.
+
 Useful commands:
 
 ```bash
 launchctl list | grep wildidea
 tail -f logs/wildidea.err.log
+tail -f logs/wildidea-worker.err.log
 launchctl stop com.wildidea.web
 launchctl start com.wildidea.web
+launchctl stop com.wildidea.worker
+launchctl start com.wildidea.worker
 ```
 
 ## 5. Hermes

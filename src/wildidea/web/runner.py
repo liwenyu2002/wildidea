@@ -15,6 +15,7 @@ from wildidea.pipeline import Config, detect_type, run as run_pipeline
 from .config import settings
 from .database import SessionLocal
 from .models import Artifact, Candidate, CreditTransaction, Run, RunEvent, User, utcnow
+from .observability import add_run_log
 from .services import add_credit_transaction, refund_run_credit
 
 
@@ -93,6 +94,45 @@ def _candidate_from_result(db, run_id: str, index: int, item) -> Candidate:
     return candidate
 
 
+def _progress_log_message(event: str, data: dict) -> str:
+    if event == "slots_done":
+        return f"slots ready: {data.get('count') or len(data.get('slots') or [])}/{data.get('target') or '?'}"
+    if event == "candidate_ok":
+        return f"candidate passed: {data.get('name') or data.get('index') or '?'}"
+    if event == "threshold_rejected":
+        return f"candidate rerolled: {data.get('name') or data.get('slot_id') or '?'}"
+    if event == "gen_fail":
+        return f"card failed: {data.get('slot_id') or data.get('slot') or '?'}"
+    if event == "judge_fail":
+        return f"judge retry: {data.get('name') or data.get('slot_id') or '?'}"
+    if event == "invalid":
+        return f"candidate invalid: {data.get('slot_id') or '?'}"
+    return event
+
+
+def _progress_log_payload(event: str, data: dict) -> dict:
+    keys = {
+        "slots_done": ("count", "target"),
+        "candidate_ok": ("index", "done", "total", "attempt", "reroll_count", "name", "slot", "slot_id"),
+        "threshold_rejected": (
+            "attempt",
+            "name",
+            "slot",
+            "slot_id",
+            "sd",
+            "nv",
+            "ap",
+            "sd_threshold",
+            "novelty_threshold",
+            "applicability_threshold",
+        ),
+        "gen_fail": ("slot", "slot_id", "reason"),
+        "judge_fail": ("slot", "slot_id", "name", "error"),
+        "invalid": ("slot", "slot_id", "errors"),
+    }
+    return {key: data.get(key) for key in keys.get(event, ()) if key in data}
+
+
 def _build_pipeline_config(snapshot: dict, output_dir: Path) -> Config:
     local_config = get_config()
     provider = snapshot.get("provider") or local_config.get("provider") or settings.default_provider
@@ -167,6 +207,18 @@ def _refund_missing_cards(db, user: User, run: Run, generated_count: int) -> int
             "requested_slots": snapshot.get("slot_count"),
         },
     ))
+    add_run_log(
+        db,
+        run.id,
+        "warning",
+        "partial card refund",
+        {
+            "credits": refund_amount,
+            "missing_cards": missing_cards,
+            "generated_candidates": generated_count,
+            "requested_slots": snapshot.get("slot_count"),
+        },
+    )
     return refund_amount
 
 
@@ -181,11 +233,24 @@ def execute_run(run_id: str) -> None:
         if not user:
             return
 
+        was_running = run.status == "running"
         run.status = "running"
         run.error = None
         run.started_at = utcnow()
         run.problem_type = detect_type(run.problem)
-        db.add(RunEvent(run_id=run.id, event_type="status", payload={"status": "running"}))
+        if not was_running:
+            db.add(RunEvent(run_id=run.id, event_type="status", payload={"status": "running"}))
+        add_run_log(
+            db,
+            run.id,
+            "info",
+            "run execution started",
+            {
+                "executor": settings.run_executor,
+                "slot_count": (run.config_snapshot or {}).get("slot_count"),
+                "parallel": (run.config_snapshot or {}).get("parallel"),
+            },
+        )
         db.commit()
 
         output_dir = settings.output_dir / run.id
@@ -201,6 +266,14 @@ def execute_run(run_id: str) -> None:
                     event_db.add(RunEvent(run_id=run.id, event_type=event, payload=safe_data))
                     if event == "candidate_ok":
                         _candidate_from_payload(event_db, run.id, safe_data)
+                    if event in {"slots_done", "candidate_ok", "threshold_rejected", "gen_fail", "judge_fail", "invalid"}:
+                        add_run_log(
+                            event_db,
+                            run.id,
+                            "warning" if event in {"threshold_rejected", "gen_fail", "judge_fail", "invalid"} else "info",
+                            _progress_log_message(event, safe_data),
+                            _progress_log_payload(event, safe_data),
+                        )
                     event_db.commit()
                 finally:
                     event_db.close()
@@ -209,6 +282,8 @@ def execute_run(run_id: str) -> None:
 
         db.refresh(run)
         if run.status != "running":
+            add_run_log(db, run.id, "warning", "run status changed during execution", {"status": run.status})
+            db.commit()
             return
 
         for idx, item in enumerate(result.candidates, 1):
@@ -225,10 +300,12 @@ def execute_run(run_id: str) -> None:
             run.error = "; ".join(result.errors) if result.errors else "No candidates were generated"
             refund_run_credit(db, user, run)
             db.add(RunEvent(run_id=run.id, event_type="refund", payload={"credits": (run.config_snapshot or {}).get("credit_cost") or settings.run_credit_cost}))
+            add_run_log(db, run.id, "error", "run failed and refunded", {"error": run.error})
         else:
             _refund_missing_cards(db, user, run, len(result.candidates))
             run.status = "succeeded"
             run.error = None
+            add_run_log(db, run.id, "info", "run succeeded", {"candidate_count": len(result.candidates)})
         db.add(RunEvent(run_id=run.id, event_type="status", payload={"status": run.status}))
         db.commit()
     except Exception as exc:
@@ -246,6 +323,7 @@ def execute_run(run_id: str) -> None:
                 refund_run_credit(db, user, run)
             db.add(RunEvent(run_id=run.id, event_type="error", payload={"message": str(exc)}))
             db.add(RunEvent(run_id=run.id, event_type="status", payload={"status": "failed"}))
+            add_run_log(db, run.id, "error", "run exception and refunded", {"error": str(exc)})
             db.commit()
     finally:
         db.close()
