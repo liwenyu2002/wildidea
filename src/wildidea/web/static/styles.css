@@ -2464,9 +2464,12 @@ h2,
   }
 
   .candidate h3 {
+    display: block;
     font-size: 17px;
     line-height: 1.22;
     min-height: 0;
+    overflow: visible;
+    -webkit-line-clamp: unset;
   }
 
   .candidate-index,
@@ -2489,8 +2492,17 @@ h2,
   }
 
   .slot-field {
+    display: block;
     font-size: 10px;
-    -webkit-line-clamp: 1;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    -webkit-line-clamp: unset;
+  }
+
+  .slot-code {
+    overflow: visible;
+    text-overflow: clip;
   }
 
   .candidate-section {
@@ -2503,13 +2515,12 @@ h2,
   .idea-section .desc,
   .proto,
   .fail {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
   }
 
   .source-phenomenon {
-    -webkit-line-clamp: 2;
     font-size: 13px;
     line-height: 1.42;
   }
@@ -2523,26 +2534,22 @@ h2,
   }
 
   .proto {
-    -webkit-line-clamp: 2;
     display: none;
     font-size: 12px;
     line-height: 1.42;
   }
 
   .advantage-section .advantage {
-    -webkit-line-clamp: 2;
     font-size: 13px;
     line-height: 1.5;
   }
 
   .idea-section .desc {
-    -webkit-line-clamp: 4;
     font-size: 14px;
     line-height: 1.5;
   }
 
   .fail {
-    -webkit-line-clamp: 2;
     font-size: 12px;
     line-height: 1.42;
   }
@@ -2668,6 +2675,12 @@ h2,
     padding: 8px;
   }
 
+  .run-item strong {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
   .run-delete {
     min-width: 0;
     padding-inline: 6px;
@@ -2685,9 +2698,9 @@ h2,
   }
 
   .status-pill {
-    max-width: 104px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
   }
 
   .candidate-top {
