@@ -486,12 +486,12 @@ function buildSlotStates(slots, events, candidates = []) {
       item.startedAt = item.startedAt || eventAt;
       item.attempt = Number(payload.attempt || item.attempt || 1);
       item.apiStep = "生成 API";
-      item.message = `正在等待模型返回，第 ${payload.attempt || 1} 次尝试${waitingDots()}`;
+      item.message = `正在分析中${waitingDots()}`;
       const recentHistory = item.history.slice(-3);
       item.stream = [
         ...recentHistory,
         "> worker attached",
-        `> attempt ${payload.attempt || 1}: freeze source mechanism`,
+        "> source mechanism locked",
         "> mapping to your photo app problem",
         `> model thinking${waitingDots()}`,
       ];
@@ -554,7 +554,7 @@ function buildSlotStates(slots, events, candidates = []) {
       item.message = "候选已进入独立评分，正在检查结构分、新颖度和可用性。";
       item.stream = [
         `> candidate: ${payload.name || item.title}`,
-        `> attempt ${payload.attempt || 1}: judge scoring`,
+        "> judge scoring",
         `> evaluating structural depth${waitingDots()}`,
         `> evaluating novelty${waitingDots()}`,
         `> evaluating applicability${waitingDots()}`,
@@ -590,7 +590,7 @@ function buildSlotStates(slots, events, candidates = []) {
         `> structural depth ${payload.sd ?? "-"} / ${payload.sd_threshold ?? "-"}`,
         `> novelty ${payload.nv ?? "-"} / ${payload.novelty_threshold ?? "-"}`,
         `> applicability ${payload.ap ?? "-"} / ${payload.applicability_threshold ?? "-"}`,
-        `> reroll attempt ${(payload.attempt || 1) + 1}`,
+        "> reroll queued",
       ];
     } else if (event.event_type === "judge_fail") {
       item.status = "checking";
