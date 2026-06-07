@@ -392,8 +392,6 @@ def create_run(
     user: User = Depends(get_current_user),
 ) -> dict:
     credit_cost = req.slot_count * settings.run_credit_cost
-    generation_mode = req.generation_mode if req.generation_mode in {"speed", "strict"} else "speed"
-    max_retries = 3 if generation_mode == "strict" else 2
     snapshot = {
         "provider": settings.default_provider,
         "model": settings.default_model,
@@ -401,9 +399,8 @@ def create_run(
         "base_url": settings.default_base_url,
         "forbid_terms": req.forbid_terms,
         "threshold_reroll": True,
-        "generation_mode": generation_mode,
-        "max_retries": max_retries,
-        "parallel": req.parallel,
+        "max_retries": 3,
+        "parallel": 10,
         "slot_count": req.slot_count,
         "credit_cost": credit_cost,
         "opt_in_improvement": user.improvement_consent,

@@ -245,55 +245,10 @@ h2 {
 
 .composer-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 110px 110px 150px;
+  grid-template-columns: minmax(220px, 1fr) 110px;
   gap: 10px;
   align-items: end;
   margin-top: 12px;
-}
-
-.mode-field {
-  display: grid;
-  gap: 6px;
-  font-weight: 800;
-}
-
-.mode-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  overflow: hidden;
-  min-height: 42px;
-}
-
-.mode-toggle label {
-  display: grid !important;
-  place-items: center;
-  min-height: 40px;
-  padding: 0;
-  position: relative;
-}
-
-.mode-toggle input {
-  opacity: 0;
-  position: absolute;
-  pointer-events: none;
-}
-
-.mode-toggle span {
-  display: grid;
-  height: 100%;
-  place-items: center;
-  width: 100%;
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.mode-toggle input:checked + span {
-  background: #f7df89;
-  color: var(--text);
-  font-weight: 900;
 }
 
 .check {

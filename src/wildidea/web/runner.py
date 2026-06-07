@@ -119,7 +119,7 @@ def _build_pipeline_config(snapshot: dict, output_dir: Path) -> Config:
         forbid_terms=snapshot.get("forbid_terms") or [],
         output_dir=output_dir,
         search_enabled=False,
-        max_retries=int(snapshot.get("max_retries") or 2),
+        max_retries=int(snapshot.get("max_retries") or 3),
         parallel=int(snapshot.get("parallel") or 10),
         target_count=int(snapshot.get("slot_count") or 10),
     )

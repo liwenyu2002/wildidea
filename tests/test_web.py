@@ -376,19 +376,20 @@ def test_create_run_defaults_to_ten_parallel_ten_cards():
         assert snapshot["parallel"] == 10
         assert snapshot["slot_count"] == 10
         assert snapshot["credit_cost"] == 10
-        assert snapshot["generation_mode"] == "speed"
-        assert snapshot["max_retries"] == 2
+        assert "generation_mode" not in snapshot
+        assert snapshot["max_retries"] == 3
         assert run_resp.json()["credit_balance"] == 20
 
-        strict_resp = client.post(
+        legacy_config_resp = client.post(
             "/api/runs",
             headers=headers,
-            json={"problem": "严格抽卡配置", "slot_count": 1, "parallel": 1, "generation_mode": "strict"},
+            json={"problem": "旧前端配置不应改变策略", "slot_count": 1, "parallel": 1, "generation_mode": "speed"},
         )
-        assert strict_resp.status_code == 200
-        strict_snapshot = strict_resp.json()["run"]["config_snapshot"]
-        assert strict_snapshot["generation_mode"] == "strict"
-        assert strict_snapshot["max_retries"] == 3
+        assert legacy_config_resp.status_code == 200
+        legacy_snapshot = legacy_config_resp.json()["run"]["config_snapshot"]
+        assert legacy_snapshot["parallel"] == 10
+        assert "generation_mode" not in legacy_snapshot
+        assert legacy_snapshot["max_retries"] == 3
 
 
 def test_run_event_stream_accepts_token_query():
@@ -445,7 +446,7 @@ def test_runner_build_pipeline_config_returns_config():
     assert config.judge_config.provider == "openrouter"
     assert config.parallel == 10
     assert config.target_count == 10
-    assert config.max_retries == 2
+    assert config.max_retries == 3
 
 
 def test_production_like_default_run_partial_refund_and_reroll_events(monkeypatch):

@@ -139,10 +139,10 @@ function runningSummary(events, config = {}) {
   const target = config.slot_count || 10;
   const ok = events.filter((event) => event.event_type === "candidate_ok").length;
   const current = [...events].reverse().find((event) => event.event_type === "generating");
-  const maxRetries = config.max_retries || 2;
-  const modeText = config.generation_mode === "strict" ? "严格模式" : "速度模式";
+  const maxRetries = config.max_retries || 3;
+  const maxRerolls = Math.max(0, maxRetries - 1);
   if (!current) return `正在准备槽位，目标 ${target} 张卡片。`;
-  return `${modeText} · 正在生成和评分，已得到 ${ok}/${target} 条候选。当前：${current.payload.slot || "-"} · 第 ${current.payload.attempt || 1}/${maxRetries} 次尝试。`;
+  return `最多重抽 ${maxRerolls} 次 · 正在生成和评分，已得到 ${ok}/${target} 条候选。当前：${current.payload.slot || "-"} · 第 ${current.payload.attempt || 1}/${maxRetries} 次尝试。`;
 }
 
 function renderCurrentRun(run) {
@@ -1171,8 +1171,6 @@ $("runForm").addEventListener("submit", async (event) => {
         problem: $("problem").value,
         slot_count: Number($("slotCount").value || 10),
         forbid_terms: forbidTerms,
-        parallel: Number($("parallel").value || 10),
-        generation_mode: document.querySelector('input[name="generationMode"]:checked')?.value || "speed",
       }),
     });
     state.user.credit_balance = data.credit_balance;

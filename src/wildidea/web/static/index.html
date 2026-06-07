@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>WildIdea · 想出不一样的点子</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20260607-required-consent">
+  <link rel="stylesheet" href="/static/styles.css?v=20260607-reroll-default">
 </head>
 <body>
   <div class="shell">
@@ -94,26 +94,9 @@
               <input id="forbidTerms" type="text" placeholder="用空格分隔，例如 EEG 脑电 被试">
             </label>
             <label>
-              并行数
-              <input id="parallel" type="number" value="10" min="1" max="10">
-            </label>
-            <label>
               槽位数
               <input id="slotCount" type="number" value="10" min="1" max="30">
             </label>
-            <div class="mode-field">
-              <span>模式</span>
-              <div class="mode-toggle" role="radiogroup" aria-label="生成模式">
-                <label>
-                  <input type="radio" name="generationMode" value="speed" checked>
-                  <span>速度</span>
-                </label>
-                <label>
-                  <input type="radio" name="generationMode" value="strict">
-                  <span>严格</span>
-                </label>
-              </div>
-            </div>
           </div>
           <button id="runSubmit" class="primary" type="submit">消耗 10 积分生成</button>
         </form>
@@ -173,6 +156,6 @@
     </main>
   </div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=20260607-required-consent"></script>
+  <script src="/static/app.js?v=20260607-reroll-default"></script>
 </body>
 </html>

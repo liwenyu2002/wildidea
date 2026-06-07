@@ -33,8 +33,6 @@ class CreateRunRequest(BaseModel):
     slot_count: int = Field(default=10, ge=1, le=30)
     forbid_terms: list[str] = Field(default_factory=list)
     search_enabled: bool = False
-    parallel: int = Field(default=10, ge=1, le=10)
-    generation_mode: str = Field(default="speed")
 
 
 class FeedbackRequest(BaseModel):
