@@ -1537,39 +1537,67 @@ function drawPosterBackground(ctx, width, height) {
 }
 
 function posterHeaderLayout(ctx, candidate, width) {
+  const problem = posterProblemText(candidate);
+  let problemLines = [];
+  let problemHeight = 0;
+  if (problem) {
+    posterFont(ctx, 20, 900);
+    problemLines = wrapPosterLines(ctx, problem, width - 36);
+    problemHeight = 60 + problemLines.length * 30 + 18;
+  }
   posterFont(ctx, 58, 900);
   const titleLines = wrapPosterLines(ctx, candidate.name || "未命名方案", width);
+  const brandTop = problemHeight ? problemHeight + 24 : 0;
+  const titleTop = brandTop + 150;
+  const dividerTop = titleTop + titleLines.length * 68 + 36;
   return {
+    problem,
+    problemLines,
+    problemHeight,
+    brandTop,
     titleLines,
-    titleTop: 150,
+    titleTop,
     titleLineHeight: 68,
-    dividerTop: 150 + titleLines.length * 68 + 36,
-    height: 150 + titleLines.length * 68 + 70,
+    dividerTop,
+    height: dividerTop + 34,
   };
 }
 
 function drawPosterHeader(ctx, candidate, x, y, width, layout = posterHeaderLayout(ctx, candidate, width)) {
   const slotText = candidate.slotLabel || formatSlotBadge(candidate.slot, candidate.field);
-  drawPosterLogo(ctx, x, y, 62);
+  if (layout.problemLines.length) {
+    drawPosterRect(ctx, x, y, width, layout.problemHeight, 8, "#edf4f7", "#2a2a2a", 3);
+    drawPosterTag(ctx, x + 18, y + 18, "本次问题", "#f7df89");
+    posterFont(ctx, 20, 900);
+    ctx.fillStyle = "#1f2528";
+    ctx.textBaseline = "top";
+    layout.problemLines.forEach((line, index) => {
+      ctx.fillText(line, x + 18, y + 62 + index * 30);
+    });
+    ctx.textBaseline = "alphabetic";
+  }
+
+  const brandY = y + layout.brandTop;
+  drawPosterLogo(ctx, x, brandY, 62);
   posterFont(ctx, 28, 900);
   ctx.fillStyle = "#1f2528";
-  ctx.fillText("WildIdea", x + 78, y + 27);
+  ctx.fillText("WildIdea", x + 78, brandY + 27);
   posterFont(ctx, 16, 800);
   ctx.fillStyle = "#667078";
-  ctx.fillText("帮你想出不一样的点子", x + 78, y + 54);
+  ctx.fillText("帮你想出不一样的点子", x + 78, brandY + 54);
 
   const badgeW = 148;
-  drawPosterRect(ctx, x + width - badgeW, y, badgeW, 88, 8, "#f3b17f", "#2a2a2a", 4);
+  drawPosterRect(ctx, x + width - badgeW, brandY, badgeW, 88, 8, "#f3b17f", "#2a2a2a", 4);
   posterFont(ctx, 28, 900);
   ctx.fillStyle = "#111";
   ctx.textAlign = "center";
   const [slotCode, ...slotRest] = String(slotText || "").split(/\s+/);
-  ctx.fillText(slotCode || "D?", x + width - badgeW / 2, y + 35);
+  ctx.fillText(slotCode || "D?", x + width - badgeW / 2, brandY + 35);
   posterFont(ctx, 16, 900);
-  ctx.fillText(slotRest.join(" ") || candidate.field || "", x + width - badgeW / 2, y + 62);
+  ctx.fillText(slotRest.join(" ") || candidate.field || "", x + width - badgeW / 2, brandY + 62);
   ctx.textAlign = "left";
 
-  const tagY = y + 98;
+  const tagY = brandY + 98;
   drawPosterTag(ctx, x, tagY, `方案 ${String(candidate.index || 1).padStart(2, "0")}`, "#fff4bd");
   if (Number(candidate.reroll_count || 0) > 0) {
     drawPosterTag(ctx, x + 112, tagY, `重抽 ${Number(candidate.reroll_count)} 次`, "#fff1c6");
@@ -1591,6 +1619,12 @@ function drawPosterHeader(ctx, candidate, x, y, width, layout = posterHeaderLayo
   return y + layout.height;
 }
 
+function posterProblemText(candidate) {
+  const problem = String(candidate.runProblem || "").trim();
+  if (!problem || problem === "生成工作台") return "";
+  return `问题：${problem}`;
+}
+
 function posterBlockLayout(ctx, section, width) {
   const pad = 24;
   const textWidth = width - pad * 2;
@@ -1601,13 +1635,18 @@ function posterBlockLayout(ctx, section, width) {
     posterFont(ctx, 22, 900);
     headingLines = wrapPosterLines(ctx, section.heading, textWidth);
   }
-  const headingHeight = headingLines.length ? headingLines.length * 30 + 12 : 0;
-  const lineHeight = section.large ? 46 : 36;
+  const headingLineHeight = 32;
+  const headingGap = headingLines.length ? 12 : 0;
+  const headingHeight = headingLines.length ? headingLines.length * headingLineHeight + headingGap : 0;
+  const textTop = 84;
+  const lineHeight = section.large ? 50 : 40;
   return {
     lines,
     headingLines,
+    headingLineHeight,
     lineHeight,
-    height: pad + 38 + 14 + headingHeight + lines.length * lineHeight + pad,
+    textTop,
+    height: textTop + headingHeight + lines.length * lineHeight + pad,
   };
 }
 
@@ -1615,15 +1654,16 @@ function drawPosterBlock(ctx, section, layout, x, y, width) {
   drawPosterRect(ctx, x, y, width, layout.height, 8, section.background, "#2a2a2a", 3);
   drawPosterRect(ctx, x, y, 8, layout.height, 0, section.accent, null, 0);
   drawPosterTag(ctx, x + 22, y + 22, section.label, "#f7df89");
-  let cursor = y + 78;
+  let cursor = y + layout.textTop;
+  ctx.textBaseline = "top";
   if (layout.headingLines.length) {
     posterFont(ctx, 22, 900);
     ctx.fillStyle = "#111";
     layout.headingLines.forEach((line) => {
       ctx.fillText(line, x + 22, cursor);
-      cursor += 30;
+      cursor += layout.headingLineHeight;
     });
-    cursor += 10;
+    cursor += 12;
   }
   posterFont(ctx, section.large ? 32 : 24, section.strong ? 900 : 700);
   ctx.fillStyle = "#1f2528";
@@ -1631,6 +1671,7 @@ function drawPosterBlock(ctx, section, layout, x, y, width) {
     ctx.fillText(line, x + 22, cursor);
     cursor += layout.lineHeight;
   });
+  ctx.textBaseline = "alphabetic";
 }
 
 function drawPosterScores(ctx, scores, x, y, width) {
@@ -1671,8 +1712,7 @@ function drawPosterFooter(ctx, candidate, x, y, width, minHeight = 260) {
 
   posterFont(ctx, 17, 800);
   ctx.fillStyle = "#667078";
-  const problem = candidate.runProblem && candidate.runProblem !== "生成工作台" ? `问题：${candidate.runProblem}` : "WildIdea 生成结果海报";
-  drawPosterWrappedText(ctx, problem, textX, y + 138, width - qrSize - 26, 24);
+  drawPosterWrappedText(ctx, "WildIdea 生成结果海报", textX, y + 138, width - qrSize - 26, 24);
   posterFont(ctx, 13, 800);
   ctx.fillStyle = "#8a7d70";
   ctx.fillText(`Generated by WildIdea · ${new Date().toLocaleDateString()}`, textX, y + Math.max(192, minHeight - 18));
