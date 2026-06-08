@@ -1439,23 +1439,21 @@ function safeFilename(value) {
 }
 
 function drawPosterCanvas(canvas, candidate) {
-  const width = 1240;
-  const minHeight = 1754;
-  const pad = 54;
-  const railWidth = 230;
-  const railGap = 34;
-  const contentWidth = width - pad * 2 - railWidth - railGap;
+  const width = 1080;
+  const minHeight = 1920;
+  const pad = 46;
+  const contentWidth = width - pad * 2;
   const sections = posterSections(candidate);
 
   canvas.width = width;
   canvas.height = 200;
   let ctx = canvas.getContext("2d");
+  const headerLayout = posterHeaderLayout(ctx, candidate, contentWidth);
   const layouts = sections.map((section) => posterBlockLayout(ctx, section, contentWidth));
-  const scoreHeight = 96;
-  const headerHeight = 214;
-  const footerHeight = 76;
+  const scoreHeight = 92;
+  const footerHeight = 286;
   const totalSectionHeight = layouts.reduce((sum, item) => sum + item.height, 0) + Math.max(0, layouts.length - 1) * 18;
-  const height = Math.max(minHeight, pad + headerHeight + totalSectionHeight + 18 + scoreHeight + footerHeight + pad);
+  const height = Math.max(minHeight, pad + headerLayout.height + totalSectionHeight + 18 + scoreHeight + footerHeight + pad);
 
   canvas.height = height;
   ctx = canvas.getContext("2d");
@@ -1468,18 +1466,14 @@ function drawPosterCanvas(canvas, candidate) {
   drawPosterRect(ctx, paperX + 5, paperY + 5, paperW, paperH, 14, "#2a2a2a", null, 0);
   drawPosterRect(ctx, paperX, paperY, paperW, paperH, 14, "#fffdf0", "#2a2a2a", 4);
 
-  const railX = width - pad - railWidth;
-  drawPosterRect(ctx, railX, pad, railWidth, height - pad * 2, 8, "#edf4f7", "#2a2a2a", 3);
-  drawPosterRail(ctx, candidate, railX, pad, railWidth, height - pad * 2);
-
   let y = pad;
-  y = drawPosterHeader(ctx, candidate, pad, y, contentWidth);
+  y = drawPosterHeader(ctx, candidate, pad, y, contentWidth, headerLayout);
   layouts.forEach((layout, index) => {
     drawPosterBlock(ctx, sections[index], layout, pad, y, contentWidth);
     y += layout.height + 18;
   });
   y = drawPosterScores(ctx, candidate.scores || {}, pad, y, contentWidth);
-  drawPosterFooter(ctx, candidate, pad, y + 18, contentWidth);
+  drawPosterFooter(ctx, candidate, pad, y + 18, contentWidth, height - pad - (y + 18));
 }
 
 function posterSections(candidate) {
@@ -1542,7 +1536,19 @@ function drawPosterBackground(ctx, width, height) {
   }
 }
 
-function drawPosterHeader(ctx, candidate, x, y, width) {
+function posterHeaderLayout(ctx, candidate, width) {
+  posterFont(ctx, 58, 900);
+  const titleLines = wrapPosterLines(ctx, candidate.name || "未命名方案", width);
+  return {
+    titleLines,
+    titleTop: 150,
+    titleLineHeight: 68,
+    dividerTop: 150 + titleLines.length * 68 + 36,
+    height: 150 + titleLines.length * 68 + 70,
+  };
+}
+
+function drawPosterHeader(ctx, candidate, x, y, width, layout = posterHeaderLayout(ctx, candidate, width)) {
   const slotText = candidate.slotLabel || formatSlotBadge(candidate.slot, candidate.field);
   drawPosterLogo(ctx, x, y, 62);
   posterFont(ctx, 28, 900);
@@ -1551,17 +1557,6 @@ function drawPosterHeader(ctx, candidate, x, y, width) {
   posterFont(ctx, 16, 800);
   ctx.fillStyle = "#667078";
   ctx.fillText("帮你想出不一样的点子", x + 78, y + 54);
-
-  drawPosterTag(ctx, x, y + 84, `方案 ${String(candidate.index || 1).padStart(2, "0")}`, "#fff4bd");
-  if (Number(candidate.reroll_count || 0) > 0) {
-    drawPosterTag(ctx, x + 112, y + 84, `重抽 ${Number(candidate.reroll_count)} 次`, "#fff1c6");
-  }
-  posterFont(ctx, 48, 900);
-  ctx.fillStyle = "#111";
-  const titleLines = wrapPosterLines(ctx, candidate.name || "未命名方案", width);
-  titleLines.slice(0, 2).forEach((line, index) => {
-    ctx.fillText(line, x, y + 142 + index * 56);
-  });
 
   const badgeW = 148;
   drawPosterRect(ctx, x + width - badgeW, y, badgeW, 88, 8, "#f3b17f", "#2a2a2a", 4);
@@ -1574,27 +1569,40 @@ function drawPosterHeader(ctx, candidate, x, y, width) {
   ctx.fillText(slotRest.join(" ") || candidate.field || "", x + width - badgeW / 2, y + 62);
   ctx.textAlign = "left";
 
+  const tagY = y + 98;
+  drawPosterTag(ctx, x, tagY, `方案 ${String(candidate.index || 1).padStart(2, "0")}`, "#fff4bd");
+  if (Number(candidate.reroll_count || 0) > 0) {
+    drawPosterTag(ctx, x + 112, tagY, `重抽 ${Number(candidate.reroll_count)} 次`, "#fff1c6");
+  }
+  posterFont(ctx, 58, 900);
+  ctx.fillStyle = "#111";
+  ctx.textBaseline = "top";
+  layout.titleLines.forEach((line, index) => {
+    ctx.fillText(line, x, y + layout.titleTop + index * layout.titleLineHeight);
+  });
+  ctx.textBaseline = "alphabetic";
+
   ctx.strokeStyle = "#2a2a2a";
   ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.moveTo(x, y + 202);
-  ctx.lineTo(x + width, y + 202);
+  ctx.moveTo(x, y + layout.dividerTop);
+  ctx.lineTo(x + width, y + layout.dividerTop);
   ctx.stroke();
-  return y + 226;
+  return y + layout.height;
 }
 
 function posterBlockLayout(ctx, section, width) {
-  const pad = 22;
+  const pad = 24;
   const textWidth = width - pad * 2;
-  posterFont(ctx, section.large ? 28 : 22, section.strong ? 900 : 700);
+  posterFont(ctx, section.large ? 32 : 24, section.strong ? 900 : 700);
   const lines = wrapPosterLines(ctx, section.text || "", textWidth);
   let headingLines = [];
   if (section.heading) {
-    posterFont(ctx, 20, 900);
+    posterFont(ctx, 22, 900);
     headingLines = wrapPosterLines(ctx, section.heading, textWidth);
   }
-  const headingHeight = headingLines.length ? headingLines.length * 27 + 10 : 0;
-  const lineHeight = section.large ? 42 : 34;
+  const headingHeight = headingLines.length ? headingLines.length * 30 + 12 : 0;
+  const lineHeight = section.large ? 46 : 36;
   return {
     lines,
     headingLines,
@@ -1609,15 +1617,15 @@ function drawPosterBlock(ctx, section, layout, x, y, width) {
   drawPosterTag(ctx, x + 22, y + 22, section.label, "#f7df89");
   let cursor = y + 78;
   if (layout.headingLines.length) {
-    posterFont(ctx, 20, 900);
+    posterFont(ctx, 22, 900);
     ctx.fillStyle = "#111";
     layout.headingLines.forEach((line) => {
       ctx.fillText(line, x + 22, cursor);
-      cursor += 27;
+      cursor += 30;
     });
     cursor += 10;
   }
-  posterFont(ctx, section.large ? 28 : 22, section.strong ? 900 : 700);
+  posterFont(ctx, section.large ? 32 : 24, section.strong ? 900 : 700);
   ctx.fillStyle = "#1f2528";
   layout.lines.forEach((line) => {
     ctx.fillText(line, x + 22, cursor);
@@ -1636,7 +1644,7 @@ function drawPosterScores(ctx, scores, x, y, width) {
   const cellW = (width - gap * 3) / 4;
   items.forEach(([label, value], index) => {
     const cellX = x + index * (cellW + gap);
-    drawPosterRect(ctx, cellX, y, cellW, 96, 6, "#edf4f7", "#2a2a2a", 3);
+    drawPosterRect(ctx, cellX, y, cellW, 92, 6, "#edf4f7", "#2a2a2a", 3);
     posterFont(ctx, 18, 900);
     ctx.fillStyle = "#496fae";
     ctx.fillText(label, cellX + 16, y + 30);
@@ -1644,53 +1652,30 @@ function drawPosterScores(ctx, scores, x, y, width) {
     ctx.fillStyle = "#111";
     ctx.fillText(String(value), cellX + 16, y + 72);
   });
-  return y + 96;
+  return y + 92;
 }
 
-function drawPosterFooter(ctx, candidate, x, y, width) {
-  posterFont(ctx, 16, 800);
+function drawPosterFooter(ctx, candidate, x, y, width, minHeight = 260) {
+  const qrSize = 178;
+  const qrX = x;
+  const qrY = y + 14;
+  drawPosterQr(ctx, posterSiteUrl(), qrX, qrY, qrSize);
+
+  const textX = qrX + qrSize + 26;
+  posterFont(ctx, 20, 900);
+  ctx.fillStyle = "#111";
+  ctx.fillText("扫码打开网站", textX, y + 48);
+  posterFont(ctx, 14, 800);
+  ctx.fillStyle = "#667078";
+  drawPosterWrappedText(ctx, posterSiteUrl(), textX, y + 78, width - qrSize - 26, 22);
+
+  posterFont(ctx, 17, 800);
   ctx.fillStyle = "#667078";
   const problem = candidate.runProblem && candidate.runProblem !== "生成工作台" ? `问题：${candidate.runProblem}` : "WildIdea 生成结果海报";
-  drawPosterWrappedText(ctx, problem, x, y + 20, width, 24);
+  drawPosterWrappedText(ctx, problem, textX, y + 138, width - qrSize - 26, 24);
   posterFont(ctx, 13, 800);
   ctx.fillStyle = "#8a7d70";
-  ctx.fillText(`Generated by WildIdea · ${new Date().toLocaleDateString()}`, x, y + 64);
-}
-
-function drawPosterRail(ctx, candidate, x, y, width, height) {
-  drawPosterLogo(ctx, x + 66, y + 34, 98);
-  posterFont(ctx, 18, 900);
-  ctx.fillStyle = "#1f2528";
-  ctx.textAlign = "center";
-  ctx.fillText("WILDIDEA", x + width / 2, y + 158);
-  posterFont(ctx, 13, 800);
-  ctx.fillStyle = "#667078";
-  ctx.fillText("跨域灵感卡", x + width / 2, y + 184);
-  ctx.textAlign = "left";
-
-  const metaY = y + 232;
-  drawPosterRect(ctx, x + 22, metaY, width - 44, 118, 6, "#fffdf0", "#2a2a2a", 3);
-  posterFont(ctx, 13, 900);
-  ctx.fillStyle = "#496fae";
-  ctx.fillText("来源槽位", x + 38, metaY + 30);
-  posterFont(ctx, 18, 900);
-  ctx.fillStyle = "#111";
-  drawPosterWrappedText(ctx, candidate.slotLabel || formatSlotBadge(candidate.slot, candidate.field) || "-", x + 38, metaY + 60, width - 76, 24);
-
-  const qrSize = 166;
-  const qrX = x + (width - qrSize) / 2;
-  const qrY = metaY + 164;
-  drawPosterQr(ctx, posterSiteUrl(), qrX, qrY, qrSize);
-  posterFont(ctx, 15, 900);
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.fillText("扫码打开网站", x + width / 2, qrY + qrSize + 32);
-  posterFont(ctx, 11, 800);
-  ctx.fillStyle = "#667078";
-  wrapPosterLines(ctx, posterSiteUrl(), width - 34).slice(0, 3).forEach((line, index) => {
-    ctx.fillText(line, x + width / 2, qrY + qrSize + 56 + index * 17);
-  });
-  ctx.textAlign = "left";
+  ctx.fillText(`Generated by WildIdea · ${new Date().toLocaleDateString()}`, textX, y + Math.max(192, minHeight - 18));
 }
 
 function drawPosterLogo(ctx, x, y, size) {

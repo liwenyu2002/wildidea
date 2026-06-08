@@ -1805,7 +1805,7 @@ h2 {
 .poster-dialog {
   position: relative;
   z-index: 1;
-  width: min(1060px, calc(100vw - 28px));
+  width: min(760px, calc(100vw - 28px));
   max-height: calc(100vh - 28px);
   border: 3px solid var(--line);
   background: var(--surface);
@@ -1847,7 +1847,7 @@ h2 {
 }
 
 .poster-preview canvas {
-  width: min(100%, 620px);
+  width: min(100%, 430px);
   height: auto;
   background: #f3ecd8;
   border: 2px solid var(--line);
