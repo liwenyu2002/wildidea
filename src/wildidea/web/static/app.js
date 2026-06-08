@@ -18,6 +18,7 @@ const state = {
   bootFinished: false,
   runListSignature: "",
   historyDrawerOpen: false,
+  posterCandidate: null,
 };
 
 const DRAW_CARD_DELAY_MS = 170;
@@ -743,6 +744,17 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
   const rerollCount = Number(candidate.reroll_count ?? candidate.rerollCount ?? slotInfo.rerollCount ?? 0);
   const runtime = options.runtime || {};
   const advantage = normalizeAdvantage(candidate.advantage);
+  const posterContext = {
+    ...candidate,
+    index,
+    field,
+    sourcePhenomenon,
+    slotLabel: formatSlotBadge(candidate.slot, field),
+    reroll_count: rerollCount,
+    advantage,
+    runProblem: $("currentRunTitle")?.textContent || "",
+    runMeta: $("currentRunMeta")?.textContent || "",
+  };
   const card = document.createElement("article");
   card.className = "candidate";
   card.innerHTML = `
@@ -798,6 +810,9 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
       <span class="score-item"><small>新颖</small><strong>${scores.novelty ?? "-"}</strong></span>
       <span class="score-item"><small>可用</small><strong>${scores.applicability ?? "-"}</strong></span>
     </div>
+    <div class="candidate-actions">
+      <button type="button" data-action="poster">另存为海报</button>
+    </div>
     ${showFeedback ? `
       <div class="feedback-row">
         <button type="button" data-label="useful" aria-pressed="false">有用</button>
@@ -815,6 +830,7 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
       </div>
     ` : ""}
   `;
+  card.querySelector('button[data-action="poster"]').addEventListener("click", () => openPoster(posterContext));
   if (showFeedback) {
     bindFeedbackControls(card, candidate);
   }
@@ -1370,6 +1386,656 @@ async function downloadFeedbackExcel() {
   }
 }
 
+function openPoster(candidate) {
+  state.posterCandidate = candidate;
+  $("posterModalTitle").textContent = candidate.name || "另存为海报";
+  $("posterHint").textContent = `二维码指向 ${posterSiteUrl()}`;
+  $("posterModal").classList.remove("hidden");
+  document.body.classList.add("poster-open");
+  drawPosterCanvas($("posterCanvas"), candidate);
+}
+
+function closePoster() {
+  state.posterCandidate = null;
+  $("posterModal").classList.add("hidden");
+  document.body.classList.remove("poster-open");
+}
+
+async function downloadPoster() {
+  if (!state.posterCandidate) return;
+  const button = $("posterDownloadBtn");
+  const previousText = button.textContent;
+  button.disabled = true;
+  button.textContent = "正在生成";
+  await delay(60);
+  try {
+    const canvas = $("posterCanvas");
+    drawPosterCanvas(canvas, state.posterCandidate);
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `wildidea-${safeFilename(state.posterCandidate.name || "poster")}.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    showToast("海报已生成");
+  } finally {
+    button.disabled = false;
+    button.textContent = previousText;
+  }
+}
+
+function posterSiteUrl() {
+  return window.location.origin || "https://wildidea";
+}
+
+function safeFilename(value) {
+  return String(value || "poster")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fa5-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 64) || "poster";
+}
+
+function drawPosterCanvas(canvas, candidate) {
+  const width = 1240;
+  const minHeight = 1754;
+  const pad = 54;
+  const railWidth = 230;
+  const railGap = 34;
+  const contentWidth = width - pad * 2 - railWidth - railGap;
+  const sections = posterSections(candidate);
+
+  canvas.width = width;
+  canvas.height = 200;
+  let ctx = canvas.getContext("2d");
+  const layouts = sections.map((section) => posterBlockLayout(ctx, section, contentWidth));
+  const scoreHeight = 96;
+  const headerHeight = 214;
+  const footerHeight = 76;
+  const totalSectionHeight = layouts.reduce((sum, item) => sum + item.height, 0) + Math.max(0, layouts.length - 1) * 18;
+  const height = Math.max(minHeight, pad + headerHeight + totalSectionHeight + 18 + scoreHeight + footerHeight + pad);
+
+  canvas.height = height;
+  ctx = canvas.getContext("2d");
+  drawPosterBackground(ctx, width, height);
+
+  const paperX = 24;
+  const paperY = 24;
+  const paperW = width - 48;
+  const paperH = height - 48;
+  drawPosterRect(ctx, paperX + 5, paperY + 5, paperW, paperH, 14, "#2a2a2a", null, 0);
+  drawPosterRect(ctx, paperX, paperY, paperW, paperH, 14, "#fffdf0", "#2a2a2a", 4);
+
+  const railX = width - pad - railWidth;
+  drawPosterRect(ctx, railX, pad, railWidth, height - pad * 2, 8, "#edf4f7", "#2a2a2a", 3);
+  drawPosterRail(ctx, candidate, railX, pad, railWidth, height - pad * 2);
+
+  let y = pad;
+  y = drawPosterHeader(ctx, candidate, pad, y, contentWidth);
+  layouts.forEach((layout, index) => {
+    drawPosterBlock(ctx, sections[index], layout, pad, y, contentWidth);
+    y += layout.height + 18;
+  });
+  y = drawPosterScores(ctx, candidate.scores || {}, pad, y, contentWidth);
+  drawPosterFooter(ctx, candidate, pad, y + 18, contentWidth);
+}
+
+function posterSections(candidate) {
+  const sourcePhenomenon = String(candidate.sourcePhenomenon || candidate.source || "").trim();
+  return [
+    {
+      label: "源现象",
+      text: sourcePhenomenon || "未记录源现象",
+      background: "#edf4f7",
+      accent: "#496fae",
+      strong: true,
+    },
+    {
+      label: "优势",
+      text: normalizeAdvantage(candidate.advantage),
+      background: "#eaf6ea",
+      accent: "#2a8a67",
+      strong: true,
+    },
+    {
+      label: "落地方案",
+      text: candidate.desc || "未记录落地方案",
+      background: "#fff4bd",
+      accent: "#2a8a67",
+      large: true,
+      strong: true,
+    },
+    {
+      label: "抽象方法",
+      heading: candidate.source || "",
+      text: candidate.proto || "未记录抽象方法",
+      background: "#f2f6f8",
+      accent: "#496fae",
+    },
+    {
+      label: "失败边界",
+      text: candidate.fail || "未记录失败边界",
+      background: "#fae8e3",
+      accent: "#b86157",
+    },
+  ].filter((section) => section.text || section.heading);
+}
+
+function drawPosterBackground(ctx, width, height) {
+  ctx.fillStyle = "#f3ecd8";
+  ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = "rgba(195, 177, 130, 0.42)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < width; x += 22) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < height; y += 22) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+}
+
+function drawPosterHeader(ctx, candidate, x, y, width) {
+  const slotText = candidate.slotLabel || formatSlotBadge(candidate.slot, candidate.field);
+  drawPosterLogo(ctx, x, y, 62);
+  posterFont(ctx, 28, 900);
+  ctx.fillStyle = "#1f2528";
+  ctx.fillText("WildIdea", x + 78, y + 27);
+  posterFont(ctx, 16, 800);
+  ctx.fillStyle = "#667078";
+  ctx.fillText("帮你想出不一样的点子", x + 78, y + 54);
+
+  drawPosterTag(ctx, x, y + 84, `方案 ${String(candidate.index || 1).padStart(2, "0")}`, "#fff4bd");
+  if (Number(candidate.reroll_count || 0) > 0) {
+    drawPosterTag(ctx, x + 112, y + 84, `重抽 ${Number(candidate.reroll_count)} 次`, "#fff1c6");
+  }
+  posterFont(ctx, 48, 900);
+  ctx.fillStyle = "#111";
+  const titleLines = wrapPosterLines(ctx, candidate.name || "未命名方案", width);
+  titleLines.slice(0, 2).forEach((line, index) => {
+    ctx.fillText(line, x, y + 142 + index * 56);
+  });
+
+  const badgeW = 148;
+  drawPosterRect(ctx, x + width - badgeW, y, badgeW, 88, 8, "#f3b17f", "#2a2a2a", 4);
+  posterFont(ctx, 28, 900);
+  ctx.fillStyle = "#111";
+  ctx.textAlign = "center";
+  const [slotCode, ...slotRest] = String(slotText || "").split(/\s+/);
+  ctx.fillText(slotCode || "D?", x + width - badgeW / 2, y + 35);
+  posterFont(ctx, 16, 900);
+  ctx.fillText(slotRest.join(" ") || candidate.field || "", x + width - badgeW / 2, y + 62);
+  ctx.textAlign = "left";
+
+  ctx.strokeStyle = "#2a2a2a";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(x, y + 202);
+  ctx.lineTo(x + width, y + 202);
+  ctx.stroke();
+  return y + 226;
+}
+
+function posterBlockLayout(ctx, section, width) {
+  const pad = 22;
+  const textWidth = width - pad * 2;
+  posterFont(ctx, section.large ? 28 : 22, section.strong ? 900 : 700);
+  const lines = wrapPosterLines(ctx, section.text || "", textWidth);
+  let headingLines = [];
+  if (section.heading) {
+    posterFont(ctx, 20, 900);
+    headingLines = wrapPosterLines(ctx, section.heading, textWidth);
+  }
+  const headingHeight = headingLines.length ? headingLines.length * 27 + 10 : 0;
+  const lineHeight = section.large ? 42 : 34;
+  return {
+    lines,
+    headingLines,
+    lineHeight,
+    height: pad + 38 + 14 + headingHeight + lines.length * lineHeight + pad,
+  };
+}
+
+function drawPosterBlock(ctx, section, layout, x, y, width) {
+  drawPosterRect(ctx, x, y, width, layout.height, 8, section.background, "#2a2a2a", 3);
+  drawPosterRect(ctx, x, y, 8, layout.height, 0, section.accent, null, 0);
+  drawPosterTag(ctx, x + 22, y + 22, section.label, "#f7df89");
+  let cursor = y + 78;
+  if (layout.headingLines.length) {
+    posterFont(ctx, 20, 900);
+    ctx.fillStyle = "#111";
+    layout.headingLines.forEach((line) => {
+      ctx.fillText(line, x + 22, cursor);
+      cursor += 27;
+    });
+    cursor += 10;
+  }
+  posterFont(ctx, section.large ? 28 : 22, section.strong ? 900 : 700);
+  ctx.fillStyle = "#1f2528";
+  layout.lines.forEach((line) => {
+    ctx.fillText(line, x + 22, cursor);
+    cursor += layout.lineHeight;
+  });
+}
+
+function drawPosterScores(ctx, scores, x, y, width) {
+  const items = [
+    ["结构", scores.structural_depth ?? "-"],
+    ["距离", scores.domain_distance ?? "-"],
+    ["新颖", scores.novelty ?? "-"],
+    ["可用", scores.applicability ?? "-"],
+  ];
+  const gap = 12;
+  const cellW = (width - gap * 3) / 4;
+  items.forEach(([label, value], index) => {
+    const cellX = x + index * (cellW + gap);
+    drawPosterRect(ctx, cellX, y, cellW, 96, 6, "#edf4f7", "#2a2a2a", 3);
+    posterFont(ctx, 18, 900);
+    ctx.fillStyle = "#496fae";
+    ctx.fillText(label, cellX + 16, y + 30);
+    posterFont(ctx, 38, 900);
+    ctx.fillStyle = "#111";
+    ctx.fillText(String(value), cellX + 16, y + 72);
+  });
+  return y + 96;
+}
+
+function drawPosterFooter(ctx, candidate, x, y, width) {
+  posterFont(ctx, 16, 800);
+  ctx.fillStyle = "#667078";
+  const problem = candidate.runProblem && candidate.runProblem !== "生成工作台" ? `问题：${candidate.runProblem}` : "WildIdea 生成结果海报";
+  drawPosterWrappedText(ctx, problem, x, y + 20, width, 24);
+  posterFont(ctx, 13, 800);
+  ctx.fillStyle = "#8a7d70";
+  ctx.fillText(`Generated by WildIdea · ${new Date().toLocaleDateString()}`, x, y + 64);
+}
+
+function drawPosterRail(ctx, candidate, x, y, width, height) {
+  drawPosterLogo(ctx, x + 66, y + 34, 98);
+  posterFont(ctx, 18, 900);
+  ctx.fillStyle = "#1f2528";
+  ctx.textAlign = "center";
+  ctx.fillText("WILDIDEA", x + width / 2, y + 158);
+  posterFont(ctx, 13, 800);
+  ctx.fillStyle = "#667078";
+  ctx.fillText("跨域灵感卡", x + width / 2, y + 184);
+  ctx.textAlign = "left";
+
+  const metaY = y + 232;
+  drawPosterRect(ctx, x + 22, metaY, width - 44, 118, 6, "#fffdf0", "#2a2a2a", 3);
+  posterFont(ctx, 13, 900);
+  ctx.fillStyle = "#496fae";
+  ctx.fillText("来源槽位", x + 38, metaY + 30);
+  posterFont(ctx, 18, 900);
+  ctx.fillStyle = "#111";
+  drawPosterWrappedText(ctx, candidate.slotLabel || formatSlotBadge(candidate.slot, candidate.field) || "-", x + 38, metaY + 60, width - 76, 24);
+
+  const qrSize = 166;
+  const qrX = x + (width - qrSize) / 2;
+  const qrY = metaY + 164;
+  drawPosterQr(ctx, posterSiteUrl(), qrX, qrY, qrSize);
+  posterFont(ctx, 15, 900);
+  ctx.fillStyle = "#111";
+  ctx.textAlign = "center";
+  ctx.fillText("扫码打开网站", x + width / 2, qrY + qrSize + 32);
+  posterFont(ctx, 11, 800);
+  ctx.fillStyle = "#667078";
+  wrapPosterLines(ctx, posterSiteUrl(), width - 34).slice(0, 3).forEach((line, index) => {
+    ctx.fillText(line, x + width / 2, qrY + qrSize + 56 + index * 17);
+  });
+  ctx.textAlign = "left";
+}
+
+function drawPosterLogo(ctx, x, y, size) {
+  drawPosterRect(ctx, x, y, size, size, 8, "#386eea", "#2a2a2a", Math.max(3, Math.round(size / 18)));
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, size, size);
+  ctx.clip();
+  ctx.fillStyle = "#fff4bd";
+  ctx.fillRect(x + size * 0.1, y + size * 0.18, size * 0.28, size * 0.16);
+  ctx.fillStyle = "#f3b17f";
+  ctx.fillRect(x + size * 0.68, y + size * 0.16, size * 0.2, size * 0.28);
+  ctx.fillStyle = "#6fcf97";
+  ctx.fillRect(x + size * 0.12, y + size * 0.72, size * 0.22, size * 0.16);
+  ctx.fillStyle = "#55e6ff";
+  ctx.fillRect(x + size * 0.64, y + size * 0.7, size * 0.26, size * 0.14);
+  posterFont(ctx, Math.round(size * 0.56), 900);
+  ctx.lineJoin = "round";
+  ctx.lineWidth = Math.max(8, Math.round(size * 0.14));
+  ctx.strokeStyle = "#fffdf0";
+  ctx.fillStyle = "#1f2528";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.strokeText("W", x + size / 2, y + size * 0.58);
+  ctx.fillText("W", x + size / 2, y + size * 0.58);
+  ctx.restore();
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+}
+
+function drawPosterTag(ctx, x, y, text, fill) {
+  posterFont(ctx, 16, 900);
+  const width = Math.ceil(ctx.measureText(text).width) + 22;
+  drawPosterRect(ctx, x, y, width, 32, 4, fill, "#2a2a2a", 3);
+  ctx.fillStyle = "#111";
+  ctx.fillText(text, x + 11, y + 22);
+  return width;
+}
+
+function drawPosterRect(ctx, x, y, width, height, radius, fill, stroke, lineWidth) {
+  ctx.beginPath();
+  if (radius > 0) {
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+  } else {
+    ctx.rect(x, y, width, height);
+  }
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
+  if (stroke && lineWidth) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+}
+
+function drawPosterWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
+  const lines = wrapPosterLines(ctx, text, maxWidth);
+  lines.forEach((line, index) => {
+    ctx.fillText(line, x, y + index * lineHeight);
+  });
+  return y + lines.length * lineHeight;
+}
+
+function wrapPosterLines(ctx, text, maxWidth) {
+  const tokens = tokenizePosterText(String(text || "").replace(/\s+/g, " ").trim());
+  const lines = [];
+  let line = "";
+  tokens.forEach((token) => {
+    const next = line ? `${line}${token}` : token.trimStart();
+    if (!line || ctx.measureText(next).width <= maxWidth) {
+      line = next;
+      return;
+    }
+    if (ctx.measureText(token).width > maxWidth) {
+      if (line) lines.push(line.trimEnd());
+      line = "";
+      Array.from(token).forEach((char) => {
+        const charNext = line + char;
+        if (line && ctx.measureText(charNext).width > maxWidth) {
+          lines.push(line);
+          line = char;
+        } else {
+          line = charNext;
+        }
+      });
+      return;
+    }
+    lines.push(line.trimEnd());
+    line = token.trimStart();
+  });
+  if (line) lines.push(line.trimEnd());
+  return lines.length ? lines : [""];
+}
+
+function tokenizePosterText(text) {
+  const tokens = [];
+  let buffer = "";
+  const flush = () => {
+    if (buffer) {
+      tokens.push(buffer);
+      buffer = "";
+    }
+  };
+  Array.from(text).forEach((char) => {
+    if (/[\u3400-\u9fff，。、“”‘’；：！？（）《》]/.test(char)) {
+      flush();
+      tokens.push(char);
+    } else if (/\s/.test(char)) {
+      flush();
+      tokens.push(" ");
+    } else {
+      buffer += char;
+    }
+  });
+  flush();
+  return tokens;
+}
+
+function posterFont(ctx, size, weight = 700) {
+  ctx.font = `${weight} ${size}px "Courier New", "SF Mono", Menlo, Monaco, "PingFang SC", "Microsoft YaHei", monospace`;
+}
+
+function drawPosterQr(ctx, text, x, y, size) {
+  let matrix;
+  try {
+    matrix = createQrMatrix(text);
+  } catch (_) {
+    matrix = createQrMatrix(posterSiteUrl().split("?")[0].slice(0, 80));
+  }
+  drawPosterRect(ctx, x - 10, y - 10, size + 20, size + 20, 6, "#fff", "#2a2a2a", 3);
+  const count = matrix.length;
+  const cell = Math.floor(size / count);
+  const realSize = cell * count;
+  const offset = (size - realSize) / 2;
+  ctx.fillStyle = "#111";
+  matrix.forEach((row, rowIndex) => {
+    row.forEach((dark, colIndex) => {
+      if (dark) ctx.fillRect(x + offset + colIndex * cell, y + offset + rowIndex * cell, cell, cell);
+    });
+  });
+}
+
+const QR_L_TABLE = [
+  null,
+  { data: 19, ecc: 7 },
+  { data: 34, ecc: 10 },
+  { data: 55, ecc: 15 },
+  { data: 80, ecc: 20 },
+  { data: 108, ecc: 26 },
+];
+
+function createQrMatrix(text) {
+  const bytes = Array.from(new TextEncoder().encode(text));
+  const version = QR_L_TABLE.findIndex((item, index) => index > 0 && bytes.length + 2 <= item.data);
+  if (version < 1) throw new Error("QR data is too long");
+  const dataCodewords = qrDataCodewords(bytes, version);
+  const ecc = reedSolomonRemainder(dataCodewords, QR_L_TABLE[version].ecc);
+  const codewords = dataCodewords.concat(ecc);
+  const size = 17 + version * 4;
+  const modules = Array.from({ length: size }, () => Array(size).fill(false));
+  const reserved = Array.from({ length: size }, () => Array(size).fill(false));
+  const set = (x, y, value, reserve = true) => {
+    if (x < 0 || y < 0 || x >= size || y >= size) return;
+    modules[y][x] = Boolean(value);
+    if (reserve) reserved[y][x] = true;
+  };
+  drawQrFunctionPatterns(version, size, set, reserved);
+  placeQrDataBits(codewords, size, modules, reserved);
+  drawQrFormatBits(size, set);
+  return modules;
+}
+
+function qrDataCodewords(bytes, version) {
+  const bits = [];
+  const append = (value, length) => {
+    for (let i = length - 1; i >= 0; i -= 1) bits.push((value >>> i) & 1);
+  };
+  append(0b0100, 4);
+  append(bytes.length, version <= 9 ? 8 : 16);
+  bytes.forEach((byte) => append(byte, 8));
+  const capacityBits = QR_L_TABLE[version].data * 8;
+  const terminator = Math.min(4, capacityBits - bits.length);
+  append(0, terminator);
+  while (bits.length % 8) bits.push(0);
+  const codewords = [];
+  for (let i = 0; i < bits.length; i += 8) {
+    codewords.push(bits.slice(i, i + 8).reduce((value, bit) => (value << 1) | bit, 0));
+  }
+  const pads = [0xec, 0x11];
+  let padIndex = 0;
+  while (codewords.length < QR_L_TABLE[version].data) {
+    codewords.push(pads[padIndex % 2]);
+    padIndex += 1;
+  }
+  return codewords;
+}
+
+function drawQrFunctionPatterns(version, size, set, reserved) {
+  drawQrFinder(set, 0, 0);
+  drawQrFinder(set, size - 7, 0);
+  drawQrFinder(set, 0, size - 7);
+  for (let i = 0; i < size; i += 1) {
+    if (!reserved[6][i]) set(i, 6, i % 2 === 0);
+    if (!reserved[i][6]) set(6, i, i % 2 === 0);
+  }
+  if (version > 1) {
+    const pos = 4 * version + 10;
+    [[pos, pos]].forEach(([x, y]) => drawQrAlignment(set, reserved, x, y));
+  }
+  set(8, size - 8, true);
+  for (let i = 0; i < 9; i += 1) {
+    if (i !== 6) {
+      reserved[8][i] = true;
+      reserved[i][8] = true;
+    }
+  }
+  for (let i = 0; i < 8; i += 1) {
+    reserved[size - 1 - i][8] = true;
+    reserved[8][size - 1 - i] = true;
+  }
+}
+
+function drawQrFinder(set, x, y) {
+  for (let dy = -1; dy <= 7; dy += 1) {
+    for (let dx = -1; dx <= 7; dx += 1) {
+      const xx = x + dx;
+      const yy = y + dy;
+      const dark = dx >= 0 && dx <= 6 && dy >= 0 && dy <= 6 &&
+        (dx === 0 || dx === 6 || dy === 0 || dy === 6 || (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4));
+      set(xx, yy, dark);
+    }
+  }
+}
+
+function drawQrAlignment(set, reserved, cx, cy) {
+  if (reserved[cy]?.[cx]) return;
+  for (let dy = -2; dy <= 2; dy += 1) {
+    for (let dx = -2; dx <= 2; dx += 1) {
+      set(cx + dx, cy + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+    }
+  }
+}
+
+function placeQrDataBits(codewords, size, modules, reserved) {
+  const bits = [];
+  codewords.forEach((byte) => {
+    for (let i = 7; i >= 0; i -= 1) bits.push((byte >>> i) & 1);
+  });
+  let bitIndex = 0;
+  let upward = true;
+  for (let right = size - 1; right >= 1; right -= 2) {
+    if (right === 6) right -= 1;
+    for (let vert = 0; vert < size; vert += 1) {
+      const y = upward ? size - 1 - vert : vert;
+      for (let dx = 0; dx < 2; dx += 1) {
+        const x = right - dx;
+        if (reserved[y][x]) continue;
+        let bit = bitIndex < bits.length ? bits[bitIndex] : 0;
+        bitIndex += 1;
+        if ((x + y) % 2 === 0) bit ^= 1;
+        modules[y][x] = Boolean(bit);
+      }
+    }
+    upward = !upward;
+  }
+}
+
+function drawQrFormatBits(size, set) {
+  const bits = qrFormatBits(1, 0);
+  const bit = (index) => ((bits >>> index) & 1) !== 0;
+  for (let i = 0; i <= 5; i += 1) set(8, i, bit(i));
+  set(8, 7, bit(6));
+  set(8, 8, bit(7));
+  set(7, 8, bit(8));
+  for (let i = 9; i < 15; i += 1) set(14 - i, 8, bit(i));
+  for (let i = 0; i < 8; i += 1) set(size - 1 - i, 8, bit(i));
+  for (let i = 8; i < 15; i += 1) set(8, size - 15 + i, bit(i));
+  set(8, size - 8, true);
+}
+
+function qrFormatBits(errorLevel, mask) {
+  const data = (errorLevel << 3) | mask;
+  let value = data << 10;
+  for (let i = 14; i >= 10; i -= 1) {
+    if (((value >>> i) & 1) !== 0) value ^= 0x537 << (i - 10);
+  }
+  return ((data << 10) | value) ^ 0x5412;
+}
+
+function reedSolomonRemainder(data, degree) {
+  const generator = reedSolomonGenerator(degree);
+  const message = data.concat(Array(degree).fill(0));
+  data.forEach((_, index) => {
+    const coefficient = message[index];
+    if (coefficient === 0) return;
+    generator.forEach((value, offset) => {
+      message[index + offset] ^= gfMultiply(value, coefficient);
+    });
+  });
+  return message.slice(data.length);
+}
+
+function reedSolomonGenerator(degree) {
+  let coefficients = [1];
+  for (let i = 0; i < degree; i += 1) {
+    const root = gfPower(2, i);
+    const next = Array(coefficients.length + 1).fill(0);
+    coefficients.forEach((coefficient, index) => {
+      next[index] ^= coefficient;
+      next[index + 1] ^= gfMultiply(coefficient, root);
+    });
+    coefficients = next;
+  }
+  return coefficients;
+}
+
+function gfPower(value, power) {
+  let result = 1;
+  for (let i = 0; i < power; i += 1) result = gfMultiply(result, value);
+  return result;
+}
+
+function gfMultiply(a, b) {
+  let result = 0;
+  let x = a;
+  let y = b;
+  while (y > 0) {
+    if (y & 1) result ^= x;
+    x <<= 1;
+    if (x & 0x100) x ^= 0x11d;
+    y >>= 1;
+  }
+  return result & 0xff;
+}
+
 function feedbackLabel(label) {
   const labels = {
     useful: "有用",
@@ -1564,6 +2230,12 @@ $("historyBackdrop").addEventListener("click", () => {
 $("refreshAdminBtn").addEventListener("click", loadAdmin);
 $("exportFeedbackBtn").addEventListener("click", downloadFeedbackExcel);
 $("slotCount").addEventListener("input", updateRunCostLabel);
+$("posterCloseBtn").addEventListener("click", closePoster);
+$("posterBackdrop").addEventListener("click", closePoster);
+$("posterDownloadBtn").addEventListener("click", downloadPoster);
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("posterModal").classList.contains("hidden")) closePoster();
+});
 
 $("inviteForm").addEventListener("submit", async (event) => {
   event.preventDefault();

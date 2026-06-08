@@ -1038,6 +1038,14 @@ h2 {
   min-width: 0;
 }
 
+.candidate-actions {
+  display: grid;
+}
+
+.candidate-actions button {
+  background: #fffdf0;
+}
+
 .weak-feedback {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1767,6 +1775,91 @@ h2 {
   border-radius: 6px;
   padding: 6px 8px;
   font-size: 12px;
+}
+
+.poster-open {
+  overflow: hidden;
+}
+
+.poster-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.poster-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: rgba(17, 22, 26, 0.58);
+  box-shadow: none !important;
+  min-height: 0;
+  padding: 0;
+  transform: none !important;
+}
+
+.poster-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(1060px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  border: 3px solid var(--line);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 rgba(42, 42, 42, 0.78);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.poster-dialog-head,
+.poster-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+}
+
+.poster-dialog-head {
+  border-bottom: 3px solid var(--line);
+}
+
+.poster-dialog-head > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.poster-dialog-head strong {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.poster-preview {
+  background: #20262b;
+  display: grid;
+  justify-items: center;
+  overflow: auto;
+  padding: 16px;
+}
+
+.poster-preview canvas {
+  width: min(100%, 620px);
+  height: auto;
+  background: #f3ecd8;
+  border: 2px solid var(--line);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.32);
+}
+
+.poster-actions {
+  border-top: 3px solid var(--line);
+}
+
+.poster-actions .muted {
+  line-height: 1.35;
 }
 
 .toast {
@@ -2611,10 +2704,12 @@ h2,
   }
 
   .feedback-row,
+  .candidate-actions,
   .weak-feedback {
     gap: 6px;
   }
 
+  .candidate-actions button,
   .feedback-row button,
   .weak-feedback button,
   .weak-other-form button {
@@ -2684,6 +2779,38 @@ h2,
   .run-delete {
     min-width: 0;
     padding-inline: 6px;
+  }
+
+  .poster-modal {
+    padding: 8px;
+  }
+
+  .poster-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
+
+  .poster-dialog-head,
+  .poster-actions {
+    align-items: flex-start;
+    padding: 9px;
+  }
+
+  .poster-dialog-head strong {
+    font-size: 17px;
+  }
+
+  .poster-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .poster-preview {
+    padding: 10px;
+  }
+
+  .poster-preview canvas {
+    width: 100%;
   }
 }
 

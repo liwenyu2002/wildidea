@@ -6,7 +6,7 @@
   <title>WildIdea · 想出不一样的点子</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=20260607-char-outline-3x">
   <link rel="shortcut icon" type="image/svg+xml" href="/static/favicon.svg?v=20260607-char-outline-3x">
-  <link rel="stylesheet" href="/static/styles.css?v=20260607-user-card-limit">
+  <link rel="stylesheet" href="/static/styles.css?v=20260608-poster-export">
 </head>
 <body class="app-booting">
   <div id="bootCurtain" class="boot-curtain" aria-hidden="true">
@@ -173,8 +173,27 @@
       </section>
     </main>
   </div>
+  <div id="posterModal" class="poster-modal hidden" role="dialog" aria-modal="true" aria-labelledby="posterModalTitle">
+    <button id="posterBackdrop" class="poster-backdrop" type="button" aria-label="关闭海报预览"></button>
+    <div class="poster-dialog">
+      <div class="poster-dialog-head">
+        <div>
+          <span class="candidate-index">海报预览</span>
+          <strong id="posterModalTitle">另存为海报</strong>
+        </div>
+        <button id="posterCloseBtn" class="ghost" type="button">关闭</button>
+      </div>
+      <div class="poster-preview">
+        <canvas id="posterCanvas" width="1240" height="1754"></canvas>
+      </div>
+      <div class="poster-actions">
+        <span id="posterHint" class="muted">二维码指向当前网站首页。</span>
+        <button id="posterDownloadBtn" class="primary" type="button">下载 PNG</button>
+      </div>
+    </div>
+  </div>
   <button id="historyBackdrop" class="history-backdrop hidden" type="button" aria-label="关闭历史侧边栏"></button>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=20260607-user-card-limit"></script>
+  <script src="/static/app.js?v=20260608-poster-export"></script>
 </body>
 </html>
