@@ -1487,11 +1487,19 @@ function posterSections(candidate) {
       strong: true,
     },
     {
+      label: "抽象方法",
+      heading: candidate.source || "",
+      text: candidate.proto || "未记录抽象方法",
+      background: "#f2f6f8",
+      accent: "#496fae",
+    },
+    {
       label: "优势",
       text: normalizeAdvantage(candidate.advantage),
       background: "#eaf6ea",
       accent: "#2a8a67",
       strong: true,
+      floating: true,
     },
     {
       label: "落地方案",
@@ -1500,13 +1508,7 @@ function posterSections(candidate) {
       accent: "#2a8a67",
       large: true,
       strong: true,
-    },
-    {
-      label: "抽象方法",
-      heading: candidate.source || "",
-      text: candidate.proto || "未记录抽象方法",
-      background: "#f2f6f8",
-      accent: "#496fae",
+      floating: true,
     },
     {
       label: "失败边界",
@@ -1651,8 +1653,13 @@ function posterBlockLayout(ctx, section, width) {
 }
 
 function drawPosterBlock(ctx, section, layout, x, y, width) {
-  drawPosterRect(ctx, x, y, width, layout.height, 8, section.background, "#2a2a2a", 3);
-  drawPosterRect(ctx, x, y, 8, layout.height, 0, section.accent, null, 0);
+  const borderWidth = section.floating ? 4 : 3;
+  if (section.floating) {
+    drawPosterRect(ctx, x + 8, y + 8, width, layout.height, 8, "rgba(42, 42, 42, 0.72)", null, 0);
+    drawPosterRect(ctx, x + 3, y + 3, width, layout.height, 8, "rgba(111, 207, 151, 0.18)", null, 0);
+  }
+  drawPosterRect(ctx, x, y, width, layout.height, 8, section.background, "#2a2a2a", borderWidth);
+  drawPosterRect(ctx, x, y, section.floating ? 12 : 8, layout.height, 0, section.accent, null, 0);
   drawPosterTag(ctx, x + 22, y + 22, section.label, "#f7df89");
   let cursor = y + layout.textTop;
   ctx.textBaseline = "top";
