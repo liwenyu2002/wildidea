@@ -1074,13 +1074,26 @@ def test_candidate_ok_persists_live_candidate_and_preserves_feedback(monkeypatch
         db.close()
 
 
-def test_production_like_all_cards_fail_gets_full_refund(monkeypatch):
+def test_production_like_all_cards_hit_reroll_limit_show_fallbacks_and_refund(monkeypatch):
     import wildidea.web.runner as runner
+    from wildidea.judge import JudgeScores
     from wildidea.pipeline import Result
+    from wildidea.renderer import Candidate as RenderCandidate
     from wildidea.web.database import SessionLocal
-    from wildidea.web.models import CreditTransaction
+    from wildidea.web.models import CreditTransaction, RunEvent
 
     webapp.execute_run = runner.execute_run
+
+    def scores_payload(scores: JudgeScores) -> dict:
+        return {
+            "structural_depth": scores.structural_depth,
+            "domain_distance": scores.domain_distance,
+            "applicability": scores.applicability,
+            "novelty": scores.novelty,
+            "unexpectedness": scores.unexpectedness,
+            "non_obviousness": scores.non_obviousness,
+            "raw": scores.raw,
+        }
 
     def fake_run_pipeline(problem, config, on_progress):
         assert config.target_count == 3
@@ -1092,7 +1105,14 @@ def test_production_like_all_cards_fail_gets_full_refund(monkeypatch):
                 for idx in range(1, 4)
             ],
         })
+        candidates = []
         for idx in range(1, 4):
+            scores = JudgeScores(
+                structural_depth=6,
+                domain_distance=8,
+                applicability=7,
+                novelty=6,
+            )
             on_progress("threshold_rejected", {
                 "slot_id": f"fail-slot-{idx}",
                 "slot": "D4",
@@ -1105,12 +1125,40 @@ def test_production_like_all_cards_fail_gets_full_refund(monkeypatch):
                 "novelty_threshold": 7,
                 "applicability_threshold": 9,
             })
-            on_progress("gen_fail", {
+            candidate = RenderCandidate(
+                name=f"保底方案{idx}",
+                slot="D4",
+                source=f"保底方法{idx}",
+                proto=f"保底机制{idx}",
+                desc=f"保底落地方案{idx}",
+                fail=f"失败边界{idx}",
+                scores=scores,
+                reroll_count=2,
+                quality_status="fallback_refunded",
+                refund_credit=True,
+                quality_note="这张卡触达重抽上限，已展示均分最高版本，并退回该卡积分。",
+            )
+            candidates.append(candidate)
+            on_progress("candidate_fallback", {
                 "slot_id": f"fail-slot-{idx}",
-                "slot": "D4",
-                "reason": "exhausted retries",
+                "index": len(candidates),
+                "attempt": 3,
+                "reroll_count": 2,
+                "name": candidate.name,
+                "slot": candidate.slot,
+                "source": candidate.source,
+                "proto": candidate.proto,
+                "advantage": candidate.advantage,
+                "desc": candidate.desc,
+                "fail": candidate.fail,
+                "quality_status": "fallback_refunded",
+                "refund_credit": True,
+                "quality_note": candidate.quality_note,
+                "scores": scores_payload(scores),
+                "done": len(candidates),
+                "total": 3,
             })
-        return Result(candidates=[], errors=[], avg_scores={})
+        return Result(candidates=candidates, errors=[], avg_scores={})
 
     monkeypatch.setattr(runner, "run_pipeline", fake_run_pipeline)
 
@@ -1130,9 +1178,14 @@ def test_production_like_all_cards_fail_gets_full_refund(monkeypatch):
         detail = client.get(f"/api/runs/{run_id}", headers=headers)
         assert detail.status_code == 200
         run = detail.json()["run"]
-        assert run["status"] == "failed"
-        assert run["error"] == "No candidates were generated"
+        assert run["status"] == "succeeded"
+        assert run["error"] is None
+        assert len(run["candidates"]) == 3
+        assert run["candidates"][0]["quality_status"] == "fallback_refunded"
+        assert run["candidates"][0]["refund_credit"] is True
+        assert run["candidates"][0]["search"]["quality_status"] == "fallback_refunded"
         assert len([event for event in run["events"] if event["event_type"] == "threshold_rejected"]) == 3
+        assert len([event for event in run["events"] if event["event_type"] == "candidate_fallback"]) == 3
 
         me_resp = client.get("/api/me", headers=headers)
         assert me_resp.status_code == 200
@@ -1142,9 +1195,17 @@ def test_production_like_all_cards_fail_gets_full_refund(monkeypatch):
         try:
             refund = db.query(CreditTransaction).filter_by(
                 run_id=run_id,
-                reason="run_refund",
+                reason="run_partial_refund",
             ).one()
             assert refund.amount == 3
+            assert refund.meta["generated_candidates"] == 0
+            assert refund.meta["visible_candidates"] == 3
+            refund_event = db.query(RunEvent).filter_by(
+                run_id=run_id,
+                event_type="refund",
+            ).filter(RunEvent.payload["reason"].as_string() == "partial_card_refund").one()
+            assert refund_event.payload["credits"] == 3
+            assert refund_event.payload["visible_candidates"] == 3
         finally:
             db.close()
 

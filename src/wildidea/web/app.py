@@ -191,6 +191,7 @@ def _feedback_payload(feedback: Feedback | None) -> dict | None:
 
 
 def _candidate_payload(candidate: Candidate, feedback: Feedback | None = None) -> dict:
+    search = candidate.search_json or {}
     return {
         "id": candidate.id,
         "index": candidate.index,
@@ -202,7 +203,11 @@ def _candidate_payload(candidate: Candidate, feedback: Feedback | None = None) -
         "desc": candidate.desc,
         "fail": candidate.fail,
         "scores": candidate.scores_json or {},
-        "search": candidate.search_json or {},
+        "search": search,
+        "quality_status": search.get("quality_status", "passed"),
+        "refund_credit": bool(search.get("refund_credit")),
+        "quality_note": search.get("quality_note", ""),
+        "score_average": search.get("score_average"),
         "reroll_count": candidate.reroll_count or 0,
         "feedback": _feedback_payload(feedback),
     }

@@ -321,7 +321,7 @@ function formatQueueEstimate(seconds) {
 
 function runningSummary(events, config = {}) {
   const target = config.slot_count || 10;
-  const ok = events.filter((event) => event.event_type === "candidate_ok").length;
+  const ok = events.filter((event) => ["candidate_ok", "candidate_fallback"].includes(event.event_type)).length;
   const maxRetries = config.max_retries || 3;
   const maxRerolls = Math.max(0, maxRetries - 1);
   const rerolls = events.filter((event) => event.event_type === "threshold_rejected").length;
@@ -514,7 +514,7 @@ function buildSlotStates(slots, events, candidates = []) {
   const nameToSlotId = new Map();
   events.forEach((event) => {
     const payload = event.payload || {};
-    if (event.event_type === "candidate_ok" && payload.name && payload.slot_id) {
+    if (["candidate_ok", "candidate_fallback"].includes(event.event_type) && payload.name && payload.slot_id) {
       nameToSlotId.set(payload.name, payload.slot_id);
     }
     const id = payload.slot_id || nameToSlotId.get(payload.name);
@@ -550,16 +550,17 @@ function buildSlotStates(slots, events, candidates = []) {
         ...((payload.errors || []).slice(0, 2).map((err) => `> ${err}`)),
         "> retrying",
       ];
-    } else if (event.event_type === "candidate_ok") {
-      item.status = "done";
+    } else if (["candidate_ok", "candidate_fallback"].includes(event.event_type)) {
+      const isFallback = event.event_type === "candidate_fallback" || payload.quality_status === "fallback_refunded";
+      item.status = isFallback ? "failed" : "done";
       item.step = 4;
       item.percent = 100;
       item.title = payload.name || item.title;
       item.finishedAt = eventAt;
       item.attempt = Number(payload.attempt || item.attempt || 1);
       item.rerollCount = Number(payload.reroll_count ?? item.rerollCount ?? 0);
-      item.apiStep = "已通过";
-      item.message = "候选已通过基础校验和评分阈值。";
+      item.apiStep = isFallback ? "已退款" : "已通过";
+      item.message = isFallback ? "已展示均分最高版本；未通过质量阈值，已退回该卡积分。" : "候选已通过基础校验和评分阈值。";
       const liveCandidate = {
         index: payload.index || payload.done,
         name: payload.name || item.title,
@@ -570,6 +571,11 @@ function buildSlotStates(slots, events, candidates = []) {
         desc: payload.desc || "",
         fail: payload.fail || "",
         reroll_count: payload.reroll_count ?? item.rerollCount ?? 0,
+        quality_status: payload.quality_status || (isFallback ? "fallback_refunded" : "passed"),
+        refund_credit: Boolean(payload.refund_credit || isFallback),
+        quality_note: payload.quality_note || "",
+        score_average: payload.score_average,
+        search: payload.search || {},
         scores: payload.scores || {},
       };
       const persisted = persistedByIndex.get(Number(liveCandidate.index)) || persistedByName.get(liveCandidate.name);
@@ -583,7 +589,8 @@ function buildSlotStates(slots, events, candidates = []) {
         ...item.history.slice(-2),
         "> draft received",
         "> structure check passed",
-        "> quality gate passed",
+        isFallback ? "> quality gate not passed" : "> quality gate passed",
+        ...(isFallback ? ["> best available draft shown", "> this card credit refunded"] : []),
         `> candidate: ${payload.name || "ready"}`,
       ];
     } else if (event.event_type === "judging") {
@@ -767,6 +774,9 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
   const index = options.index ?? candidate.index ?? 1;
   const showFeedback = options.feedback !== false && candidate.id;
   const rerollCount = Number(candidate.reroll_count ?? candidate.rerollCount ?? slotInfo.rerollCount ?? 0);
+  const qualityStatus = candidate.quality_status || candidate.search?.quality_status || "passed";
+  const isFallback = Boolean(candidate.refund_credit || candidate.search?.refund_credit || qualityStatus === "fallback_refunded");
+  const qualityNote = candidate.quality_note || candidate.search?.quality_note || "这张卡未通过质量阈值，系统已退回该卡积分。";
   const runtime = options.runtime || {};
   const advantage = normalizeAdvantage(candidate.advantage);
   const posterContext = {
@@ -776,24 +786,34 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
     sourcePhenomenon,
     slotLabel: formatSlotBadge(candidate.slot, field),
     reroll_count: rerollCount,
+    quality_status: qualityStatus,
+    refund_credit: isFallback,
+    quality_note: qualityNote,
     advantage,
     runProblem: $("currentRunTitle")?.textContent || "",
     runMeta: $("currentRunMeta")?.textContent || "",
   };
   const card = document.createElement("article");
-  card.className = "candidate";
+  card.className = `candidate${isFallback ? " quality-fallback" : ""}`;
   card.innerHTML = `
     <div class="candidate-top">
       <div class="candidate-title-block">
         <div class="candidate-meta-row">
           <span class="candidate-index">方案 ${String(index).padStart(2, "0")}</span>
           ${rerollCount > 0 ? `<span class="reroll-badge">重抽 ${rerollCount} 次</span>` : ""}
+          ${isFallback ? '<span class="quality-badge">未达标 · 已退款</span>' : ""}
           ${runtime.elapsedText ? `<span class="runtime-badge"><span class="runtime-value" data-start-ms="${runtime.start || ""}" data-finish-ms="${runtime.finish || ""}">${escapeHtml(runtime.elapsedText)}</span> · ${escapeHtml(runtime.apiStep || "已通过")}</span>` : ""}
         </div>
         <h3>${escapeHtml(candidate.name)}</h3>
       </div>
       ${slotBadgeMarkup(candidate.slot, field)}
     </div>
+    ${isFallback ? `
+      <div class="quality-notice">
+        <strong>保底答案</strong>
+        <span>${escapeHtml(qualityNote)}</span>
+      </div>
+    ` : ""}
     <section class="candidate-section source-section">
       <div class="section-label">源现象</div>
       <p class="source-phenomenon">${escapeHtml(sourcePhenomenon)}</p>
@@ -903,7 +923,7 @@ function buildCandidateSlotMap(events) {
       rerollsBySlotId.set(slotId, (rerollsBySlotId.get(slotId) || 0) + 1);
       return;
     }
-    if (event.event_type !== "candidate_ok") return;
+    if (!["candidate_ok", "candidate_fallback"].includes(event.event_type)) return;
     const payload = event.payload || {};
     if (!payload.name) return;
     const slot = slotsById.get(payload.slot_id);

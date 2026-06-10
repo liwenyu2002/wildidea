@@ -365,6 +365,91 @@ class TestPipelineThresholdReroll(unittest.TestCase):
         self.assertEqual(ok_payload["scores"]["novelty"], 8)
         self.assertEqual(ok_payload["scores"]["applicability"], 9)
 
+    def test_reroll_limit_returns_best_failed_candidate_as_refunded_fallback(self):
+        from wildidea import pipeline
+        from wildidea.judge import JudgeConfig, JudgeScores
+
+        slot = {
+            "id": "D1-fallback",
+            "slot": "D1",
+            "domain": "测试领域",
+            "anchor": "测试源现象",
+            "methods": [{"mechanism": "测试机制"}],
+        }
+        drafts = iter([
+            {
+                "name": "低均分方案",
+                "slot": "D1",
+                "source": "测试方法",
+                "proto": "结构普通",
+                "advantage": "能给出一个保底解释",
+                "desc": "低均分落地方案",
+                "fail": "失败边界",
+            },
+            {
+                "name": "较高均分方案",
+                "slot": "D1",
+                "source": "测试方法",
+                "proto": "结构更完整",
+                "advantage": "更值得用户参考",
+                "desc": "较高均分落地方案",
+                "fail": "失败边界",
+            },
+        ])
+
+        class FakeLLM:
+            def __init__(self, *args, **kwargs):
+                pass
+
+        class FakeJudge:
+            sd_threshold = 9
+            novelty_threshold = 9
+            applicability_threshold = 9
+
+            def __init__(self, config):
+                pass
+
+            def evaluate(self, problem, source_domain, target_domain, proto, desc):
+                if "较高均分" in desc:
+                    return JudgeScores(structural_depth=8, domain_distance=9, applicability=8, novelty=8)
+                return JudgeScores(structural_depth=6, domain_distance=7, applicability=7, novelty=6)
+
+            def passes_threshold(self, scores):
+                return (
+                    scores.structural_depth >= self.sd_threshold
+                    and scores.novelty >= self.novelty_threshold
+                    and scores.applicability >= self.applicability_threshold
+                )
+
+        events = []
+        with patch.object(pipeline, "LLMClient", FakeLLM), \
+             patch.object(pipeline, "JudgeClient", FakeJudge), \
+             patch.object(pipeline, "_build_target_slots", return_value=[slot]), \
+             patch.object(pipeline, "_generate_candidate", side_effect=lambda problem, slot, llm: next(drafts)):
+            result = pipeline.run(
+                "测试问题",
+                pipeline.Config(
+                    judge_config=JudgeConfig(model="fake-model", provider="fake-provider"),
+                    target_count=1,
+                    max_retries=2,
+                    output_dir=Path("/tmp/wildidea-test-output"),
+                ),
+                on_progress=lambda event, payload: events.append((event, payload)),
+            )
+
+        self.assertEqual([candidate.name for candidate in result.candidates], ["较高均分方案"])
+        fallback = result.candidates[0]
+        self.assertEqual(fallback.quality_status, "fallback_refunded")
+        self.assertTrue(fallback.refund_credit)
+        self.assertEqual(fallback.reroll_count, 1)
+        self.assertNotIn("candidate_ok", [event for event, _ in events])
+        fallback_payload = next(payload for event, payload in events if event == "candidate_fallback")
+        self.assertEqual(fallback_payload["name"], "较高均分方案")
+        self.assertTrue(fallback_payload["refund_credit"])
+        self.assertEqual(fallback_payload["quality_status"], "fallback_refunded")
+        self.assertEqual(fallback_payload["scores"]["structural_depth"], 8)
+        self.assertEqual(fallback_payload["scores"]["applicability"], 8)
+
 
 # ─── Integration Tests (need API key) ──────────────────────────────────────
 

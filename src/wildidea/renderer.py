@@ -20,6 +20,9 @@ class Candidate:
     advantage: str = ""
     scores: Optional[JudgeScores] = None
     reroll_count: int = 0
+    quality_status: str = "passed"
+    refund_credit: bool = False
+    quality_note: str = ""
 
 
 def _card_html(index: int, c: Candidate) -> str:

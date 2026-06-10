@@ -883,6 +883,18 @@ h2 {
   white-space: nowrap;
 }
 
+.quality-badge {
+  border: 1px solid #d78c84;
+  background: #ffe2db;
+  color: #8a251c;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
 .candidate-top .muted {
   display: block;
   max-width: 100%;
@@ -1005,6 +1017,36 @@ h2 {
 
 .risk-section {
   background: #fff1ec;
+}
+
+.quality-fallback {
+  background: #fff8f1;
+  border-color: #d78c84;
+  box-shadow: var(--shadow), inset 5px 0 0 #d8756d;
+}
+
+.quality-fallback .candidate-top {
+  border-color: #d78c84;
+}
+
+.quality-notice {
+  border: 2px solid #d78c84;
+  background: #ffe9e2;
+  color: #6d1d16;
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.quality-notice strong {
+  color: #8a251c;
+  font-size: 13px;
+}
+
+.quality-notice span {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .proto,
@@ -2271,6 +2313,20 @@ h2,
   background: #fae8e3;
 }
 
+.quality-fallback {
+  background: #fff0e8;
+  border-color: #d8756d;
+  box-shadow: 4px 4px 0 rgba(42, 42, 42, 0.65), inset 5px 0 0 #d8756d;
+}
+
+.quality-fallback .candidate-top {
+  border-color: #d8756d;
+}
+
+.quality-fallback .quality-notice {
+  box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.55);
+}
+
 .slot {
   border: 2px solid var(--line);
   background: #f3b17f;
@@ -2643,6 +2699,21 @@ h2,
   .reroll-badge {
     font-size: 10px;
     padding: 2px 5px;
+  }
+
+  .quality-badge {
+    font-size: 10px;
+    padding: 2px 5px;
+  }
+
+  .quality-notice {
+    gap: 3px;
+    padding: 7px 8px;
+  }
+
+  .quality-notice span {
+    font-size: 12px;
+    line-height: 1.4;
   }
 
   .slot {

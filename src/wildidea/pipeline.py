@@ -192,6 +192,7 @@ def _normalize_advantage(value: object) -> str:
 
 def _score_event_payload(candidate: Candidate, judge: JudgeClient, passed: bool) -> dict:
     scores = candidate.scores
+    average = _score_average(scores)
     return {
         "name": candidate.name,
         "source": candidate.source,
@@ -201,6 +202,7 @@ def _score_event_payload(candidate: Candidate, judge: JudgeClient, passed: bool)
         "ap": scores.applicability if scores else None,
         "unexpectedness": scores.unexpectedness if scores else None,
         "non_obviousness": scores.non_obviousness if scores else None,
+        "score_average": average,
         "pass": passed,
         "sd_threshold": judge.sd_threshold,
         "novelty_threshold": judge.novelty_threshold,
@@ -208,8 +210,25 @@ def _score_event_payload(candidate: Candidate, judge: JudgeClient, passed: bool)
     }
 
 
+def _score_average(scores) -> Optional[float]:
+    if not scores:
+        return None
+    values = [
+        scores.structural_depth,
+        scores.domain_distance,
+        scores.novelty,
+        scores.applicability,
+    ]
+    numeric = [float(value) for value in values if value is not None]
+    if not numeric:
+        return None
+    return sum(numeric) / len(numeric)
+
+
 def _candidate_ok_payload(slot_id: str, candidate: Candidate, done: int, total: int, attempt: int) -> dict:
     scores = candidate.scores
+    quality_status = getattr(candidate, "quality_status", "passed") or "passed"
+    refund_credit = bool(getattr(candidate, "refund_credit", False))
     return {
         "slot_id": slot_id,
         "index": done,
@@ -222,6 +241,10 @@ def _candidate_ok_payload(slot_id: str, candidate: Candidate, done: int, total: 
         "advantage": candidate.advantage,
         "desc": candidate.desc,
         "fail": candidate.fail,
+        "quality_status": quality_status,
+        "refund_credit": refund_credit,
+        "quality_note": getattr(candidate, "quality_note", ""),
+        "score_average": _score_average(scores),
         "scores": {
             "structural_depth": scores.structural_depth,
             "domain_distance": scores.domain_distance,
@@ -231,6 +254,14 @@ def _candidate_ok_payload(slot_id: str, candidate: Candidate, done: int, total: 
             "non_obviousness": scores.non_obviousness,
             "raw": scores.raw,
         } if scores else {},
+        "search": {
+            "quality_status": quality_status,
+            "refund_credit": refund_credit,
+            "quality_note": getattr(candidate, "quality_note", ""),
+            "score_average": _score_average(scores),
+            "fallback_attempt": getattr(candidate, "fallback_attempt", None),
+            "max_retries": getattr(candidate, "max_retries", None),
+        },
         "done": done,
         "total": total,
     }
@@ -305,6 +336,9 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
         domain = slot.get("domain", "?")
         slot_id = _slot_id(slot)
         judge = JudgeClient(config.judge_config) if config.judge_config else None
+        best_failed: Optional[Candidate] = None
+        best_failed_attempt = 0
+        best_failed_average = -1.0
         for attempt in range(config.max_retries):
             _emit(
                 "generating",
@@ -345,6 +379,11 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
                     score_payload = _score_event_payload(candidate, judge, passed)
                     _emit("judged", slot_id=slot_id, slot=slot_name, **score_payload)
                     if not passed:
+                        average = score_payload.get("score_average")
+                        if average is not None and float(average) > best_failed_average:
+                            best_failed = candidate
+                            best_failed_attempt = attempt + 1
+                            best_failed_average = float(average)
                         _emit(
                             "threshold_rejected",
                             slot_id=slot_id,
@@ -358,6 +397,15 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
                     continue
             candidate.reroll_count = max(0, attempt)
             return slot, candidate, attempt + 1
+        if best_failed:
+            best_failed.reroll_count = max(0, config.max_retries - 1)
+            best_failed.quality_status = "fallback_refunded"
+            best_failed.refund_credit = True
+            best_failed.quality_note = "这张卡触达重抽上限，未通过质量阈值；已展示均分最高版本，并退回该卡积分。"
+            best_failed.fallback_attempt = best_failed_attempt
+            best_failed.max_retries = config.max_retries
+            best_failed.score_average = best_failed_average
+            return slot, best_failed, config.max_retries
         return slot, None, config.max_retries
 
     if config.parallel > 1:
@@ -374,7 +422,8 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
                     if candidate:
                         candidates.append(candidate)
                         exclude_ids.append(slot.get("id", ""))
-                        _emit("candidate_ok", **_candidate_ok_payload(slot_id, candidate, len(candidates), target_count, attempt))
+                        event = "candidate_fallback" if getattr(candidate, "refund_credit", False) else "candidate_ok"
+                        _emit(event, **_candidate_ok_payload(slot_id, candidate, len(candidates), target_count, attempt))
                     else:
                         slot_name = slot.get("slot", "?")
                         _emit("gen_fail", slot_id=slot_id, slot=slot_name, reason="exhausted retries")
@@ -388,7 +437,8 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
                     _, candidate, attempt = _try_slot(slot)
                     if candidate:
                         candidates.append(candidate)
-                        _emit("candidate_ok", **_candidate_ok_payload(slot_id, candidate, len(candidates), target_count, attempt))
+                        event = "candidate_fallback" if getattr(candidate, "refund_credit", False) else "candidate_ok"
+                        _emit(event, **_candidate_ok_payload(slot_id, candidate, len(candidates), target_count, attempt))
                     else:
                         slot_name = slot.get("slot", "?")
                         _emit("gen_fail", slot_id=slot_id, slot=slot_name, reason="exhausted retries")
@@ -405,7 +455,8 @@ def run(problem: str, config: Config, on_progress=None) -> Result:
                 if candidate:
                     candidates.append(candidate)
                     exclude_ids.append(slot.get("id", ""))
-                    _emit("candidate_ok", **_candidate_ok_payload(slot_id, candidate, len(candidates), target_count, attempt))
+                    event = "candidate_fallback" if getattr(candidate, "refund_credit", False) else "candidate_ok"
+                    _emit(event, **_candidate_ok_payload(slot_id, candidate, len(candidates), target_count, attempt))
                 else:
                     slot_name = slot.get("slot", "?")
                     _emit("gen_fail", slot_id=slot_id, slot=slot_name, reason="empty response")
