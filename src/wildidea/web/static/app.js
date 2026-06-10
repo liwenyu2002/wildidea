@@ -22,7 +22,8 @@ const state = {
   posterCandidate: null,
 };
 
-const DRAW_CARD_DELAY_MS = 170;
+const DRAW_CARD_DELAY_MS = 210;
+const SEARCH_LAUNCH_MIN_MS = 940;
 
 const $ = (id) => document.getElementById(id);
 
@@ -1090,7 +1091,7 @@ async function refreshMeOnly() {
   renderShell();
 }
 
-async function selectRun(runId) {
+async function selectRun(runId, options = {}) {
   stopWatching();
   state.currentRunId = runId;
   state.searchOpen = false;
@@ -1100,7 +1101,7 @@ async function selectRun(runId) {
   const runSummary = state.runs.find((item) => item.id === runId);
   renderRuns();
   renderShell();
-  renderRunTransition(runSummary);
+  renderRunTransition(runSummary, options);
   try {
     const data = await withMinimumDelay(api(`/api/runs/${runId}`), 320);
     renderCurrentRun(data.run);
@@ -1113,18 +1114,20 @@ async function selectRun(runId) {
   }
 }
 
-function renderRunTransition(run) {
+function renderRunTransition(run, options = {}) {
   const section = $("resultSection");
   section.classList.remove("result-arrive");
   section.classList.add("result-switching");
   $("currentRunTitle").textContent = run?.problem || "正在调取记录";
-  $("currentRunMeta").textContent = run ? `${statusLabel(run.status)} · 正在打开历史任务` : "正在打开历史任务";
+  $("currentRunMeta").textContent = options.fromLaunch
+    ? "任务已建立 · 正在接入实时进度"
+    : (run ? `${statusLabel(run.status)} · 正在打开历史任务` : "正在打开历史任务");
   $("resultSection").dataset.activeRunStatus = "";
   $("resultSection").dataset.activeRunSnapshot = "{}";
-  $("progressLog").innerHTML = '<div class="progress-item history-loading">正在调取这次发散记录。</div>';
+  $("progressLog").innerHTML = `<div class="progress-item history-loading">${options.fromLaunch ? "正在接入抽卡流水线。" : "正在调取这次发散记录。"}</div>`;
   $("candidateGrid").innerHTML = `
     <div class="history-result-skeleton">
-      <strong>正在整理卡片</strong>
+      <strong>${options.fromLaunch ? "正在接入卡片" : "正在整理卡片"}</strong>
       <span></span>
       <span></span>
       <span></span>
@@ -1138,7 +1141,7 @@ function animateResultArrival() {
   void section.offsetWidth;
   window.requestAnimationFrame(() => {
     section.classList.add("result-arrive");
-    window.setTimeout(() => section.classList.remove("result-arrive"), 900);
+    window.setTimeout(() => section.classList.remove("result-arrive"), 1040);
   });
 }
 
@@ -2249,18 +2252,18 @@ $("runForm").addEventListener("submit", async (event) => {
   beginSearchLaunch(problemText);
   try {
     const slotCount = Math.max(1, Math.min(10, Number($("slotCount").value || 10)));
-    const data = await api("/api/runs", {
+    const data = await withMinimumDelay(api("/api/runs", {
       method: "POST",
       body: JSON.stringify({
         problem: problemText,
         slot_count: slotCount,
         forbid_terms: forbidTerms,
       }),
-    });
+    }), SEARCH_LAUNCH_MIN_MS);
     state.user.credit_balance = data.credit_balance;
     renderShell();
     await loadRuns();
-    await selectRun(data.run.id);
+    await selectRun(data.run.id, { fromLaunch: true });
     showToast("任务已提交");
   } catch (err) {
     cancelSearchLaunch();
