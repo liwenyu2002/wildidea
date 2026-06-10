@@ -262,7 +262,8 @@ textarea {
 .shell {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -272,6 +273,9 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .brand {
@@ -382,6 +386,25 @@ textarea {
   padding: 14px;
 }
 
+#historyPanel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.history-search {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.history-search span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -433,6 +456,8 @@ textarea {
 }
 
 .main {
+  height: 100vh;
+  overflow-y: auto;
   min-width: 0;
   padding: 22px;
 }
@@ -1422,8 +1447,12 @@ h2 {
 
 .run-list {
   display: grid;
+  flex: 1 1 auto;
   gap: 8px;
   margin-top: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
   transform-origin: top left;
 }
 
@@ -1442,16 +1471,24 @@ h2 {
 }
 
 .run-row {
+  border-bottom: 2px dotted rgba(42, 42, 42, 0.26);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: stretch;
+  padding-bottom: 8px;
+}
+
+.run-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .run-item {
   text-align: left;
   display: grid;
   gap: 5px;
+  align-content: center;
   min-width: 0;
 }
 
@@ -1459,8 +1496,8 @@ h2 {
   align-self: stretch;
   background: #fff3ef;
   color: var(--danger);
-  min-width: 56px;
-  padding-inline: 10px;
+  min-width: 46px;
+  padding-inline: 8px;
 }
 
 .run-item.active {
@@ -2361,10 +2398,14 @@ h2,
 
   .shell {
     display: block;
+    height: auto;
+    overflow: visible;
     min-height: 100vh;
   }
 
   .main {
+    height: auto;
+    overflow: visible;
     padding: 12px;
   }
 
@@ -2376,7 +2417,8 @@ h2,
     gap: 10px;
     left: 0;
     max-width: calc(100vw - 42px);
-    overflow-y: auto;
+    height: auto;
+    overflow: hidden;
     padding: 12px;
     position: fixed;
     top: 0;
@@ -2397,6 +2439,8 @@ h2,
   body:not(.app-logged-in) .sidebar {
     border-right: 0;
     border-bottom: 3px solid var(--line);
+    height: auto;
+    overflow: visible;
     padding: 12px;
   }
 

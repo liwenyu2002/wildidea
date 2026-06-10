@@ -18,6 +18,7 @@ const state = {
   bootFinished: false,
   runListSignature: "",
   historyDrawerOpen: false,
+  historyQuery: "",
   posterCandidate: null,
 };
 
@@ -193,7 +194,9 @@ function statusLabel(status) {
 
 function renderRuns() {
   const list = $("runList");
-  const signature = state.runs.map((run) => `${run.id}:${run.status}:${run.created_at}`).join("|");
+  const query = normalizeHistoryQuery(state.historyQuery);
+  const visibleRuns = query ? state.runs.filter((run) => runMatchesHistoryQuery(run, query)) : state.runs;
+  const signature = `${query}::${visibleRuns.map((run) => `${run.id}:${run.status}:${run.created_at}`).join("|")}`;
   const shouldAnimate = signature !== state.runListSignature;
   state.runListSignature = signature;
   list.classList.remove("run-list-arrive", "run-list-loading");
@@ -203,7 +206,12 @@ function renderRuns() {
     if (shouldAnimate) requestAnimationFrame(() => list.classList.add("run-list-arrive"));
     return;
   }
-  state.runs.forEach((run, index) => {
+  if (!visibleRuns.length) {
+    list.innerHTML = '<div class="muted">没有匹配的历史任务</div>';
+    if (shouldAnimate) requestAnimationFrame(() => list.classList.add("run-list-arrive"));
+    return;
+  }
+  visibleRuns.forEach((run, index) => {
     const row = document.createElement("div");
     row.className = "run-row";
     row.style.setProperty("--run-delay", `${Math.min(index, 8) * 42}ms`);
@@ -222,6 +230,22 @@ function renderRuns() {
     list.appendChild(row);
   });
   if (shouldAnimate) requestAnimationFrame(() => list.classList.add("run-list-arrive"));
+}
+
+function normalizeHistoryQuery(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function runMatchesHistoryQuery(run, query) {
+  const createdAt = run.created_at ? new Date(run.created_at).toLocaleString() : "";
+  const haystack = [
+    run.problem,
+    run.problem_type,
+    run.status,
+    statusLabel(run.status),
+    createdAt,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return haystack.includes(query);
 }
 
 async function deleteRun(run) {
@@ -2187,6 +2211,8 @@ $("logoutBtn").addEventListener("click", () => {
   state.searchOpen = true;
   state.launchingSearch = false;
   state.historyDrawerOpen = false;
+  state.historyQuery = "";
+  $("historySearch").value = "";
   state.animatedProgressCards.clear();
   renderShell();
   renderRuns();
@@ -2258,6 +2284,10 @@ $("historyCloseBtn").addEventListener("click", () => {
 $("historyBackdrop").addEventListener("click", () => {
   state.historyDrawerOpen = false;
   renderShell();
+});
+$("historySearch").addEventListener("input", (event) => {
+  state.historyQuery = event.currentTarget.value;
+  renderRuns();
 });
 $("refreshAdminBtn").addEventListener("click", loadAdmin);
 $("exportFeedbackBtn").addEventListener("click", downloadFeedbackExcel);
