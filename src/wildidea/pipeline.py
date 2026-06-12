@@ -42,8 +42,8 @@ class Config:
     output_dir: Path = field(default_factory=lambda: Path("outputs"))
     search_enabled: bool = False  # Deprecated: search dedup is no longer used.
     max_retries: int = 3
-    parallel: int = 10  # Number of parallel generation workers (1 = sequential)
-    target_count: int = 10
+    parallel: int = 9  # Number of parallel generation workers (1 = sequential)
+    target_count: int = 9
 
 
 @dataclass
@@ -269,7 +269,7 @@ def _candidate_ok_payload(slot_id: str, candidate: Candidate, done: int, total: 
 
 def _build_target_slots(problem_type: str, target_count: int) -> list[dict]:
     """Build approximately target_count slots while preserving the existing quota sampler."""
-    target = max(1, min(int(target_count or 10), 30))
+    target = max(1, min(int(target_count or 9), 30))
     slots: list[dict] = []
     exclude: list[str] = []
 

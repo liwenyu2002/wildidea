@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import time
 from threading import Lock
 from pathlib import Path
 from typing import Any
@@ -200,8 +201,8 @@ def _build_pipeline_config(snapshot: dict, output_dir: Path) -> Config:
         output_dir=output_dir,
         search_enabled=False,
         max_retries=int(snapshot.get("max_retries") or 3),
-        parallel=int(snapshot.get("parallel") or 10),
-        target_count=int(snapshot.get("slot_count") or 10),
+        parallel=int(snapshot.get("parallel") or 9),
+        target_count=int(snapshot.get("slot_count") or 9),
     )
 
 
@@ -274,6 +275,243 @@ def _billable_candidate_count(candidates: list) -> int:
     )
 
 
+_FAKE_SLOT_POOL = [
+    {
+        "slot": "D3",
+        "domain": "建筑/设计",
+        "source": "Pattern language 把反复有效的空间问题写成可复用模式",
+        "method": "模式语言拆解法",
+    },
+    {
+        "slot": "D4",
+        "domain": "产品体验",
+        "source": "Undo Send 给用户短暂撤回窗口，降低误操作带来的心理压力",
+        "method": "可撤回缓冲窗口",
+    },
+    {
+        "slot": "D2",
+        "domain": "生物系统",
+        "source": "免疫记忆会在再次遇到相似抗原时快速启动二次响应",
+        "method": "相似触发的记忆响应",
+    },
+    {
+        "slot": "D1",
+        "domain": "信息论",
+        "source": "纠错码把冗余校验位嵌入信息流，接收端可定位并修复噪声",
+        "method": "冗余校验纠错机制",
+    },
+    {
+        "slot": "D3",
+        "domain": "舞蹈",
+        "source": "Laban effort 用重量、时间、空间、流动四维描述动作质感",
+        "method": "动作质感四维编码",
+    },
+    {
+        "slot": "D4",
+        "domain": "隐私产品",
+        "source": "Locked Folder 把敏感内容从搜索、推荐和共享入口整体隐藏",
+        "method": "全路径隔离隐藏",
+    },
+    {
+        "slot": "D2",
+        "domain": "结构工程",
+        "source": "抗震耗能构件允许指定部位先屈服，把破坏集中到可替换部件",
+        "method": "可替换损伤吸收",
+    },
+    {
+        "slot": "D1",
+        "domain": "排队系统",
+        "source": "令牌桶用固定速率补充令牌，突发请求只能消耗已有令牌",
+        "method": "速率令牌配额",
+    },
+    {
+        "slot": "D6",
+        "domain": "毛选",
+        "source": "路线是个纲，纲举目张",
+        "method": "主纲牵引分支",
+    },
+    {
+        "slot": "D7",
+        "domain": "随机组词",
+        "source": "折叠",
+        "method": "折叠展开双态",
+    },
+]
+
+
+_FAKE_NAMES = [
+    "可撤回灵感缓冲器",
+    "问题模式语言库",
+    "二次响应推荐卡",
+    "冗余校验创意流",
+    "动作质感标注器",
+    "隐私沙箱工作台",
+    "可替换风险吸收层",
+    "令牌式请求节流器",
+    "主纲牵引生成器",
+    "折叠式方案预览",
+]
+
+
+def _fake_slots(target_count: int) -> list[dict]:
+    slots: list[dict] = []
+    for index in range(max(1, target_count)):
+        row = _FAKE_SLOT_POOL[index % len(_FAKE_SLOT_POOL)]
+        slots.append({
+            "slot_id": f"fake-slot-{index + 1}",
+            "slot": row["slot"],
+            "domain": row["domain"],
+            "source": row["source"],
+            "source_phenomenon": row["source"],
+            "method": row["method"],
+        })
+    return slots
+
+
+def _fake_scores(index: int) -> dict:
+    structural = 9 if index % 3 else 8
+    distance = 9 + (index % 2)
+    novelty = 8 + (index % 3 == 1)
+    applicability = 9
+    return {
+        "structural_depth": structural,
+        "domain_distance": distance,
+        "applicability": applicability,
+        "novelty": novelty,
+        "unexpectedness": 8,
+        "non_obviousness": 9,
+        "raw": "fake judge: frontend smoke data",
+    }
+
+
+def _fake_candidate_payload(run: Run, slot: dict, index: int, total: int) -> dict:
+    name = _FAKE_NAMES[(index - 1) % len(_FAKE_NAMES)]
+    scores = _fake_scores(index)
+    score_values = [
+        scores["structural_depth"],
+        scores["domain_distance"],
+        scores["applicability"],
+        scores["novelty"],
+    ]
+    score_average = sum(score_values) / len(score_values)
+    problem = run.problem.strip()
+    return {
+        "slot_id": slot["slot_id"],
+        "index": index,
+        "attempt": 1,
+        "reroll_count": 0,
+        "name": name,
+        "slot": slot["slot"],
+        "source": slot["method"],
+        "proto": f"从“{slot['source']}”抽象出一个可复用动作：先把用户问题拆成可观察状态，再给每个状态配置清晰的反馈与下一步动作。",
+        "advantage": "这种方案的优势在于，用户能看懂系统正在做什么，等待过程也会变成有节奏的参与感。",
+        "desc": f"围绕“{problem}”搭建一个前端可测试的假数据流程：提交后先展示源现象卡面，随后逐步显示分析、评分和通过状态，最终落成一张完整方案卡。真实上线时，这套结构可替换为模型输出，但交互节奏保持一致。",
+        "fail": "如果真实模型输出结构差异过大，fake 数据验证过的排版仍可能在长文本或异常字段下被撑开。",
+        "quality_status": "passed",
+        "refund_credit": False,
+        "quality_note": "",
+        "score_average": score_average,
+        "scores": scores,
+        "search": {
+            "quality_status": "passed",
+            "refund_credit": False,
+            "quality_note": "fake frontend smoke data",
+            "score_average": score_average,
+            "fallback_attempt": None,
+            "max_retries": 3,
+        },
+        "done": index,
+        "total": total,
+    }
+
+
+def _execute_fake_run(db, run: Run, user: User) -> None:
+    snapshot = run.config_snapshot or {}
+    target_count = max(1, int(snapshot.get("slot_count") or 9))
+    duration = max(1.0, float(snapshot.get("fake_run_seconds") or settings.fake_run_seconds or 10))
+    slots = _fake_slots(target_count)
+    started_at = time.monotonic()
+
+    def emit(event: str, payload: dict | None = None) -> None:
+        db.refresh(run)
+        if run.status == "deleted":
+            return
+        safe_payload = _json_safe(payload or {})
+        db.add(RunEvent(run_id=run.id, event_type=event, payload=safe_payload))
+        if event in {"candidate_ok", "candidate_fallback"}:
+            _candidate_from_payload(db, run.id, safe_payload)
+        if event in {"slots_done", "candidate_ok", "candidate_fallback", "threshold_rejected", "gen_fail", "judge_fail", "invalid"}:
+            add_run_log(
+                db,
+                run.id,
+                "info",
+                f"fake {_progress_log_message(event, safe_payload)}",
+                _progress_log_payload(event, safe_payload),
+            )
+        db.commit()
+
+    emit("type", {"value": run.problem_type or detect_type(run.problem)})
+    emit("slots_start", {})
+    time.sleep(min(0.6, duration * 0.08))
+    emit("slots_done", {"count": target_count, "target": target_count, "slots": slots})
+
+    remaining = max(0.1, duration - (time.monotonic() - started_at))
+    per_slot = remaining / target_count
+    for index, slot in enumerate(slots, 1):
+        if run.status == "deleted":
+            return
+        time.sleep(per_slot * 0.22)
+        emit("generating", {
+            "slot_id": slot["slot_id"],
+            "slot": slot["slot"],
+            "domain": slot["domain"],
+            "attempt": 1,
+        })
+        candidate = _fake_candidate_payload(run, slot, index, target_count)
+        time.sleep(per_slot * 0.22)
+        emit("judging", {
+            "slot_id": slot["slot_id"],
+            "slot": slot["slot"],
+            "name": candidate["name"],
+            "attempt": 1,
+        })
+        time.sleep(per_slot * 0.18)
+        emit("judged", {
+            "slot_id": slot["slot_id"],
+            "slot": slot["slot"],
+            "name": candidate["name"],
+            "pass": True,
+            "sd": candidate["scores"]["structural_depth"],
+            "nv": candidate["scores"]["novelty"],
+            "ap": candidate["scores"]["applicability"],
+            "sd_threshold": 8,
+            "novelty_threshold": 8,
+            "applicability_threshold": 9,
+        })
+        time.sleep(per_slot * 0.18)
+        emit("candidate_ok", candidate)
+
+    elapsed = time.monotonic() - started_at
+    if elapsed < duration:
+        time.sleep(duration - elapsed)
+
+    db.refresh(run)
+    if run.status == "deleted":
+        return
+    run.avg_scores = {
+        "structural_depth": 8.8,
+        "domain_distance": 9.4,
+        "novelty": 8.7,
+        "applicability": 9.0,
+    }
+    run.finished_at = utcnow()
+    run.status = "succeeded"
+    run.error = None
+    db.add(RunEvent(run_id=run.id, event_type="status", payload={"status": "succeeded", "fake": True}))
+    add_run_log(db, run.id, "info", "fake run succeeded", {"candidate_count": target_count, "seconds": duration})
+    db.commit()
+
+
 def execute_run(run_id: str) -> None:
     """Execute a queued run in a background task."""
     db = SessionLocal()
@@ -304,6 +542,10 @@ def execute_run(run_id: str) -> None:
             },
         )
         db.commit()
+
+        if settings.fake_runs:
+            _execute_fake_run(db, run, user)
+            return
 
         output_dir = settings.output_dir / run.id
         output_dir.mkdir(parents=True, exist_ok=True)

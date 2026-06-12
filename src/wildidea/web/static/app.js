@@ -20,15 +20,99 @@ const state = {
   historyDrawerOpen: false,
   historyQuery: "",
   posterCandidate: null,
+  suppressProgressAnimationRunId: null,
+  launchTimers: [],
+  userInviteOpen: false,
 };
 
 const DRAW_CARD_DELAY_MS = 210;
-const SEARCH_LAUNCH_MIN_MS = 940;
+const LAUNCH_CARD_DELAY_MS = 115;
+const LAUNCH_PRINT_START_MS = 680;
+const LAUNCH_CARD_LAND_MS = 1180;
+const LAUNCH_PRINTER_EXIT_MS = 620;
+const DEFAULT_SLOT_COUNT = 9;
+const MAX_SLOT_COUNT = 9;
 
 const $ = (id) => document.getElementById(id);
+const FIT_TEXT_SELECTOR = "[data-fit-text]";
 
 function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function scheduleFitText(root = document) {
+  window.requestAnimationFrame(() => {
+    fitTextInCards(root);
+    window.requestAnimationFrame(() => fitTextInCards(root));
+    window.setTimeout(() => fitTextInCards(root), 160);
+  });
+}
+
+function fitTextInCards(root = document) {
+  const scope = root?.querySelectorAll ? root : document;
+  const cards = new Set();
+  if (root?.matches?.(".candidate")) cards.add(root);
+  scope.querySelectorAll?.(".candidate").forEach((card) => cards.add(card));
+  cards.forEach((card) => fitTextInCard(card));
+}
+
+function fitTextInCard(card) {
+  if (!card || !card.querySelector) return;
+  const items = Array.from(card.querySelectorAll(FIT_TEXT_SELECTOR)).filter((item) => item.offsetParent !== null);
+  if (!items.length) return;
+  items.forEach(resetFitTextItem);
+  shrinkTextUntilFits(card, items, 44);
+  card.querySelectorAll("[data-fit-container]").forEach((container) => {
+    const localItems = Array.from(container.querySelectorAll(FIT_TEXT_SELECTOR)).filter((item) => item.offsetParent !== null);
+    shrinkTextUntilFits(container, localItems, 40);
+  });
+}
+
+function resetFitTextItem(item) {
+  const computed = getComputedStyle(item);
+  if (!item.dataset.fitBaseSize) {
+    const size = Number.parseFloat(computed.fontSize) || 12;
+    const lineHeight = Number.parseFloat(computed.lineHeight) || size * 1.25;
+    item.dataset.fitBaseSize = String(size);
+    item.dataset.fitLineRatio = String(lineHeight / size);
+  }
+  const baseSize = Number.parseFloat(item.dataset.fitBaseSize) || 12;
+  const ratio = Number.parseFloat(item.dataset.fitLineRatio) || 1.25;
+  item.style.setProperty("font-size", `${baseSize}px`);
+  item.style.setProperty("line-height", `${baseSize * ratio}px`);
+  item.style.setProperty("display", "block", "important");
+  item.style.setProperty("-webkit-line-clamp", "unset", "important");
+  item.style.setProperty("-webkit-box-orient", "initial", "important");
+}
+
+function shrinkTextUntilFits(container, items, maxSteps) {
+  if (!container || !items.length) return;
+  for (let step = 0; step < maxSteps && fitTargetOverflows(container, items); step += 1) {
+    let changed = false;
+    items.forEach((item) => {
+      const minSize = Number.parseFloat(item.dataset.fitMin || "6.8");
+      const current = Number.parseFloat(item.style.fontSize || getComputedStyle(item).fontSize) || minSize;
+      if (current <= minSize) return;
+      const next = Math.max(minSize, current - 0.5);
+      const ratio = Number.parseFloat(item.dataset.fitLineRatio) || 1.25;
+      item.style.fontSize = `${next}px`;
+      item.style.lineHeight = `${next * ratio}px`;
+      changed = true;
+    });
+    if (!changed) break;
+  }
+}
+
+function fitTargetOverflows(container, items) {
+  return containerOverflows(container) || items.some(textItemOverflows);
+}
+
+function containerOverflows(container) {
+  return container.scrollHeight > container.clientHeight + 1 || container.scrollWidth > container.clientWidth + 1;
+}
+
+function textItemOverflows(item) {
+  return item.scrollHeight > item.clientHeight + 1 || item.scrollWidth > item.clientWidth + 1;
 }
 
 async function withMinimumDelay(promise, ms) {
@@ -92,6 +176,7 @@ function renderShell() {
   const adminViewActive = loggedIn && isAdmin && state.adminOpen;
   if (!isAdmin) state.adminOpen = false;
   if (!loggedIn || adminViewActive) state.historyDrawerOpen = false;
+  if (!loggedIn) state.userInviteOpen = false;
   document.body.classList.toggle("app-logged-in", loggedIn);
   document.body.classList.toggle("admin-view-open", adminViewActive);
   $("authPanel").classList.toggle("hidden", booting || loggedIn);
@@ -113,11 +198,13 @@ function renderShell() {
   $("statusPill").classList.toggle("is-admin-action", isAdmin);
   $("statusPill").setAttribute("aria-pressed", String(adminViewActive));
   $("statusPill").title = isAdmin ? (adminViewActive ? "返回生成工作台" : "打开管理员后台") : "";
+  $("userPanel").classList.toggle("invite-open", loggedIn && state.userInviteOpen);
+  $("redeemForm").classList.toggle("hidden", !loggedIn || !state.userInviteOpen);
+  $("userPanelToggle").setAttribute("aria-expanded", String(loggedIn && state.userInviteOpen));
   $("brandHomeBtn").classList.toggle("is-clickable", loggedIn);
   $("brandHomeBtn").setAttribute("aria-label", loggedIn ? "发起新的 WildIdea 搜索" : "WildIdea");
   if (loggedIn) {
     $("userEmail").textContent = state.user.email;
-    $("creditBalance").textContent = isAdmin ? "管理员" : `${state.user.credit_balance} 积分`;
   }
   updateRunCostLabel();
   renderWorkspaceMode();
@@ -131,8 +218,52 @@ function statusPillText(booting, loggedIn, isAdmin, adminViewActive) {
 }
 
 function updateRunCostLabel() {
-  const count = Math.max(1, Math.min(10, Number($("slotCount")?.value || 10)));
-  $("runSubmit").textContent = isAdminUser() ? `生成 ${count} 张卡` : `消耗 ${count} 积分生成`;
+  const count = Math.max(1, Math.min(MAX_SLOT_COUNT, Number($("slotCount")?.value || DEFAULT_SLOT_COUNT)));
+  $("runSubmit").textContent = isAdminUser() ? `打印 ${count} 张灵感卡` : `消耗 ${count} 积分打印`;
+}
+
+function launchDurationForCount(count) {
+  const safeCount = Math.max(1, Math.min(MAX_SLOT_COUNT, Number(count || DEFAULT_SLOT_COUNT)));
+  return LAUNCH_PRINT_START_MS + (safeCount - 1) * LAUNCH_CARD_DELAY_MS + LAUNCH_CARD_LAND_MS + LAUNCH_PRINTER_EXIT_MS;
+}
+
+function setLaunchTiming(slotCount) {
+  const safeCount = Math.max(1, Math.min(MAX_SLOT_COUNT, Number(slotCount || DEFAULT_SLOT_COUNT)));
+  const workspace = $("workspace");
+  workspace.style.setProperty("--launch-duration", `${launchDurationForCount(safeCount)}ms`);
+  workspace.style.setProperty("--print-start-delay", `${LAUNCH_PRINT_START_MS}ms`);
+  workspace.style.setProperty("--card-land-duration", `${LAUNCH_CARD_LAND_MS}ms`);
+}
+
+function setLaunchPrinterFrame() {
+  const workspace = $("workspace");
+  const form = $("runForm");
+  if (!workspace || !form) return;
+  const rect = form.getBoundingClientRect();
+  workspace.style.setProperty("--launch-printer-left", `${Math.round(rect.left)}px`);
+  workspace.style.setProperty("--launch-printer-top", `${Math.round(rect.top)}px`);
+  workspace.style.setProperty("--launch-printer-width", `${Math.round(rect.width)}px`);
+}
+
+function clearLaunchTiming() {
+  const workspace = $("workspace");
+  workspace.style.removeProperty("--launch-duration");
+  workspace.style.removeProperty("--print-start-delay");
+  workspace.style.removeProperty("--card-land-duration");
+  workspace.style.removeProperty("--launch-printer-left");
+  workspace.style.removeProperty("--launch-printer-top");
+  workspace.style.removeProperty("--launch-printer-width");
+}
+
+function clearLaunchTimers({ softLayer = false } = {}) {
+  state.launchTimers.forEach((timer) => window.clearTimeout(timer));
+  state.launchTimers = [];
+  if (softLayer) {
+    settleLaunchPlaceholders();
+    fadePrinterDrawLayer();
+  } else {
+    clearPrinterDrawLayer();
+  }
 }
 
 function renderWorkspaceMode() {
@@ -143,7 +274,6 @@ function renderWorkspaceMode() {
   $("workspace").classList.toggle("launching", Boolean(state.launchingSearch));
   $("runForm").classList.toggle("hidden", loggedIn && !showSearch && !state.launchingSearch);
   $("resultSection").classList.toggle("hidden", !loggedIn || (showSearch && !state.launchingSearch));
-  $("launchGhost").classList.toggle("hidden", !state.launchingSearch);
 }
 
 function openSearchPage() {
@@ -154,10 +284,13 @@ function openSearchPage() {
   state.launchingSearch = false;
   state.adminOpen = false;
   state.historyDrawerOpen = false;
+  state.suppressProgressAnimationRunId = null;
+  clearLaunchTimers();
+  clearLaunchTiming();
   state.animatedProgressCards.clear();
   $("problem").value = "";
   $("forbidTerms").value = "";
-  $("slotCount").value = "10";
+  $("slotCount").value = String(DEFAULT_SLOT_COUNT);
   updateRunCostLabel();
   renderRuns();
   renderCurrentRun(null);
@@ -165,20 +298,175 @@ function openSearchPage() {
   setTimeout(() => $("problem").focus(), 0);
 }
 
-function beginSearchLaunch(problemText) {
+function fillExampleProblem(text) {
+  if (!state.user || !text) return;
+  $("problem").value = text;
+  $("problem").focus();
+  $("problem").dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function beginSearchLaunch(problemText, slotCount) {
+  setLaunchPrinterFrame();
   state.searchOpen = false;
   state.launchingSearch = true;
-  $("launchGhostText").textContent = problemText;
+  clearLaunchTimers();
+  setLaunchTiming(slotCount);
   $("currentRunTitle").textContent = "生成工作台";
-  $("currentRunMeta").textContent = "正在提交任务";
-  $("progressLog").innerHTML = '<div class="progress-item">正在把问题送入抽卡流水线。</div>';
-  $("candidateGrid").innerHTML = "";
+  $("currentRunMeta").textContent = "正在打印卡片";
+  $("progressLog").innerHTML = '<div class="progress-item">卡片正在落位，落下后会直接接入生成进度。</div>';
+  renderLaunchLandingCards(slotCount, problemText);
   renderShell();
+  schedulePrinterDrawCards();
+}
+
+function renderLaunchLandingCards(slotCount, problemText) {
+  const count = Math.max(1, Math.min(MAX_SLOT_COUNT, Number(slotCount || DEFAULT_SLOT_COUNT)));
+  const grid = $("candidateGrid");
+  grid.classList.add("launch-landing-grid", "compact-card-grid");
+  grid.innerHTML = Array.from({ length: count }, (_, index) => `
+    <article class="candidate progress-card launch-progress-card launch-card-placeholder" data-launch-index="${index}" style="--draw-delay:${LAUNCH_PRINT_START_MS + index * LAUNCH_CARD_DELAY_MS}ms">
+      <div class="candidate-top" data-fit-container>
+        <div class="candidate-title-block">
+          <div class="candidate-meta-row">
+            <span class="candidate-index">方案 ${String(index + 1).padStart(2, "0")}</span>
+            <span class="progress-status-badge pending">等待中</span>
+          </div>
+          <h3 data-fit-text data-fit-min="10">等待他山之石</h3>
+          <span class="muted">正在接入流水线</span>
+        </div>
+        <span class="slot"><span class="slot-code">?</span><span class="slot-field">待抽取</span></span>
+      </div>
+      <div class="progress-track"><span style="width:12%"></span></div>
+      <p>卡片已落位，等待接入生成流水线。</p>
+      <div class="slot-stats">
+        <span><small>耗时</small><strong>--</strong></span>
+        <span><small>重抽</small><strong>0</strong></span>
+        <span><small>API</small><strong>准备中</strong></span>
+      </div>
+      <div class="card-stream">
+        <div>&gt; card landed</div>
+        <div>&gt; waiting for source slot</div>
+        <div>&gt; connecting pipeline</div>
+        <div class="stream-cursor">▌</div>
+      </div>
+      <div class="step-row">
+        <span>抽取</span>
+        <span>生成</span>
+        <span>校验</span>
+        <span>完成</span>
+      </div>
+    </article>
+  `).join("");
+  scheduleFitText(grid);
+}
+
+function schedulePrinterDrawCards() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      renderPrinterDrawLayer();
+    });
+  });
+}
+
+function renderPrinterDrawLayer() {
+  const workspace = $("workspace");
+  const mouth = document.querySelector(".printer-mouth span") || document.querySelector(".printer-mouth");
+  const targets = Array.from(document.querySelectorAll(".launch-card-placeholder"));
+  if (!workspace || !mouth || !targets.length) return;
+
+  const mouthRect = mouth.getBoundingClientRect();
+  const liftY = Number.parseFloat(getComputedStyle(workspace).getPropertyValue("--printer-lift-y")) || 0;
+  const sourceY = mouthRect.top + liftY + mouthRect.height * 0.55;
+  const layer = getPrinterDrawLayer();
+  layer.innerHTML = "";
+
+  targets.forEach((target, index) => {
+    const rect = target.getBoundingClientRect();
+    const targetX = rect.left + rect.width / 2;
+    const targetY = rect.top;
+    const laneX = clamp(targetX, mouthRect.left + 18, mouthRect.right - 18);
+    const sourceX = laneX;
+    const fromX = sourceX - targetX;
+    const fromY = sourceY - targetY;
+    const card = document.createElement("article");
+    card.className = "printer-draw-card";
+    card.innerHTML = printerDrawCardMarkup(index);
+    card.style.left = `${Math.round(rect.left)}px`;
+    card.style.top = `${Math.round(rect.top)}px`;
+    card.style.width = `${Math.round(rect.width)}px`;
+    card.style.height = `${Math.round(rect.height)}px`;
+    card.style.setProperty("--draw-delay", `${LAUNCH_PRINT_START_MS + index * LAUNCH_CARD_DELAY_MS}ms`);
+    setLaunchVector(card, fromX, fromY);
+    layer.appendChild(card);
+    state.launchTimers.push(window.setTimeout(() => {
+      target.classList.add("launch-card-settled");
+    }, LAUNCH_PRINT_START_MS + index * LAUNCH_CARD_DELAY_MS + LAUNCH_CARD_LAND_MS - 120));
+  });
+
+  const removeDelay = LAUNCH_PRINT_START_MS + (targets.length - 1) * LAUNCH_CARD_DELAY_MS + LAUNCH_CARD_LAND_MS + 260;
+  state.launchTimers.push(window.setTimeout(fadePrinterDrawLayer, removeDelay));
+}
+
+function getPrinterDrawLayer() {
+  let layer = $("printerDrawLayer");
+  if (!layer) {
+    layer = document.createElement("div");
+    layer.id = "printerDrawLayer";
+    layer.className = "printer-draw-layer";
+    layer.setAttribute("aria-hidden", "true");
+    document.body.appendChild(layer);
+  }
+  return layer;
+}
+
+function clearPrinterDrawLayer() {
+  const layer = $("printerDrawLayer");
+  if (layer) layer.remove();
+}
+
+function fadePrinterDrawLayer() {
+  const layer = $("printerDrawLayer");
+  if (!layer) return;
+  layer.classList.add("is-exiting");
+  window.setTimeout(() => {
+    if (layer.classList.contains("is-exiting")) layer.remove();
+  }, 360);
+}
+
+function settleLaunchPlaceholders() {
+  document.querySelectorAll(".launch-card-placeholder").forEach((card) => {
+    card.classList.add("launch-card-settled");
+  });
+}
+
+function printerDrawCardMarkup(index) {
+  return `
+    <div class="printer-draw-card-head">
+      <strong>方案 ${String(index + 1).padStart(2, "0")}</strong>
+      <span>待抽取</span>
+    </div>
+    <div class="printer-draw-card-face">
+      <span>WildIdea</span>
+      <i></i>
+    </div>
+    <div class="printer-draw-card-line"></div>
+  `;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function setLaunchVector(card, fromX, fromY) {
+  card.style.setProperty("--launch-from-x", `${Math.round(fromX)}px`);
+  card.style.setProperty("--launch-from-y", `${Math.round(fromY)}px`);
 }
 
 function cancelSearchLaunch() {
   state.launchingSearch = false;
   state.searchOpen = true;
+  clearLaunchTimers();
+  clearLaunchTiming();
   renderShell();
 }
 
@@ -189,6 +477,17 @@ function statusLabel(status) {
     succeeded: "已完成",
     failed: "失败",
     deleted: "已删除",
+  };
+  return labels[status] || status;
+}
+
+function progressStatusText(status) {
+  const labels = {
+    pending: "等待中",
+    working: "生成中",
+    checking: "校验中",
+    done: "已完成",
+    failed: "已保底",
   };
   return labels[status] || status;
 }
@@ -219,7 +518,7 @@ function renderRuns() {
     const btn = document.createElement("button");
     btn.className = `run-item ${run.id === state.currentRunId ? "active" : ""}`;
     btn.type = "button";
-    btn.innerHTML = `<strong>${escapeHtml(run.problem)}</strong><span class="muted">${statusLabel(run.status)} · ${new Date(run.created_at).toLocaleString()}</span>`;
+    btn.innerHTML = `<strong>${escapeHtml(run.problem)}</strong>${runHistoryMetaMarkup(run)}`;
     btn.addEventListener("click", () => selectRun(run.id));
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "run-delete";
@@ -231,6 +530,19 @@ function renderRuns() {
     list.appendChild(row);
   });
   if (shouldAnimate) requestAnimationFrame(() => list.classList.add("run-list-arrive"));
+}
+
+function runHistoryMetaMarkup(run) {
+  const createdAt = run.created_at ? new Date(run.created_at).toLocaleString() : "";
+  const isRunning = ["running", "queued"].includes(run.status);
+  const statusText = run.status === "succeeded" ? "" : statusLabel(run.status);
+  const text = [statusText, createdAt].filter(Boolean).join(" · ");
+  return `
+    <span class="run-meta muted">
+      ${isRunning ? '<span class="run-spinner" aria-hidden="true"></span>' : ""}
+      <span>${escapeHtml(text || createdAt)}</span>
+    </span>
+  `;
 }
 
 function normalizeHistoryQuery(value) {
@@ -320,19 +632,25 @@ function formatQueueEstimate(seconds) {
 }
 
 function runningSummary(events, config = {}) {
-  const target = config.slot_count || 10;
+  const target = config.slot_count || DEFAULT_SLOT_COUNT;
   const ok = events.filter((event) => ["candidate_ok", "candidate_fallback"].includes(event.event_type)).length;
-  const maxRetries = config.max_retries || 3;
-  const maxRerolls = Math.max(0, maxRetries - 1);
-  const rerolls = events.filter((event) => event.event_type === "threshold_rejected").length;
-  const estimateSeconds = Math.max(90, (target + rerolls) * 90);
-  const estimateText = formatEstimate(estimateSeconds);
   const startedAt = runStartMs(events);
   const elapsedText = startedAt ? formatChineseDuration(elapsedMs(startedAt)) : "--";
-  if (!events.some((event) => event.event_type === "generating")) {
-    return `已用时 ${elapsedText} · 正在抽取源现象并准备生成，目标 ${target} 张卡片。每张卡大约 90 秒；为保证质量可能重抽，触达上限仍不通过会退回该卡积分。`;
+  if (config.fake_runs) {
+    const fakeSeconds = Number(config.fake_run_seconds || 10);
+    const estimateText = fakeSeconds < 60 ? `${Math.ceil(fakeSeconds)} 秒` : formatEstimate(fakeSeconds);
+    if (!events.some((event) => event.event_type === "generating")) {
+      return `已用时 ${elapsedText} · fake 测试模式正在抽取他山之石，预计共需约 ${estimateText}。`;
+    }
+    return `已用时 ${elapsedText} · fake 测试模式正在生成进度，已得到 ${ok}/${target} 条候选。预计共需约 ${estimateText}。`;
   }
-  return `已用时 ${elapsedText} · 正在生成和评分，已得到 ${ok}/${target} 条候选。预计共需约 ${estimateText}；每张卡大约 90 秒，最多重抽 ${maxRerolls} 次。系统会为了保证结果质量自动重抽，触达上限仍不通过会退回该卡积分。`;
+  const maxRetries = config.max_retries || 3;
+  const maxRerolls = Math.max(0, maxRetries - 1);
+  const estimateText = "90 秒";
+  if (!events.some((event) => event.event_type === "generating")) {
+    return `已用时 ${elapsedText} · 正在抽取他山之石并准备生成，目标 ${target} 张卡片。预计共需约 ${estimateText}；并行生成，每张卡大约 90 秒。为保证质量可能重抽，触达上限仍不通过会退回该卡积分。`;
+  }
+  return `已用时 ${elapsedText} · 正在生成和评分，已得到 ${ok}/${target} 条候选。预计共需约 ${estimateText}；并行生成，每张卡大约 90 秒，最多重抽 ${maxRerolls} 次。系统会为了保证结果质量自动重抽，触达上限仍不通过会退回该卡积分。`;
 }
 
 function formatEstimate(seconds) {
@@ -353,6 +671,7 @@ function latestRefundEvent(events) {
 }
 
 function renderCurrentRun(run) {
+  const grid = $("candidateGrid");
   if (!run) {
     stopRuntimeTicker();
     $("currentRunTitle").textContent = "还没有选择任务";
@@ -360,13 +679,21 @@ function renderCurrentRun(run) {
     $("resultSection").dataset.activeRunStatus = "";
     $("resultSection").dataset.activeRunSnapshot = "{}";
     $("progressLog").innerHTML = "";
-    $("candidateGrid").innerHTML = "";
+    grid.classList.remove("launch-landing-grid", "compact-card-grid", "result-card-grid");
+    grid.innerHTML = "";
     return;
   }
+  const compactGrid = run.status === "running" || run.status === "queued" || (run.status === "succeeded" && (run.candidates || []).length > 0);
+  grid.classList.toggle("compact-card-grid", compactGrid);
+  if (!compactGrid) grid.classList.remove("launch-landing-grid");
+  const section = $("resultSection");
+  const prevRunId = section.dataset.activeRunId || "";
+  const prevStatus = section.dataset.activeRunStatus || "";
   $("currentRunTitle").textContent = run.problem;
   $("currentRunMeta").textContent = `${statusLabel(run.status)} · ${run.problem_type || "待判断"} · ${new Date(run.created_at).toLocaleString()}`;
-  $("resultSection").dataset.activeRunStatus = run.status || "";
-  $("resultSection").dataset.activeRunSnapshot = JSON.stringify(run.config_snapshot || {});
+  section.dataset.activeRunId = String(run.id);
+  section.dataset.activeRunStatus = run.status || "";
+  section.dataset.activeRunSnapshot = JSON.stringify(run.config_snapshot || {});
   $("progressLog").innerHTML = `<div class="progress-item" id="runProgressSummary">${escapeHtml(progressLine(run))}</div>`;
   const summary = $("runProgressSummary");
   if (summary) {
@@ -380,72 +707,288 @@ function renderCurrentRun(run) {
     stopRuntimeTicker();
   }
   if (run.status === "succeeded" && (run.candidates || []).length) {
-    renderCandidates(run.candidates || [], run.events || []);
+    const watchedToCompletion = prevRunId === String(run.id) && (prevStatus === "running" || prevStatus === "queued");
+    renderCandidates(run.candidates || [], run.events || [], { celebrate: watchedToCompletion });
   } else {
-    renderSlotProgress(run.events || [], run.config_snapshot?.slot_count || 10, run.candidates || []);
+    renderSlotProgress(run.events || [], run.config_snapshot?.slot_count || DEFAULT_SLOT_COUNT, run.candidates || []);
   }
 }
 
 function renderSlotProgress(events, target, candidates = []) {
   const grid = $("candidateGrid");
-  grid.innerHTML = "";
   const slotsDone = events.find((event) => event.event_type === "slots_done");
   const slots = slotsDone?.payload?.slots || [];
   if (!slots.length) {
+    grid.classList.remove("result-card-grid");
+    if (state.suppressProgressAnimationRunId === state.currentRunId && grid.querySelector(".launch-progress-card")) {
+      return;
+    }
+    grid.innerHTML = "";
+    delete grid.dataset.progressRun;
     renderDrawStage(grid, target, events);
     return;
   }
+  grid.classList.remove("launch-landing-grid");
   const states = buildSlotStates(slots, events, candidates);
+  const hasLiveResults = states.some((item) => item.candidate);
+  grid.classList.toggle("result-card-grid", hasLiveResults);
+  const isHandoffRender = state.suppressProgressAnimationRunId === state.currentRunId;
+  const runKey = String(state.currentRunId || "draft");
+  const hasPlaceholders = Boolean(grid.querySelector(".launch-card-placeholder"));
+  if (grid.dataset.progressRun !== runKey && !(hasPlaceholders && isHandoffRender)) {
+    grid.innerHTML = "";
+  }
+  grid.dataset.progressRun = runKey;
+  grid.querySelectorAll(":scope > :not(.candidate):not(.pixel-frame)").forEach((el) => el.remove());
+  const existing = gridCardChildren(grid);
+  const existingBySlot = new Map();
+  existing.forEach((card) => {
+    if (card.dataset.slotId) existingBySlot.set(card.dataset.slotId, card);
+  });
+  const used = new Set();
 
   states.forEach((item, index) => {
+    const slotKey = item.slot_id || `slot-${index}`;
     const animationKey = `${state.currentRunId || "draft"}:${item.slot_id || index}`;
+    const current = existingBySlot.get(slotKey) || existing[index];
     if (item.candidate) {
-      const liveCard = renderCandidateArticle(item.candidate, item.slotInfo, {
-        feedback: true,
-        index: item.candidate.index || index + 1,
-        runtime: runtimeMeta(item),
-      });
-      liveCard.classList.add("live-candidate");
-      if (!state.animatedProgressCards.has(animationKey)) {
-        state.animatedProgressCards.add(animationKey);
-        liveCard.classList.add("draw-enter");
-        liveCard.style.setProperty("--draw-delay", `${Math.min(index, 9) * DRAW_CARD_DELAY_MS}ms`);
-      }
-      grid.appendChild(liveCard);
+      const card = renderLiveResultCard(item, index, current);
+      used.add(card);
+      placeCardAtIndex(grid, card, index);
       return;
     }
-
+    if (current && current.classList.contains("progress-card")) {
+      const adopting = current.classList.contains("launch-card-placeholder");
+      current.dataset.slotId = slotKey;
+      state.animatedProgressCards.add(animationKey);
+      morphProgressCard(current, item, adopting ? Math.min(index, 9) * 70 : 0);
+      used.add(current);
+      placeCardAtIndex(grid, current, index);
+      return;
+    }
     const card = document.createElement("article");
     card.className = `candidate progress-card ${item.status}`;
-    if (!state.animatedProgressCards.has(animationKey)) {
+    card.dataset.slotId = slotKey;
+    if (isHandoffRender) {
       state.animatedProgressCards.add(animationKey);
+    } else if (!state.animatedProgressCards.has(animationKey)) {
+      state.animatedProgressCards.add(animationKey);
+      const drawDelay = Math.min(index, 9) * DRAW_CARD_DELAY_MS;
       card.classList.add("draw-enter");
-      card.style.setProperty("--draw-delay", `${Math.min(index, 9) * DRAW_CARD_DELAY_MS}ms`);
+      card.style.setProperty("--draw-delay", `${drawDelay}ms`);
+      window.setTimeout(() => card.classList.remove("draw-enter"), drawDelay + 2950);
     }
-    card.innerHTML = `
-      <div class="candidate-top">
-        <div>
-          <h3>${index + 1}. ${escapeHtml(item.title)}</h3>
-          <span class="muted">${escapeHtml(item.domain)}</span>
+    card.innerHTML = progressCardMarkup(item, index);
+    card.dataset.slotSig = formatSlotBadge(item.slot, item.domain);
+    const stats = card.querySelector(".slot-stats");
+    if (stats) stats.dataset.sig = slotStatsSignature(item);
+    const stream = card.querySelector(".card-stream");
+    if (stream) stream.dataset.sig = streamSignature(item);
+    if (current) current.replaceWith(card);
+    else grid.appendChild(card);
+    used.add(card);
+    placeCardAtIndex(grid, card, index);
+  });
+
+  existing.forEach((card) => {
+    if (!used.has(card)) card.remove();
+  });
+  scheduleFitText(grid);
+}
+
+function placeCardAtIndex(grid, card, index) {
+  const cards = gridCardChildren(grid).filter((item) => item !== card);
+  const anchor = cards[index] || null;
+  if (card.parentElement !== grid) {
+    grid.insertBefore(card, anchor);
+  } else if (anchor && anchor.previousElementSibling !== card) {
+    grid.insertBefore(card, anchor);
+  }
+}
+
+function gridCardChildren(grid) {
+  return Array.from(grid.querySelectorAll(":scope > .candidate, :scope > .pixel-frame"));
+}
+
+function liveResultSignature(item, index) {
+  const candidate = item.candidate || {};
+  return JSON.stringify([
+    index,
+    candidate.id || "",
+    candidate.name || "",
+    candidate.source || "",
+    candidate.proto || "",
+    candidate.advantage || "",
+    candidate.desc || "",
+    candidate.quality_status || "",
+    candidate.refund_credit || false,
+    candidate.feedback?.label || "",
+    candidate.feedback?.comment || "",
+    item.finishedAt || "",
+    item.rerollCount || 0,
+  ]);
+}
+
+function renderLiveResultCard(item, index, current) {
+  const slotKey = item.slot_id || `slot-${index}`;
+  const candidate = {
+    ...item.candidate,
+    index: index + 1,
+    slot: item.candidate?.slot || item.slot,
+    reroll_count: item.candidate?.reroll_count ?? item.rerollCount ?? 0,
+  };
+  const slotInfo = {
+    ...(item.slotInfo || {}),
+    domain: item.domain || item.slotInfo?.domain || "",
+    source: item.source || item.slotInfo?.source || "",
+    rerollCount: item.rerollCount || 0,
+  };
+  const signature = liveResultSignature({ ...item, candidate }, index);
+  const currentCard = current?.classList.contains("pixel-frame")
+    ? current.querySelector(":scope > .result-card")
+    : current;
+  if (currentCard?.classList.contains("result-card") && currentCard.dataset.resultSig === signature) {
+    current.dataset.slotId = slotKey;
+    current.dataset.resultSig = signature;
+    currentCard.dataset.slotId = slotKey;
+    return current;
+  }
+  const card = renderCandidateArticle(candidate, slotInfo, {
+    feedback: Boolean(candidate.id),
+    featured: false,
+    index: index + 1,
+    runtime: runtimeMeta(item),
+  });
+  card.dataset.slotId = slotKey;
+  card.dataset.resultSig = signature;
+  card.classList.add("partial-result-card");
+  const frame = document.createElement("div");
+  frame.className = "pixel-frame partial-result-frame";
+  frame.dataset.slotId = slotKey;
+  frame.dataset.resultSig = signature;
+  frame.appendChild(card);
+  if (!currentCard?.classList.contains("result-card")) {
+    card.classList.add("result-reveal");
+    card.style.setProperty("--reveal-delay", "0ms");
+    frame.classList.add("result-reveal");
+    frame.style.setProperty("--reveal-delay", "0ms");
+  }
+  if (current) current.replaceWith(frame);
+  return frame;
+}
+
+function progressCardMarkup(item, index) {
+  const previewSlotLabel = formatSlotBadge(item.slot, item.domain);
+  const previewSource = item.source || item.title || item.domain || "等待他山之石";
+  return `
+    <div class="slot-preview" aria-hidden="true">
+      <span>${escapeHtml(previewSlotLabel)}</span>
+      <strong>${escapeHtml(previewSource)}</strong>
+    </div>
+    <div class="candidate-top" data-fit-container>
+      <div class="candidate-title-block">
+        <div class="candidate-meta-row">
+          <span class="candidate-index">方案 ${String(index + 1).padStart(2, "0")}</span>
+          <span class="progress-status-badge ${item.status}">${progressStatusText(item.status)}</span>
         </div>
-        ${slotBadgeMarkup(item.slot, item.domain)}
+        <h3 data-fit-text data-fit-min="10">${escapeHtml(item.title)}</h3>
+        <span class="muted">${escapeHtml(item.domain)}</span>
       </div>
-      <div class="progress-track"><span style="width:${item.percent}%"></span></div>
-      <p>${escapeHtml(item.message)}</p>
-      <p class="proto">${escapeHtml(item.source || "等待流水线事件")}</p>
-      ${slotStatsMarkup(item)}
-      <div class="card-stream">
-        ${item.stream.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}
-        ${item.status === "working" || item.status === "checking" ? '<div class="stream-cursor">▌</div>' : ""}
-      </div>
-      <div class="step-row">
-        <span class="${item.step >= 1 ? "done" : ""}">抽取</span>
-        <span class="${item.step >= 2 ? "done" : ""}">生成</span>
-        <span class="${item.step >= 3 ? "done" : ""}">校验</span>
-        <span class="${item.step >= 4 ? "done" : ""}">完成</span>
-      </div>
-    `;
-    grid.appendChild(card);
+      ${slotBadgeMarkup(item.slot, item.domain)}
+    </div>
+    <div class="progress-track"><span style="width:${item.percent}%"></span></div>
+    <p data-fit-text data-fit-min="7.4">${escapeHtml(item.message)}</p>
+    ${slotStatsMarkup(item)}
+    <div class="card-stream">${streamMarkup(item)}</div>
+    <div class="step-row">
+      <span class="${item.step >= 1 ? "done" : ""}">抽取</span>
+      <span class="${item.step >= 2 ? "done" : ""}">生成</span>
+      <span class="${item.step >= 3 ? "done" : ""}">校验</span>
+      <span class="${item.step >= 4 ? "done" : ""}">完成</span>
+    </div>
+  `;
+}
+
+function streamMarkup(item) {
+  const cursor = item.status === "working" || item.status === "checking" ? '<div class="stream-cursor">▌</div>' : "";
+  return `${item.stream.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}${cursor}`;
+}
+
+function streamSignature(item) {
+  return `${item.stream.join("¦")}|${item.status === "working" || item.status === "checking" ? "cursor" : ""}`;
+}
+
+function slotStatsSignature(item) {
+  return `${item.startedAt || ""}|${item.finishedAt || ""}|${Number(item.rerollCount || 0)}|${item.apiStep || ""}`;
+}
+
+function swapText(el, text, delayMs = 0, animate = true) {
+  if (!el) return;
+  const next = String(text);
+  if (el.textContent === next) return;
+  el.textContent = next;
+  el.classList.remove("text-swap");
+  if (!animate) return;
+  if (delayMs) el.style.setProperty("--swap-delay", `${delayMs}ms`);
+  else el.style.removeProperty("--swap-delay");
+  void el.offsetWidth;
+  el.classList.add("text-swap");
+}
+
+function morphProgressCard(card, item, staggerMs = 0) {
+  const animate = !card.classList.contains("draw-enter");
+  card.classList.remove("launch-progress-card", "launch-card-placeholder", "launch-card-settled", "pending", "working", "checking", "done", "failed");
+  card.classList.add(item.status);
+  const badge = card.querySelector(".progress-status-badge");
+  if (badge) {
+    badge.classList.remove("pending", "working", "checking", "done", "failed");
+    badge.classList.add(item.status);
+    swapText(badge, progressStatusText(item.status), staggerMs, animate);
+  }
+  swapText(card.querySelector(".candidate-title-block h3"), item.title, staggerMs, animate);
+  swapText(card.querySelector(".candidate-title-block > .muted"), item.domain, staggerMs, animate);
+  const slotSig = formatSlotBadge(item.slot, item.domain);
+  if (card.dataset.slotSig !== slotSig) {
+    card.dataset.slotSig = slotSig;
+    const top = card.querySelector(".candidate-top");
+    const existingSlot = top?.querySelector(".slot");
+    const markup = slotBadgeMarkup(item.slot, item.domain).trim();
+    if (markup && top) {
+      const tpl = document.createElement("template");
+      tpl.innerHTML = markup;
+      const next = tpl.content.firstElementChild;
+      if (animate) {
+        if (staggerMs) next.style.setProperty("--swap-delay", `${staggerMs}ms`);
+        next.classList.add("text-swap");
+      }
+      if (existingSlot) existingSlot.replaceWith(next);
+      else top.appendChild(next);
+    } else if (existingSlot) {
+      existingSlot.remove();
+    }
+  }
+  const track = card.querySelector(".progress-track span");
+  if (track) track.style.width = `${item.percent}%`;
+  card.querySelector(":scope > p.proto")?.remove();
+  swapText(card.querySelector(":scope > p"), item.message, staggerMs, animate);
+  const stats = card.querySelector(".slot-stats");
+  if (stats) {
+    const sig = slotStatsSignature(item);
+    if (stats.dataset.sig !== sig) {
+      stats.dataset.sig = sig;
+      stats.innerHTML = slotStatsInner(item);
+    }
+  }
+  const stream = card.querySelector(".card-stream");
+  if (stream) {
+    const sig = streamSignature(item);
+    if (stream.dataset.sig !== sig) {
+      stream.dataset.sig = sig;
+      stream.innerHTML = streamMarkup(item);
+    }
+  }
+  card.querySelectorAll(".step-row span").forEach((span, stepIndex) => {
+    span.classList.toggle("done", item.step >= stepIndex + 1);
   });
 }
 
@@ -463,7 +1006,7 @@ function renderDrawStage(grid, target, events) {
     <div class="draw-copy">
       <span class="eyebrow">抽卡中</span>
       <strong>正在从卡池里抽取 ${target} 张灵感卡</strong>
-      <p>${escapeHtml(typeEvent ? `已识别为 ${typeEvent.payload?.value || "product"} 类型，正在洗牌匹配源现象。` : (running ? "模型工人已启动，正在抽槽位。" : "任务已进入队列，准备发牌。"))}</p>
+      <p>${escapeHtml(typeEvent ? `已识别为 ${typeEvent.payload?.value || "product"} 类型，正在洗牌匹配他山之石。` : (running ? "模型工人已启动，正在抽槽位。" : "任务已进入队列，准备发牌。"))}</p>
       <div class="draw-slots">
         ${Array.from({ length: target }, (_, index) => `<i style="--draw-delay:${Math.min(index, 9) * DRAW_CARD_DELAY_MS}ms"></i>`).join("")}
       </div>
@@ -716,15 +1259,17 @@ function runtimeMeta(item) {
   };
 }
 
-function slotStatsMarkup(item) {
+function slotStatsInner(item) {
   const runtime = runtimeMeta(item);
   return `
-    <div class="slot-stats">
-      <span><small>耗时</small><strong class="runtime-value" data-start-ms="${runtime.start || ""}" data-finish-ms="${runtime.finish || ""}">${escapeHtml(runtime.elapsedText)}</strong></span>
-      <span><small>重抽</small><strong>${Number(item.rerollCount || 0)}</strong></span>
-      <span><small>API</small><strong>${escapeHtml(item.apiStep || "等待生成")}</strong></span>
-    </div>
+    <span><small>耗时</small><strong class="runtime-value" data-start-ms="${runtime.start || ""}" data-finish-ms="${runtime.finish || ""}">${escapeHtml(runtime.elapsedText)}</strong></span>
+    <span><small>重抽</small><strong>${Number(item.rerollCount || 0)}</strong></span>
+    <span><small>API</small><strong>${escapeHtml(item.apiStep || "等待生成")}</strong></span>
   `;
+}
+
+function slotStatsMarkup(item) {
+  return `<div class="slot-stats">${slotStatsInner(item)}</div>`;
 }
 
 function updateRuntimeLabels() {
@@ -768,7 +1313,6 @@ function stopRuntimeTicker() {
 }
 
 function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
-  const scores = candidate.scores || {};
   const field = slotInfo.domain || candidate.source;
   const sourcePhenomenon = sourcePhenomenonText(slotInfo, candidate);
   const index = options.index ?? candidate.index ?? 1;
@@ -778,7 +1322,26 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
   const isFallback = Boolean(candidate.refund_credit || candidate.search?.refund_credit || qualityStatus === "fallback_refunded");
   const qualityNote = candidate.quality_note || candidate.search?.quality_note || "这张卡未通过质量阈值，系统已退回该卡积分。";
   const runtime = options.runtime || {};
+  const fallbackBadgeText = rerollCount > 0 ? `重抽 ${rerollCount} 次 · 已退款` : "未达标 · 已退款";
+  const showRuntimeBadge = Boolean(runtime.elapsedText && !isFallback);
   const advantage = normalizeAdvantage(candidate.advantage);
+  const sourceCopyText = [
+    "他山之石",
+    sourcePhenomenon,
+    "",
+    "抽象方法",
+    candidate.source,
+    candidate.proto,
+  ].filter((line) => line !== null && line !== undefined).join("\n").trim();
+  const ideaCopyText = ["落地方案", candidate.desc].filter(Boolean).join("\n").trim();
+  const advantageCopyText = advantage ? ["优势", advantage].join("\n").trim() : "";
+  const sourceHoverText = [
+    `他山之石：${sourcePhenomenon}`,
+    candidate.source ? `抽象方法：${candidate.source}` : "",
+    candidate.proto ? candidate.proto : "",
+  ].filter(Boolean).join("\n\n").trim();
+  const ideaHoverText = String(candidate.desc || "").trim();
+  const advantageHoverText = String(advantage || "").trim();
   const posterContext = {
     ...candidate,
     index,
@@ -794,87 +1357,89 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
     runMeta: $("currentRunMeta")?.textContent || "",
   };
   const card = document.createElement("article");
-  card.className = `candidate${isFallback ? " quality-fallback" : ""}`;
+  card.className = `candidate result-card${isFallback ? " quality-fallback" : ""}${options.featured ? " featured-card" : ""}`;
   card.innerHTML = `
-    <div class="candidate-top">
+    <div class="candidate-top" data-fit-container>
       <div class="candidate-title-block">
         <div class="candidate-meta-row">
           <span class="candidate-index">方案 ${String(index).padStart(2, "0")}</span>
-          ${rerollCount > 0 ? `<span class="reroll-badge">重抽 ${rerollCount} 次</span>` : ""}
-          ${isFallback ? '<span class="quality-badge">未达标 · 已退款</span>' : ""}
-          ${runtime.elapsedText ? `<span class="runtime-badge"><span class="runtime-value" data-start-ms="${runtime.start || ""}" data-finish-ms="${runtime.finish || ""}">${escapeHtml(runtime.elapsedText)}</span> · ${escapeHtml(runtime.apiStep || "已通过")}</span>` : ""}
+          ${isFallback ? `<span class="quality-badge">${escapeHtml(fallbackBadgeText)}</span>` : ""}
+          ${!isFallback && rerollCount > 0 ? `<span class="reroll-badge">重抽 ${rerollCount} 次</span>` : ""}
+          ${showRuntimeBadge ? `<span class="runtime-badge"><span class="runtime-value" data-start-ms="${runtime.start || ""}" data-finish-ms="${runtime.finish || ""}">${escapeHtml(runtime.elapsedText)}</span> · ${escapeHtml(runtime.apiStep || "已通过")}</span>` : ""}
         </div>
         <h3>${escapeHtml(candidate.name)}</h3>
+        ${field ? `<span class="muted" data-fit-text data-fit-min="7.2">源自 ${escapeHtml(field)}</span>` : ""}
       </div>
       ${slotBadgeMarkup(candidate.slot, field)}
     </div>
-    ${isFallback ? `
-      <div class="quality-notice">
-        <strong>保底答案</strong>
-        <span>${escapeHtml(qualityNote)}</span>
-      </div>
-    ` : ""}
-    <section class="candidate-section source-section">
-      <div class="section-label">源现象</div>
-      <p class="source-phenomenon">${escapeHtml(sourcePhenomenon)}</p>
-      <div class="source-method">
-        <span>抽象方法</span>
-        <strong>${escapeHtml(candidate.source)}</strong>
-      </div>
-      <p class="proto">${escapeHtml(candidate.proto)}</p>
-    </section>
-    ${advantage ? `
-      <section class="candidate-section advantage-section">
-        <div class="section-label">优势</div>
-        <p class="advantage">${escapeHtml(advantage)}</p>
+    <div class="result-card-body">
+      <section class="candidate-section source-section copyable-section" data-fit-container data-copy-text="${escapeHtml(sourceCopyText)}" data-full-text="${escapeHtml(sourceHoverText)}" role="button" tabindex="0" aria-label="将他山之石和抽象方法放入剪贴板">
+        <div class="section-label">他山之石</div>
+        <p class="source-phenomenon" data-fit-text data-fit-min="6.8">${escapeHtml(sourcePhenomenon)}</p>
+        <div class="source-method">
+          <span>抽象方法</span>
+          <strong>${escapeHtml(candidate.source)}</strong>
+        </div>
+        <p class="proto">${escapeHtml(candidate.proto)}</p>
       </section>
+      <section class="candidate-section idea-section copyable-section" data-fit-container data-copy-text="${escapeHtml(ideaCopyText)}" data-full-text="${escapeHtml(ideaHoverText)}" role="button" tabindex="0" aria-label="将落地方案放入剪贴板">
+        <div class="section-label">落地方案</div>
+        <p class="desc" data-fit-text data-fit-min="6.8">${escapeHtml(candidate.desc)}</p>
+      </section>
+      ${advantage ? `
+        <section class="candidate-section advantage-section copyable-section" data-fit-container data-copy-text="${escapeHtml(advantageCopyText)}" data-full-text="${escapeHtml(advantageHoverText)}" role="button" tabindex="0" aria-label="将优势放入剪贴板">
+          <div class="section-label">优势</div>
+          <p class="advantage" data-fit-text data-fit-min="6.8">${escapeHtml(advantage)}</p>
+        </section>
+      ` : ""}
+      <details class="mobile-card-details">
+        <summary>更多细节</summary>
+        <div>
+          <span>抽象方法</span>
+          <strong>${escapeHtml(candidate.source)}</strong>
+          <p>${escapeHtml(candidate.proto)}</p>
+        </div>
+      </details>
+    </div>
+    ${!showFeedback ? `
+      <div class="candidate-actions">
+        <button type="button" class="share-card-button" data-action="poster" aria-label="分享该卡" title="分享该卡">
+          <span class="share-logo-glyph" aria-hidden="true"></span>
+        </button>
+      </div>
     ` : ""}
-    <section class="candidate-section idea-section">
-      <div class="section-label">落地方案</div>
-      <p class="desc">${escapeHtml(candidate.desc)}</p>
-    </section>
-    <section class="candidate-section risk-section">
-      <div class="section-label">失败边界</div>
-      <p class="fail">${escapeHtml(candidate.fail)}</p>
-    </section>
-    <details class="mobile-card-details">
-      <summary>更多细节</summary>
-      <div>
-        <span>抽象方法</span>
-        <strong>${escapeHtml(candidate.source)}</strong>
-        <p>${escapeHtml(candidate.proto)}</p>
-      </div>
-      <div>
-        <span>失败边界</span>
-        <p>${escapeHtml(candidate.fail)}</p>
-      </div>
-    </details>
-    <div class="score-row">
-      <span class="score-item"><small>结构</small><strong>${scores.structural_depth ?? "-"}</strong></span>
-      <span class="score-item"><small>距离</small><strong>${scores.domain_distance ?? "-"}</strong></span>
-      <span class="score-item"><small>新颖</small><strong>${scores.novelty ?? "-"}</strong></span>
-      <span class="score-item"><small>可用</small><strong>${scores.applicability ?? "-"}</strong></span>
-    </div>
-    <div class="candidate-actions">
-      <button type="button" data-action="poster">另存为海报</button>
-    </div>
     ${showFeedback ? `
-      <div class="feedback-row">
-        <button type="button" data-label="useful" aria-pressed="false">有用</button>
-        <button type="button" data-action="show-weak" aria-expanded="false">没用</button>
-      </div>
-      <div class="weak-feedback hidden">
-        <button type="button" data-label="weak_obscure" aria-pressed="false">晦涩难懂</button>
-        <button type="button" data-label="weak_off_topic" aria-pressed="false">不够相关</button>
-        <button type="button" data-label="weak_too_common" aria-pressed="false">太常规</button>
-        <button type="button" data-label="weak_unusable" aria-pressed="false">不可落地</button>
-        <form class="weak-other-form">
-          <input type="text" name="comment" placeholder="其他原因">
-          <button type="submit">其他提交</button>
-        </form>
+      <div class="card-response-row">
+        <div class="feedback-block">
+          <div class="feedback-prompt">
+            <strong>这张卡有启发吗？</strong>
+            <span>点一下反馈，下一轮抽卡会更懂你</span>
+          </div>
+          <div class="feedback-row">
+            <button type="button" class="feedback-useful" data-label="useful" aria-pressed="false">有用</button>
+            <button type="button" class="feedback-weak" data-action="show-weak" aria-expanded="false">没用</button>
+          </div>
+          <div class="weak-feedback hidden">
+            <button type="button" data-label="weak_obscure" aria-pressed="false">晦涩难懂</button>
+            <button type="button" data-label="weak_off_topic" aria-pressed="false">不够相关</button>
+            <button type="button" data-label="weak_too_common" aria-pressed="false">太常规</button>
+            <button type="button" data-label="weak_unusable" aria-pressed="false">不可落地</button>
+            <form class="weak-other-form">
+              <input type="text" name="comment" placeholder="其他原因">
+              <button type="submit">其他提交</button>
+            </form>
+          </div>
+        </div>
+        <button type="button" class="share-card-button" data-action="poster" aria-label="分享该卡" title="分享该卡">
+          <span class="share-logo-glyph" aria-hidden="true"></span>
+        </button>
       </div>
     ` : ""}
   `;
+  if (showFeedback) {
+    card.dataset.feedbackPanelKey = String(candidate.id);
+  }
+  bindCopyableSections(card);
   card.querySelector('button[data-action="poster"]').addEventListener("click", () => openPoster(posterContext));
   if (showFeedback) {
     bindFeedbackControls(card, candidate);
@@ -882,21 +1447,194 @@ function renderCandidateArticle(candidate, slotInfo = {}, options = {}) {
   return card;
 }
 
-function renderCandidates(candidates, events = []) {
+function bindCopyableSections(card) {
+  card.querySelectorAll(".copyable-section[data-copy-text]").forEach((section) => {
+    section.addEventListener("mouseenter", (event) => showFullTextTooltip(section, event));
+    section.addEventListener("mousemove", (event) => positionFullTextTooltip(event));
+    section.addEventListener("mouseleave", hideFullTextTooltip);
+    section.addEventListener("focus", () => showFullTextTooltip(section));
+    section.addEventListener("blur", hideFullTextTooltip);
+    section.addEventListener("click", (event) => {
+      if (event.target.closest("button, input, textarea, a, summary")) return;
+      if (window.getSelection?.().toString()) return;
+      copySectionText(section);
+    });
+    section.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      copySectionText(section);
+    });
+  });
+}
+
+function getFullTextTooltip() {
+  let tooltip = $("fullTextTooltip");
+  if (!tooltip) {
+    tooltip = document.createElement("div");
+    tooltip.id = "fullTextTooltip";
+    tooltip.className = "full-text-tooltip hidden";
+    tooltip.setAttribute("role", "tooltip");
+    document.body.appendChild(tooltip);
+  }
+  return tooltip;
+}
+
+function showFullTextTooltip(section, event = null) {
+  const text = (section.dataset.fullText || section.dataset.copyText || "").trim();
+  if (!text) return;
+  const tooltip = getFullTextTooltip();
+  tooltip.textContent = text;
+  tooltip.classList.remove("hidden");
+  if (event) {
+    positionFullTextTooltip(event);
+  } else {
+    positionFullTextTooltipForElement(section);
+  }
+}
+
+function hideFullTextTooltip() {
+  const tooltip = $("fullTextTooltip");
+  if (tooltip) tooltip.classList.add("hidden");
+}
+
+function positionFullTextTooltip(event) {
+  const tooltip = $("fullTextTooltip");
+  if (!tooltip || tooltip.classList.contains("hidden")) return;
+  placeFullTextTooltip(event.clientX + 14, event.clientY + 14);
+}
+
+function positionFullTextTooltipForElement(element) {
+  const rect = element.getBoundingClientRect();
+  placeFullTextTooltip(rect.left + Math.min(20, rect.width / 2), rect.bottom + 10);
+}
+
+function placeFullTextTooltip(left, top) {
+  const tooltip = $("fullTextTooltip");
+  if (!tooltip) return;
+  const margin = 12;
+  const rect = tooltip.getBoundingClientRect();
+  const maxLeft = window.innerWidth - rect.width - margin;
+  const maxTop = window.innerHeight - rect.height - margin;
+  tooltip.style.left = `${Math.max(margin, Math.min(left, maxLeft))}px`;
+  tooltip.style.top = `${Math.max(margin, Math.min(top, maxTop))}px`;
+}
+
+async function copySectionText(section) {
+  const text = section.dataset.copyText || section.innerText.trim();
+  if (!text) return;
+  const ok = await writeClipboardText(text);
+  if (!ok) {
+    showToast("未能写入剪贴板，请手动选择文字");
+    return;
+  }
+  flashCopiedSection(section);
+  showToast("已放入剪贴板");
+}
+
+async function writeClipboardText(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Fall through to the legacy copy path.
+  }
+  const input = document.createElement("textarea");
+  input.value = text;
+  input.setAttribute("readonly", "");
+  input.style.position = "fixed";
+  input.style.left = "-9999px";
+  input.style.top = "0";
+  document.body.appendChild(input);
+  input.select();
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  }
+  input.remove();
+  return copied;
+}
+
+function flashCopiedSection(section) {
+  window.clearTimeout(section.__copyTimer);
+  section.classList.add("copied", "copy-pressed");
+  section.__copyTimer = window.setTimeout(() => {
+    section.classList.remove("copied", "copy-pressed");
+  }, 950);
+}
+
+function candidateScoreAverage(candidate) {
+  const explicitAverage = Number(candidate.score_average ?? candidate.search?.score_average);
+  if (Number.isFinite(explicitAverage)) return explicitAverage;
+  const scores = candidate.scores || {};
+  const values = [
+    scores.structural_depth,
+    scores.domain_distance,
+    scores.novelty,
+    scores.applicability,
+  ].map(Number).filter(Number.isFinite);
+  if (!values.length) return Number.NEGATIVE_INFINITY;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function candidateApplicability(candidate) {
+  const value = Number(candidate.scores?.applicability);
+  return Number.isFinite(value) ? value : Number.NEGATIVE_INFINITY;
+}
+
+function featuredCandidateKey(candidates) {
+  let best = null;
+  candidates.forEach((candidate, index) => {
+    if (candidate.refund_credit || candidate.search?.refund_credit) return;
+    const average = candidateScoreAverage(candidate);
+    const applicability = candidateApplicability(candidate);
+    if (!Number.isFinite(average) && !Number.isFinite(applicability)) return;
+    const contender = { candidate, index, average, applicability };
+    if (!best
+      || contender.average > best.average
+      || (contender.average === best.average && contender.applicability > best.applicability)) {
+      best = contender;
+    }
+  });
+  if (!best) return "";
+  return best.candidate.id || `${best.index}:${best.candidate.name || ""}`;
+}
+
+function renderCandidates(candidates, events = [], options = {}) {
   const grid = $("candidateGrid");
+  grid.classList.remove("launch-landing-grid");
+  grid.classList.add("compact-card-grid", "result-card-grid");
   grid.innerHTML = "";
   if (!candidates.length) return;
   const candidateSlots = buildCandidateSlotMap(events);
-  candidates.forEach((candidate) => {
+  const featuredKey = featuredCandidateKey(candidates);
+  candidates.forEach((candidate, index) => {
     const slotInfo = candidateSlots.get(candidate.name) || {};
-    const card = renderCandidateArticle(candidate, slotInfo, { feedback: true });
-    grid.appendChild(card);
+    const candidateKey = candidate.id || `${index}:${candidate.name || ""}`;
+    const isFeatured = candidateKey === featuredKey;
+    const card = renderCandidateArticle(candidate, slotInfo, { feedback: true, featured: isFeatured });
+    if (options.celebrate) {
+      card.classList.add("result-reveal");
+      card.style.setProperty("--reveal-delay", `${Math.min(index, 9) * 70}ms`);
+    }
+    const frame = document.createElement("div");
+    frame.className = `pixel-frame${isFeatured ? " featured-frame" : ""}`;
+    if (options.celebrate) {
+      frame.classList.add("result-reveal");
+      frame.style.setProperty("--reveal-delay", `${Math.min(index, 9) * 70}ms`);
+    }
+    frame.appendChild(card);
+    grid.appendChild(frame);
   });
+  scheduleFitText(grid);
 }
 
 function bindFeedbackControls(card, candidate) {
   card.querySelector('button[data-action="show-weak"]').addEventListener("click", () => {
-    toggleWeakFeedback(card, true);
+    toggleWeakFeedback(card, card.querySelector(".weak-feedback")?.classList.contains("hidden"), { remember: true });
   });
   card.querySelectorAll('button[data-label]').forEach((btn) => {
     btn.addEventListener("click", () => submitFeedback(candidate, btn.dataset.label, card));
@@ -1023,19 +1761,43 @@ function applyFeedbackState(card, label) {
   if (weakOtherInput && label === "weak_other") {
     weakOtherInput.value = card.__lastWeakOtherComment || weakOtherInput.value;
   }
-  toggleWeakFeedback(card, weakSelected);
+  toggleWeakFeedback(card, weakSelected && weakFeedbackPanelPreference(card) !== "closed");
 }
 
 function isWeakFeedbackLabel(label) {
   return Boolean(label && label !== "useful");
 }
 
-function toggleWeakFeedback(card, show) {
+function weakFeedbackPanelPreference(card) {
+  const key = card.dataset.feedbackPanelKey;
+  if (!key) return "";
+  try {
+    return localStorage.getItem(`wildidea:weak-feedback-panel:${key}`) || "";
+  } catch {
+    return "";
+  }
+}
+
+function rememberWeakFeedbackPanel(card, show) {
+  const key = card.dataset.feedbackPanelKey;
+  if (!key) return;
+  try {
+    localStorage.setItem(`wildidea:weak-feedback-panel:${key}`, show ? "open" : "closed");
+  } catch {
+    return;
+  }
+}
+
+function toggleWeakFeedback(card, show, options = {}) {
   const weakPanel = card.querySelector(".weak-feedback");
   if (!weakPanel) return;
   weakPanel.classList.toggle("hidden", !show);
+  if (options.remember) rememberWeakFeedbackPanel(card, show);
   const weakToggle = card.querySelector('button[data-action="show-weak"]');
-  if (weakToggle) weakToggle.setAttribute("aria-expanded", show ? "true" : "false");
+  if (weakToggle) {
+    weakToggle.setAttribute("aria-expanded", show ? "true" : "false");
+    weakToggle.textContent = show ? "收起" : "没用";
+  }
 }
 
 async function submitFeedback(candidate, label, card, comment = "") {
@@ -1116,6 +1878,9 @@ async function selectRun(runId, options = {}) {
   state.currentRunId = runId;
   state.searchOpen = false;
   state.launchingSearch = false;
+  clearLaunchTimers({ softLayer: Boolean(options.fromLaunch) });
+  clearLaunchTiming();
+  state.suppressProgressAnimationRunId = options.fromLaunch ? runId : null;
   state.adminOpen = false;
   state.historyDrawerOpen = false;
   const runSummary = state.runs.find((item) => item.id === runId);
@@ -1125,7 +1890,7 @@ async function selectRun(runId, options = {}) {
   try {
     const data = await withMinimumDelay(api(`/api/runs/${runId}`), 320);
     renderCurrentRun(data.run);
-    animateResultArrival();
+    if (!options.fromLaunch) animateResultArrival();
     if (!["succeeded", "failed", "deleted"].includes(data.run.status)) watchRun(runId);
   } catch (err) {
     $("resultSection").classList.remove("result-switching");
@@ -1137,7 +1902,7 @@ async function selectRun(runId, options = {}) {
 function renderRunTransition(run, options = {}) {
   const section = $("resultSection");
   section.classList.remove("result-arrive");
-  section.classList.add("result-switching");
+  section.classList.toggle("result-switching", !options.fromLaunch);
   $("currentRunTitle").textContent = run?.problem || "正在调取记录";
   $("currentRunMeta").textContent = options.fromLaunch
     ? "任务已建立 · 正在接入实时进度"
@@ -1145,14 +1910,17 @@ function renderRunTransition(run, options = {}) {
   $("resultSection").dataset.activeRunStatus = "";
   $("resultSection").dataset.activeRunSnapshot = "{}";
   $("progressLog").innerHTML = `<div class="progress-item history-loading">${options.fromLaunch ? "正在接入抽卡流水线。" : "正在调取这次发散记录。"}</div>`;
-  $("candidateGrid").innerHTML = `
-    <div class="history-result-skeleton">
-      <strong>${options.fromLaunch ? "正在接入卡片" : "正在整理卡片"}</strong>
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
-  `;
+  if (!options.fromLaunch) {
+    $("candidateGrid").classList.remove("launch-landing-grid", "compact-card-grid", "result-card-grid");
+    $("candidateGrid").innerHTML = `
+      <div class="history-result-skeleton">
+        <strong>正在整理卡片</strong>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    `;
+  }
 }
 
 function animateResultArrival() {
@@ -1280,7 +2048,7 @@ async function loadAdmin() {
           ${slotBadgeMarkup(item.candidate_slot, item.candidate_domain || item.candidate_source)}
         </div>
         <div class="admin-card-block source">
-          <span>源现象</span>
+          <span>他山之石</span>
           <p>${escapeHtml(item.candidate_source_phenomenon || item.candidate_source || "-")}</p>
         </div>
         <div class="admin-card-block">
@@ -1487,83 +2255,90 @@ function safeFilename(value) {
 
 function drawPosterCanvas(canvas, candidate) {
   const width = 1080;
-  const minHeight = 1920;
-  const pad = 46;
-  const contentWidth = width - pad * 2;
-  const sections = posterSections(candidate);
-
+  const height = 1920;
   canvas.width = width;
-  canvas.height = 200;
-  let ctx = canvas.getContext("2d");
-  const headerLayout = posterHeaderLayout(ctx, candidate, contentWidth);
-  const layouts = sections.map((section) => posterBlockLayout(ctx, section, contentWidth));
-  const scoreHeight = 92;
-  const footerHeight = 286;
-  const totalSectionHeight = layouts.reduce((sum, item) => sum + item.height, 0) + Math.max(0, layouts.length - 1) * 18;
-  const height = Math.max(minHeight, pad + headerLayout.height + totalSectionHeight + 18 + scoreHeight + footerHeight + pad);
-
   canvas.height = height;
-  ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d");
   drawPosterBackground(ctx, width, height);
 
-  const paperX = 24;
-  const paperY = 24;
-  const paperW = width - 48;
-  const paperH = height - 48;
-  drawPosterRect(ctx, paperX + 5, paperY + 5, paperW, paperH, 14, "#2a2a2a", null, 0);
-  drawPosterRect(ctx, paperX, paperY, paperW, paperH, 14, "#fffdf0", "#2a2a2a", 4);
+  const frame = { x: 28, y: 30, width: 1024, height: 1858 };
+  const card = {
+    x: frame.x + 16,
+    y: frame.y + 16,
+    width: frame.width - 32,
+    height: frame.height - 32,
+  };
+  drawPosterPixelRect(ctx, frame.x, frame.y, frame.width, frame.height, 70, "#2a2a2a", null, 0);
+  drawPosterPixelRect(ctx, card.x, card.y, card.width, card.height, 56, "#fffaf0", "rgba(91, 98, 104, 0.42)", 2);
 
-  let y = pad;
-  y = drawPosterHeader(ctx, candidate, pad, y, contentWidth, headerLayout);
-  layouts.forEach((layout, index) => {
-    drawPosterBlock(ctx, sections[index], layout, pad, y, contentWidth);
-    y += layout.height + 18;
-  });
-  y = drawPosterScores(ctx, candidate.scores || {}, pad, y, contentWidth);
-  drawPosterFooter(ctx, candidate, pad, y + 18, contentWidth, height - pad - (y + 18));
+  const content = {
+    x: card.x + 34,
+    y: card.y + 34,
+    width: card.width - 68,
+  };
+  const cardBottom = card.y + card.height - 34;
+  const headerHeight = 300;
+  const sourceHeight = 318;
+  const gap = 26;
+  const advantageHeight = 232;
+  const footerHeight = 252;
+  const ideaHeight = Math.max(
+    560,
+    cardBottom - (content.y + headerHeight + sourceHeight + advantageHeight + footerHeight + gap * 4)
+  );
+
+  let y = content.y;
+  y = drawPosterCardHeader(ctx, candidate, content.x, y, content.width, headerHeight);
+  y += gap;
+  drawPosterCardSection(ctx, posterCardSourceSection(candidate), content.x, y, content.width, sourceHeight);
+  y += sourceHeight + gap;
+  drawPosterCardSection(ctx, posterCardIdeaSection(candidate), content.x, y, content.width, ideaHeight);
+  y += ideaHeight + gap;
+  drawPosterCardSection(ctx, posterCardAdvantageSection(candidate), content.x, y, content.width, advantageHeight);
+  y += advantageHeight + gap;
+  drawPosterCardFooter(ctx, candidate, content.x, y, content.width, footerHeight);
+
+  posterFont(ctx, 17, 900);
+  ctx.fillStyle = "rgba(102, 112, 120, 0.72)";
+  ctx.textAlign = "center";
+  ctx.fillText(`Generated by WildIdea · ${new Date().toLocaleDateString()}`, width / 2, height - 22);
+  ctx.textAlign = "left";
 }
 
-function posterSections(candidate) {
+function posterCardSourceSection(candidate) {
   const sourcePhenomenon = String(candidate.sourcePhenomenon || candidate.source || "").trim();
-  return [
-    {
-      label: "源现象",
-      text: sourcePhenomenon || "未记录源现象",
-      background: "#edf4f7",
-      accent: "#496fae",
-      strong: true,
-    },
-    {
-      label: "抽象方法",
-      heading: candidate.source || "",
-      text: candidate.proto || "未记录抽象方法",
-      background: "#f2f6f8",
-      accent: "#496fae",
-    },
-    {
-      label: "优势",
-      text: normalizeAdvantage(candidate.advantage),
-      background: "#eaf6ea",
-      accent: "#2a8a67",
-      strong: true,
-      floating: true,
-    },
-    {
-      label: "落地方案",
-      text: candidate.desc || "未记录落地方案",
-      background: "#fff4bd",
-      accent: "#2a8a67",
-      large: true,
-      strong: true,
-      floating: true,
-    },
-    {
-      label: "失败边界",
-      text: candidate.fail || "未记录失败边界",
-      background: "#fae8e3",
-      accent: "#b86157",
-    },
-  ].filter((section) => section.text || section.heading);
+  return {
+    label: "他山之石",
+    background: "#edf4f7",
+    accent: "#496fae",
+    labelFill: "#f7df89",
+    kind: "source",
+    phenomenon: sourcePhenomenon || "未记录他山之石",
+    method: String(candidate.source || "").trim(),
+    proto: String(candidate.proto || "").trim(),
+  };
+}
+
+function posterCardIdeaSection(candidate) {
+  return {
+    label: "落地方案",
+    background: "#fffdf7",
+    accent: "#2a8a67",
+    labelFill: "#6fcf97",
+    kind: "idea",
+    text: String(candidate.desc || "未记录落地方案").trim(),
+  };
+}
+
+function posterCardAdvantageSection(candidate) {
+  return {
+    label: "优势",
+    background: "#eaf6ea",
+    accent: "#8fd7a0",
+    labelFill: "#f7df89",
+    kind: "advantage",
+    text: normalizeAdvantage(candidate.advantage) || "未记录优势",
+  };
 }
 
 function drawPosterBackground(ctx, width, height) {
@@ -1585,191 +2360,151 @@ function drawPosterBackground(ctx, width, height) {
   }
 }
 
-function posterHeaderLayout(ctx, candidate, width) {
-  const problem = posterProblemText(candidate);
-  let problemLines = [];
-  let problemHeight = 0;
-  if (problem) {
-    posterFont(ctx, 20, 900);
-    problemLines = wrapPosterLines(ctx, problem, width - 36);
-    problemHeight = 60 + problemLines.length * 30 + 18;
-  }
-  posterFont(ctx, 58, 900);
-  const titleLines = wrapPosterLines(ctx, candidate.name || "未命名方案", width);
-  const brandTop = problemHeight ? problemHeight + 24 : 0;
-  const titleTop = brandTop + 150;
-  const dividerTop = titleTop + titleLines.length * 68 + 36;
-  return {
-    problem,
-    problemLines,
-    problemHeight,
-    brandTop,
-    titleLines,
-    titleTop,
-    titleLineHeight: 68,
-    dividerTop,
-    height: dividerTop + 34,
-  };
-}
-
-function drawPosterHeader(ctx, candidate, x, y, width, layout = posterHeaderLayout(ctx, candidate, width)) {
-  const slotText = candidate.slotLabel || formatSlotBadge(candidate.slot, candidate.field);
-  if (layout.problemLines.length) {
-    drawPosterRect(ctx, x, y, width, layout.problemHeight, 8, "#edf4f7", "#2a2a2a", 3);
-    drawPosterTag(ctx, x + 18, y + 18, "本次问题", "#f7df89");
-    posterFont(ctx, 20, 900);
-    ctx.fillStyle = "#1f2528";
-    ctx.textBaseline = "top";
-    layout.problemLines.forEach((line, index) => {
-      ctx.fillText(line, x + 18, y + 62 + index * 30);
-    });
-    ctx.textBaseline = "alphabetic";
-  }
-
-  const brandY = y + layout.brandTop;
-  drawPosterLogo(ctx, x, brandY, 62);
-  posterFont(ctx, 28, 900);
-  ctx.fillStyle = "#1f2528";
-  ctx.fillText("WildIdea", x + 78, brandY + 27);
-  posterFont(ctx, 16, 800);
-  ctx.fillStyle = "#667078";
-  ctx.fillText("帮你想出不一样的点子", x + 78, brandY + 54);
-
-  const badgeW = 148;
-  drawPosterRect(ctx, x + width - badgeW, brandY, badgeW, 88, 8, "#f3b17f", "#2a2a2a", 4);
-  posterFont(ctx, 28, 900);
+function drawPosterCardHeader(ctx, candidate, x, y, width, height) {
+  const { code, label } = slotBadgeParts(candidate.slot, candidate.field);
+  const badgeW = 170;
+  const badgeH = 104;
+  drawPosterRect(ctx, x + width - badgeW, y + 6, badgeW, badgeH, 8, "#f3b17f", "#2a2a2a", 5);
+  posterFont(ctx, 34, 900);
   ctx.fillStyle = "#111";
   ctx.textAlign = "center";
-  const [slotCode, ...slotRest] = String(slotText || "").split(/\s+/);
-  ctx.fillText(slotCode || "D?", x + width - badgeW / 2, brandY + 35);
-  posterFont(ctx, 16, 900);
-  ctx.fillText(slotRest.join(" ") || candidate.field || "", x + width - badgeW / 2, brandY + 62);
+  ctx.fillText(code || "D?", x + width - badgeW / 2, y + 45);
+  posterFont(ctx, 20, 900);
+  drawPosterSingleLine(ctx, label || candidate.field || "", x + width - badgeW / 2, y + 76, badgeW - 24, 20, 12, 900, "center");
   ctx.textAlign = "left";
 
-  const tagY = brandY + 98;
-  drawPosterTag(ctx, x, tagY, `方案 ${String(candidate.index || 1).padStart(2, "0")}`, "#fff4bd");
-  if (Number(candidate.reroll_count || 0) > 0) {
-    drawPosterTag(ctx, x + 112, tagY, `重抽 ${Number(candidate.reroll_count)} 次`, "#fff1c6");
+  drawPosterTag(ctx, x, y + 8, `方案 ${String(candidate.index || 1).padStart(2, "0")}`, "#fff4bd");
+  const rerollCount = Number(candidate.reroll_count || 0);
+  if (rerollCount > 0) {
+    drawPosterTag(ctx, x + 112, y + 8, `重抽 ${rerollCount} 次`, "#fff1c6");
   }
-  posterFont(ctx, 58, 900);
+
+  const titleWidth = width - badgeW - 32;
+  posterFont(ctx, 66, 900);
+  const titleLines = wrapPosterLines(ctx, candidate.name || "未命名方案", titleWidth).slice(0, 2);
   ctx.fillStyle = "#111";
   ctx.textBaseline = "top";
-  layout.titleLines.forEach((line, index) => {
-    ctx.fillText(line, x, y + layout.titleTop + index * layout.titleLineHeight);
+  titleLines.forEach((line, index) => {
+    ctx.fillText(line, x, y + 74 + index * 74);
   });
   ctx.textBaseline = "alphabetic";
 
+  const sourceLine = candidate.field ? `源自 ${candidate.field}` : "";
+  if (sourceLine) {
+    posterFont(ctx, 26, 900);
+    ctx.fillStyle = "#667078";
+    ctx.fillText(sourceLine, x, y + 240);
+  }
+
   ctx.strokeStyle = "#2a2a2a";
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.moveTo(x, y + layout.dividerTop);
-  ctx.lineTo(x + width, y + layout.dividerTop);
+  ctx.moveTo(x, y + height - 6);
+  ctx.lineTo(x + width, y + height - 6);
   ctx.stroke();
-  return y + layout.height;
+  return y + height;
+}
+
+function drawPosterCardSection(ctx, section, x, y, width, height) {
+  if (section.kind === "idea") {
+    drawPosterRect(ctx, x + 7, y + 7, width, height, 8, "rgba(42, 42, 42, 0.42)", null, 0);
+  }
+  drawPosterRect(ctx, x, y, width, height, 8, section.background, "#2a2a2a", section.kind === "idea" ? 5 : 4);
+  if (section.kind === "idea") {
+    drawPosterJokerPattern(ctx, x + 12, y + 18, width - 24, height - 36);
+    ctx.fillStyle = "#d85f63";
+    ctx.fillRect(x, y + 5, 10, height - 10);
+    ctx.fillStyle = "#496fae";
+    ctx.fillRect(x + width - 10, y + 5, 10, height - 10);
+  } else {
+    ctx.fillStyle = section.accent;
+    ctx.fillRect(x, y + 4, 9, height - 8);
+  }
+  drawPosterTag(ctx, x + 18, y - 18, section.label, section.labelFill);
+
+  if (section.kind === "source") {
+    const textX = x + 32;
+    const textW = width - 64;
+    drawPosterFittedText(ctx, section.phenomenon, textX, y + 52, textW, 88, {
+      fontSize: 31,
+      minFont: 19,
+      lineHeight: 1.22,
+      weight: 900,
+    });
+    ctx.strokeStyle = "rgba(42, 42, 42, 0.52)";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([3, 8]);
+    ctx.beginPath();
+    ctx.moveTo(textX, y + 154);
+    ctx.lineTo(textX + textW, y + 154);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    posterFont(ctx, 24, 900);
+    ctx.fillStyle = "#496fae";
+    ctx.fillText("抽象方法", textX, y + 194);
+    posterFont(ctx, 25, 900);
+    ctx.fillStyle = "#111";
+    ctx.fillText(section.method || "未记录抽象方法", textX, y + 230);
+    drawPosterFittedText(ctx, section.proto || "", textX, y + 250, textW, height - 266, {
+      fontSize: 22,
+      minFont: 15,
+      lineHeight: 1.32,
+      weight: 800,
+      color: "#667078",
+    });
+    return;
+  }
+
+  const bodyPad = section.kind === "idea" ? 42 : 32;
+  const maxHeight = height - bodyPad * 2 + (section.kind === "idea" ? 8 : 0);
+  drawPosterFittedText(ctx, section.text, x + bodyPad, y + bodyPad, width - bodyPad * 2, maxHeight, {
+    fontSize: section.kind === "idea" ? 42 : 31,
+    minFont: section.kind === "idea" ? 22 : 18,
+    lineHeight: section.kind === "idea" ? 1.3 : 1.24,
+    weight: 900,
+    color: "#1f2528",
+    centerY: true,
+  });
+}
+
+function drawPosterCardFooter(ctx, candidate, x, y, width, height) {
+  const qrSize = 176;
+  const qrX = x + width - qrSize - 24;
+  const qrY = y + 38;
+  drawPosterRect(ctx, x, y, width, height, 10, "#fff7cf", "rgba(42, 42, 42, 0.68)", 3);
+  ctx.setLineDash([8, 8]);
+  ctx.strokeStyle = "rgba(42, 42, 42, 0.62)";
+  ctx.lineWidth = 3;
+  drawPosterRect(ctx, x + 8, y + 8, width - 16, height - 16, 8, null, "rgba(42, 42, 42, 0.62)", 3);
+  ctx.setLineDash([]);
+
+  const textX = x + 26;
+  const textW = qrX - textX - 30;
+  posterFont(ctx, 31, 900);
+  ctx.fillStyle = "#111";
+  ctx.fillText("扫码抽一张自己的跨域灵感卡", textX, y + 62);
+  posterFont(ctx, 21, 900);
+  ctx.fillStyle = "#667078";
+  drawPosterWrappedText(ctx, posterSiteUrl(), textX, y + 98, textW, 30);
+  const problem = posterProblemText(candidate);
+  if (problem) {
+    posterFont(ctx, 21, 900);
+    ctx.fillStyle = "#667078";
+    drawPosterFittedText(ctx, problem, textX, y + 154, textW, 74, {
+      fontSize: 21,
+      minFont: 14,
+      lineHeight: 1.35,
+      weight: 900,
+      color: "#667078",
+    });
+  }
+  drawPosterQr(ctx, posterSiteUrl(), qrX, qrY, qrSize);
 }
 
 function posterProblemText(candidate) {
   const problem = String(candidate.runProblem || "").trim();
   if (!problem || problem === "生成工作台") return "";
   return `问题：${problem}`;
-}
-
-function posterBlockLayout(ctx, section, width) {
-  const pad = 24;
-  const textWidth = width - pad * 2;
-  posterFont(ctx, section.large ? 32 : 24, section.strong ? 900 : 700);
-  const lines = wrapPosterLines(ctx, section.text || "", textWidth);
-  let headingLines = [];
-  if (section.heading) {
-    posterFont(ctx, 22, 900);
-    headingLines = wrapPosterLines(ctx, section.heading, textWidth);
-  }
-  const headingLineHeight = 32;
-  const headingGap = headingLines.length ? 12 : 0;
-  const headingHeight = headingLines.length ? headingLines.length * headingLineHeight + headingGap : 0;
-  const textTop = 84;
-  const lineHeight = section.large ? 50 : 40;
-  return {
-    lines,
-    headingLines,
-    headingLineHeight,
-    lineHeight,
-    textTop,
-    height: textTop + headingHeight + lines.length * lineHeight + pad,
-  };
-}
-
-function drawPosterBlock(ctx, section, layout, x, y, width) {
-  const borderWidth = section.floating ? 4 : 3;
-  if (section.floating) {
-    drawPosterRect(ctx, x + 8, y + 8, width, layout.height, 8, "rgba(42, 42, 42, 0.72)", null, 0);
-    drawPosterRect(ctx, x + 3, y + 3, width, layout.height, 8, "rgba(111, 207, 151, 0.18)", null, 0);
-  }
-  drawPosterRect(ctx, x, y, width, layout.height, 8, section.background, "#2a2a2a", borderWidth);
-  drawPosterRect(ctx, x, y, section.floating ? 12 : 8, layout.height, 0, section.accent, null, 0);
-  drawPosterTag(ctx, x + 22, y + 22, section.label, "#f7df89");
-  let cursor = y + layout.textTop;
-  ctx.textBaseline = "top";
-  if (layout.headingLines.length) {
-    posterFont(ctx, 22, 900);
-    ctx.fillStyle = "#111";
-    layout.headingLines.forEach((line) => {
-      ctx.fillText(line, x + 22, cursor);
-      cursor += layout.headingLineHeight;
-    });
-    cursor += 12;
-  }
-  posterFont(ctx, section.large ? 32 : 24, section.strong ? 900 : 700);
-  ctx.fillStyle = "#1f2528";
-  layout.lines.forEach((line) => {
-    ctx.fillText(line, x + 22, cursor);
-    cursor += layout.lineHeight;
-  });
-  ctx.textBaseline = "alphabetic";
-}
-
-function drawPosterScores(ctx, scores, x, y, width) {
-  const items = [
-    ["结构", scores.structural_depth ?? "-"],
-    ["距离", scores.domain_distance ?? "-"],
-    ["新颖", scores.novelty ?? "-"],
-    ["可用", scores.applicability ?? "-"],
-  ];
-  const gap = 12;
-  const cellW = (width - gap * 3) / 4;
-  items.forEach(([label, value], index) => {
-    const cellX = x + index * (cellW + gap);
-    drawPosterRect(ctx, cellX, y, cellW, 92, 6, "#edf4f7", "#2a2a2a", 3);
-    posterFont(ctx, 18, 900);
-    ctx.fillStyle = "#496fae";
-    ctx.fillText(label, cellX + 16, y + 30);
-    posterFont(ctx, 38, 900);
-    ctx.fillStyle = "#111";
-    ctx.fillText(String(value), cellX + 16, y + 72);
-  });
-  return y + 92;
-}
-
-function drawPosterFooter(ctx, candidate, x, y, width, minHeight = 260) {
-  const qrSize = 178;
-  const qrX = x;
-  const qrY = y + 14;
-  drawPosterQr(ctx, posterSiteUrl(), qrX, qrY, qrSize);
-
-  const textX = qrX + qrSize + 26;
-  posterFont(ctx, 20, 900);
-  ctx.fillStyle = "#111";
-  ctx.fillText("扫码打开网站", textX, y + 48);
-  posterFont(ctx, 14, 800);
-  ctx.fillStyle = "#667078";
-  drawPosterWrappedText(ctx, posterSiteUrl(), textX, y + 78, width - qrSize - 26, 22);
-
-  posterFont(ctx, 17, 800);
-  ctx.fillStyle = "#667078";
-  drawPosterWrappedText(ctx, "WildIdea 生成结果海报", textX, y + 138, width - qrSize - 26, 24);
-  posterFont(ctx, 13, 800);
-  ctx.fillStyle = "#8a7d70";
-  ctx.fillText(`Generated by WildIdea · ${new Date().toLocaleDateString()}`, textX, y + Math.max(192, minHeight - 18));
 }
 
 function drawPosterLogo(ctx, x, y, size) {
@@ -1801,12 +2536,156 @@ function drawPosterLogo(ctx, x, y, size) {
 }
 
 function drawPosterTag(ctx, x, y, text, fill) {
-  posterFont(ctx, 16, 900);
-  const width = Math.ceil(ctx.measureText(text).width) + 22;
-  drawPosterRect(ctx, x, y, width, 32, 4, fill, "#2a2a2a", 3);
+  posterFont(ctx, 19, 900);
+  const width = Math.ceil(ctx.measureText(text).width) + 26;
+  drawPosterRect(ctx, x, y, width, 38, 3, fill, "#2a2a2a", 4);
   ctx.fillStyle = "#111";
-  ctx.fillText(text, x + 11, y + 22);
+  ctx.fillText(text, x + 13, y + 26);
   return width;
+}
+
+function drawPosterFittedText(ctx, text, x, y, width, height, options = {}) {
+  const {
+    fontSize = 24,
+    minFont = 12,
+    lineHeight = 1.35,
+    weight = 800,
+    color = "#1f2528",
+    centerY = false,
+  } = options;
+  let size = fontSize;
+  let lines = [];
+  let actualLineHeight = size * lineHeight;
+  while (size >= minFont) {
+    posterFont(ctx, size, weight);
+    lines = wrapPosterLines(ctx, text, width);
+    actualLineHeight = Math.ceil(size * lineHeight);
+    if (lines.length * actualLineHeight <= height) break;
+    size -= 1;
+  }
+  const maxLines = Math.max(1, Math.floor(height / actualLineHeight));
+  if (lines.length > maxLines) {
+    lines = lines.slice(0, maxLines);
+    lines[lines.length - 1] = posterEllipsisLine(ctx, lines[lines.length - 1], width);
+  }
+  const textHeight = lines.length * actualLineHeight;
+  const startY = centerY ? y + Math.max(0, (height - textHeight) / 2) : y;
+  ctx.fillStyle = color;
+  ctx.textBaseline = "top";
+  posterFont(ctx, size, weight);
+  lines.forEach((line, index) => {
+    ctx.fillText(line, x, startY + index * actualLineHeight);
+  });
+  ctx.textBaseline = "alphabetic";
+}
+
+function drawPosterSingleLine(ctx, text, x, y, maxWidth, fontSize, minFont, weight = 900, align = "left") {
+  let size = fontSize;
+  while (size > minFont) {
+    posterFont(ctx, size, weight);
+    if (ctx.measureText(text).width <= maxWidth) break;
+    size -= 1;
+  }
+  posterFont(ctx, size, weight);
+  ctx.textAlign = align;
+  ctx.fillText(text, x, y);
+  ctx.textAlign = "left";
+}
+
+function posterEllipsisLine(ctx, line, maxWidth) {
+  const ellipsis = "…";
+  let value = String(line || "");
+  while (value.length > 0 && ctx.measureText(value + ellipsis).width > maxWidth) {
+    value = value.slice(0, -1);
+  }
+  return `${value}${ellipsis}`;
+}
+
+function drawPosterJokerPattern(ctx, x, y, width, height) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, width, height);
+  ctx.clip();
+  for (let row = -1; row < Math.ceil(height / 78) + 1; row += 1) {
+    for (let col = -1; col < Math.ceil(width / 96) + 1; col += 1) {
+      const px = x + col * 96 + (row % 2 ? 48 : 0);
+      const py = y + row * 78;
+      drawPosterTinyJoker(ctx, px, py, 0.72);
+    }
+  }
+  ctx.restore();
+}
+
+function drawPosterTinyJoker(ctx, x, y, scale = 1) {
+  const unit = 7 * scale;
+  ctx.save();
+  ctx.globalAlpha = 0.075;
+  ctx.fillStyle = "#2a2a2a";
+  ctx.fillRect(x + unit * 3, y, unit * 2, unit * 1);
+  ctx.fillRect(x + unit * 2, y + unit, unit * 4, unit * 1);
+  ctx.fillRect(x, y + unit * 2, unit * 8, unit * 1);
+  ctx.fillRect(x + unit * 2, y + unit * 4, unit * 1.5, unit * 1);
+  ctx.fillRect(x + unit * 4.5, y + unit * 4, unit * 1.5, unit * 1);
+  ctx.fillRect(x + unit * 2, y + unit * 6, unit * 4, unit * 1);
+  ctx.fillRect(x + unit * 1, y + unit * 8, unit * 6, unit * 1);
+  ctx.fillRect(x, y + unit * 9, unit * 8, unit * 1);
+  ctx.fillRect(x + unit * 1, y + unit * 10, unit * 2, unit * 1);
+  ctx.fillRect(x + unit * 5, y + unit * 10, unit * 2, unit * 1);
+  ctx.restore();
+}
+
+function drawPosterPixelRect(ctx, x, y, width, height, radius, fill, stroke, lineWidth) {
+  posterPixelRectPath(ctx, x, y, width, height, radius);
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
+  if (stroke && lineWidth) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+}
+
+function posterPixelRectPath(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  const step = r / 8;
+  const points = [
+    [x + r, y],
+    [x + width - r, y],
+    [x + width - r * 0.62, y + step],
+    [x + width - r * 0.5, y + step * 2],
+    [x + width - r * 0.37, y + step * 3],
+    [x + width - r * 0.25, y + step * 4],
+    [x + width - r * 0.12, y + step * 5],
+    [x + width, y + r],
+    [x + width, y + height - r],
+    [x + width - r * 0.12, y + height - step * 5],
+    [x + width - r * 0.25, y + height - step * 4],
+    [x + width - r * 0.37, y + height - step * 3],
+    [x + width - r * 0.5, y + height - step * 2],
+    [x + width - r * 0.62, y + height - step],
+    [x + width - r, y + height],
+    [x + r, y + height],
+    [x + r * 0.62, y + height - step],
+    [x + r * 0.5, y + height - step * 2],
+    [x + r * 0.37, y + height - step * 3],
+    [x + r * 0.25, y + height - step * 4],
+    [x + r * 0.12, y + height - step * 5],
+    [x, y + height - r],
+    [x, y + r],
+    [x + r * 0.12, y + step * 5],
+    [x + r * 0.25, y + step * 4],
+    [x + r * 0.37, y + step * 3],
+    [x + r * 0.5, y + step * 2],
+    [x + r * 0.62, y + step],
+  ];
+  ctx.beginPath();
+  points.forEach(([px, py], index) => {
+    if (index === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  });
+  ctx.closePath();
 }
 
 function drawPosterRect(ctx, x, y, width, height, radius, fill, stroke, lineWidth) {
@@ -2211,6 +3090,7 @@ $("authForm").addEventListener("submit", async (event) => {
     state.token = data.access_token;
     state.user = data.user;
     state.currentRunId = null;
+    state.userInviteOpen = false;
     state.searchOpen = true;
     state.launchingSearch = false;
     localStorage.setItem("wildidea_token", state.token);
@@ -2235,11 +3115,21 @@ $("logoutBtn").addEventListener("click", () => {
   state.launchingSearch = false;
   state.historyDrawerOpen = false;
   state.historyQuery = "";
+  state.userInviteOpen = false;
   $("historySearch").value = "";
   state.animatedProgressCards.clear();
   renderShell();
   renderRuns();
   renderCurrentRun(null);
+});
+
+$("userPanelToggle").addEventListener("click", () => {
+  if (!state.user) return;
+  state.userInviteOpen = !state.userInviteOpen;
+  renderShell();
+  if (state.userInviteOpen) {
+    window.setTimeout(() => $("redeemCode").focus(), 0);
+  }
 });
 
 $("redeemForm").addEventListener("submit", async (event) => {
@@ -2251,6 +3141,7 @@ $("redeemForm").addEventListener("submit", async (event) => {
     });
     state.user.credit_balance = data.credit_balance;
     $("redeemCode").value = "";
+    state.userInviteOpen = false;
     renderShell();
     showToast(`兑换成功，增加 ${data.bonus_credits} 积分`);
   } catch (err) {
@@ -2269,9 +3160,9 @@ $("runForm").addEventListener("submit", async (event) => {
     return;
   }
   const forbidTerms = $("forbidTerms").value.split(/\s+/).map((item) => item.trim()).filter(Boolean);
-  beginSearchLaunch(problemText);
+  const slotCount = Math.max(1, Math.min(MAX_SLOT_COUNT, Number($("slotCount").value || DEFAULT_SLOT_COUNT)));
+  beginSearchLaunch(problemText, slotCount);
   try {
-    const slotCount = Math.max(1, Math.min(10, Number($("slotCount").value || 10)));
     const data = await withMinimumDelay(api("/api/runs", {
       method: "POST",
       body: JSON.stringify({
@@ -2279,7 +3170,7 @@ $("runForm").addEventListener("submit", async (event) => {
         slot_count: slotCount,
         forbid_terms: forbidTerms,
       }),
-    }), SEARCH_LAUNCH_MIN_MS);
+    }), launchDurationForCount(slotCount));
     state.user.credit_balance = data.credit_balance;
     renderShell();
     await loadRuns();
@@ -2315,9 +3206,17 @@ $("historySearch").addEventListener("input", (event) => {
 $("refreshAdminBtn").addEventListener("click", loadAdmin);
 $("exportFeedbackBtn").addEventListener("click", downloadFeedbackExcel);
 $("slotCount").addEventListener("input", updateRunCostLabel);
+document.querySelectorAll(".floating-question").forEach((button) => {
+  button.addEventListener("click", () => fillExampleProblem(button.dataset.exampleProblem || button.textContent.trim()));
+});
 $("posterCloseBtn").addEventListener("click", closePoster);
 $("posterBackdrop").addEventListener("click", closePoster);
 $("posterDownloadBtn").addEventListener("click", downloadPoster);
+let fitResizeTimer = null;
+window.addEventListener("resize", () => {
+  window.clearTimeout(fitResizeTimer);
+  fitResizeTimer = window.setTimeout(() => scheduleFitText($("candidateGrid")), 120);
+});
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !$("posterModal").classList.contains("hidden")) closePoster();
 });

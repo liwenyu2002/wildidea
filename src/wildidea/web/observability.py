@@ -71,9 +71,9 @@ def _age_seconds(value: datetime | None) -> int | None:
 
 def run_slot_count(run: Run) -> int:
     try:
-        return max(1, int((run.config_snapshot or {}).get("slot_count") or 10))
+        return max(1, int((run.config_snapshot or {}).get("slot_count") or 9))
     except (TypeError, ValueError):
-        return 10
+        return 9
 
 
 def run_estimated_seconds(run: Run) -> int:

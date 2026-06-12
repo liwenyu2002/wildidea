@@ -2,15 +2,18 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
+import socket
 import time
+from collections import deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Optional
 
 import uvicorn
-from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import desc, func, select
@@ -119,6 +122,13 @@ DATA_EXPORT_COLUMNS = [
     ("feedback_id", "反馈ID"),
 ]
 
+EMAIL_BASIC_RE = re.compile(
+    r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@"
+    r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+"
+    r"[A-Za-z]{2,63}$"
+)
+_RATE_BUCKETS: dict[str, deque[float]] = {}
+
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
@@ -130,6 +140,18 @@ async def lifespan(app_: FastAPI):
 
 app = FastAPI(title="WildIdea Web", version="0.1.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
+    return response
 
 
 def _utc_iso(value: datetime | None) -> str | None:
@@ -274,6 +296,30 @@ def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/privacy", include_in_schema=False)
+def privacy() -> FileResponse:
+    return FileResponse(STATIC_DIR / "privacy.html")
+
+
+@app.get("/terms", include_in_schema=False)
+def terms() -> FileResponse:
+    return FileResponse(STATIC_DIR / "terms.html")
+
+
+@app.get("/design-lab", include_in_schema=False)
+def design_lab() -> FileResponse:
+    return FileResponse(STATIC_DIR / "design-lab.html")
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots_txt() -> Response:
+    return Response(
+        "User-agent: *\nDisallow: /\n",
+        media_type="text/plain; charset=utf-8",
+        headers={"X-Robots-Tag": "noindex, nofollow"},
+    )
+
+
 @app.api_route("/favicon.svg", methods=["GET", "HEAD"], include_in_schema=False)
 def favicon_svg() -> FileResponse:
     return FileResponse(STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
@@ -315,9 +361,67 @@ def _verify_email_code(db: Session, email: str, code: str) -> EmailVerificationC
     return row
 
 
+def _client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip() or "unknown"
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit(key: str, limit: int, window_seconds: int, message: str) -> None:
+    if limit <= 0:
+        return
+    now = time.monotonic()
+    bucket = _RATE_BUCKETS.setdefault(key, deque())
+    cutoff = now - window_seconds
+    while bucket and bucket[0] <= cutoff:
+        bucket.popleft()
+    if len(bucket) >= limit:
+        retry_after = max(1, int(window_seconds - (now - bucket[0])))
+        raise HTTPException(
+            status_code=429,
+            detail={"error": "RATE_LIMITED", "message": message, "retry_after_seconds": retry_after},
+            headers={"Retry-After": str(retry_after)},
+        )
+    bucket.append(now)
+
+
+def _validate_email_can_receive(email: str) -> None:
+    if not EMAIL_BASIC_RE.match(email):
+        raise HTTPException(status_code=422, detail={"error": "EMAIL_INVALID", "message": "请输入有效的邮箱地址"})
+    domain = email.rsplit("@", 1)[1]
+    try:
+        domain_ascii = domain.encode("idna").decode("ascii")
+        socket.getaddrinfo(domain_ascii, None, type=socket.SOCK_STREAM)
+    except socket.gaierror as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "EMAIL_DOMAIN_INVALID",
+                "message": "邮箱域名无法解析，请检查邮箱地址是否填写正确",
+            },
+        ) from exc
+    except UnicodeError as exc:
+        raise HTTPException(status_code=422, detail={"error": "EMAIL_INVALID", "message": "请输入有效的邮箱地址"}) from exc
+
+
 @app.post("/api/auth/email-code")
-def request_email_code(req: EmailCodeRequest, db: Session = Depends(get_db)) -> dict:
+def request_email_code(req: EmailCodeRequest, request: Request, db: Session = Depends(get_db)) -> dict:
     email = req.email.strip().lower()
+    _validate_email_can_receive(email)
+    ip = _client_ip(request)
+    _rate_limit(
+        f"email-code:ip:{ip}",
+        settings.email_code_ip_limit_per_hour,
+        3600,
+        "验证码请求过于频繁，请稍后再试",
+    )
+    _rate_limit(
+        f"email-code:email:{email}",
+        settings.email_code_address_limit_per_hour,
+        3600,
+        "这个邮箱验证码请求过于频繁，请稍后再试",
+    )
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status_code=409, detail={"error": "EMAIL_EXISTS", "message": "邮箱已注册"})
     latest = db.scalar(
@@ -383,8 +487,22 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)) -> dict:
 
 
 @app.post("/api/auth/login")
-def login(req: LoginRequest, db: Session = Depends(get_db)) -> dict:
-    user = db.scalar(select(User).where(User.email == req.email.strip().lower()))
+def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)) -> dict:
+    email = req.email.strip().lower()
+    ip = _client_ip(request)
+    _rate_limit(
+        f"login:ip:{ip}",
+        settings.login_ip_limit_per_15m,
+        900,
+        "登录尝试过于频繁，请稍后再试",
+    )
+    _rate_limit(
+        f"login:email:{email}",
+        settings.login_address_limit_per_15m,
+        900,
+        "这个邮箱登录尝试过于频繁，请稍后再试",
+    )
+    user = db.scalar(select(User).where(User.email == email))
     if not user or not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail={"error": "BAD_CREDENTIALS", "message": "邮箱或密码错误"})
     if user.status != "active":
@@ -433,9 +551,16 @@ def my_credits(db: Session = Depends(get_db), user: User = Depends(get_current_u
 def create_run(
     req: CreateRunRequest,
     background_tasks: BackgroundTasks,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict:
+    _rate_limit(
+        f"run-create:user:{user.id}",
+        settings.run_create_user_limit_per_10m,
+        600,
+        "提交生成任务过于频繁，请稍后再试",
+    )
     if req.slot_count > settings.user_run_card_limit:
         raise HTTPException(
             status_code=400,
@@ -471,10 +596,12 @@ def create_run(
         "forbid_terms": req.forbid_terms,
         "threshold_reroll": True,
         "max_retries": 3,
-        "parallel": 10,
+        "parallel": min(req.slot_count, settings.user_run_card_limit),
         "slot_count": req.slot_count,
         "credit_cost": credit_cost,
         "opt_in_improvement": user.improvement_consent,
+        "fake_runs": settings.fake_runs,
+        "fake_run_seconds": settings.fake_run_seconds,
     }
     run = Run(
         user_id=user.id,
@@ -493,14 +620,14 @@ def create_run(
         "info",
         "run queued",
         {
-            "executor": settings.run_executor,
+            "executor": "fake" if settings.fake_runs else settings.run_executor,
             "credit_cost": credit_cost,
             "slot_count": req.slot_count,
             "user_id": user.id,
         },
     )
     db.commit()
-    if settings.run_executor == "worker":
+    if settings.run_executor == "worker" and not settings.fake_runs:
         pass
     else:
         background_tasks.add_task(execute_run, run.id)

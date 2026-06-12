@@ -57,11 +57,30 @@ def test_verification_email_has_html_and_plaintext_parts():
     assert "分钟内有效" in html_content
 
 
+def test_email_code_rejects_unresolvable_domain(monkeypatch):
+    sent: list[tuple[str, str]] = []
+
+    def fail_dns(*_args, **_kwargs):
+        raise webapp.socket.gaierror("dns failed")
+
+    monkeypatch.setattr(webapp.socket, "getaddrinfo", fail_dns)
+    monkeypatch.setattr(webapp, "send_verification_email", lambda email, code: sent.append((email, code)))
+    with TestClient(webapp.app) as client:
+        response = client.post("/api/auth/email-code", json={"email": "user@missing.example"})
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"] == "EMAIL_DOMAIN_INVALID"
+    assert "邮箱域名无法解析" in response.json()["detail"]["message"]
+    assert sent == []
+
+
 def test_homepage_exposes_favicon():
     with TestClient(webapp.app) as client:
         home = client.get("/")
         assert home.status_code == 200
         assert "/static/favicon.svg" in home.text
+        assert home.headers["x-frame-options"] == "DENY"
+        assert "noindex" in home.headers["x-robots-tag"]
 
         favicon = client.get("/favicon.ico")
         assert favicon.status_code == 200
@@ -70,6 +89,18 @@ def test_homepage_exposes_favicon():
 
         favicon_head = client.head("/favicon.ico")
         assert favicon_head.status_code == 200
+
+        privacy = client.get("/privacy")
+        assert privacy.status_code == 200
+        assert "WildIdea 隐私政策" in privacy.text
+
+        terms = client.get("/terms")
+        assert terms.status_code == 200
+        assert "WildIdea 用户协议" in terms.text
+
+        robots = client.get("/robots.txt")
+        assert robots.status_code == 200
+        assert "Disallow: /" in robots.text
 
 
 def test_register_invite_redeem_and_run_charge():
@@ -410,7 +441,7 @@ def test_feedback_is_mutually_exclusive_upsert():
             db.close()
 
 
-def test_create_run_defaults_to_ten_parallel_ten_cards():
+def test_create_run_defaults_to_nine_parallel_nine_cards():
     webapp.execute_run = lambda run_id: None
 
     with TestClient(webapp.app) as client:
@@ -437,12 +468,12 @@ def test_create_run_defaults_to_ten_parallel_ten_cards():
         assert run_resp.status_code == 200
         snapshot = run_resp.json()["run"]["config_snapshot"]
         assert run_resp.json()["run"]["created_at"].endswith("Z")
-        assert snapshot["parallel"] == 10
-        assert snapshot["slot_count"] == 10
-        assert snapshot["credit_cost"] == 10
+        assert snapshot["parallel"] == 9
+        assert snapshot["slot_count"] == 9
+        assert snapshot["credit_cost"] == 9
         assert "generation_mode" not in snapshot
         assert snapshot["max_retries"] == 3
-        assert run_resp.json()["credit_balance"] == 20
+        assert run_resp.json()["credit_balance"] == 21
 
         legacy_config_resp = client.post(
             "/api/runs",
@@ -466,7 +497,7 @@ def test_create_run_defaults_to_ten_parallel_ten_cards():
         )
         assert legacy_config_resp.status_code == 200
         legacy_snapshot = legacy_config_resp.json()["run"]["config_snapshot"]
-        assert legacy_snapshot["parallel"] == 10
+        assert legacy_snapshot["parallel"] == 1
         assert "generation_mode" not in legacy_snapshot
         assert legacy_snapshot["max_retries"] == 3
 
@@ -494,12 +525,12 @@ def test_admin_run_does_not_require_or_consume_credits():
         run_resp = client.post(
             "/api/runs",
             headers=headers,
-            json={"problem": "管理员零积分生成", "slot_count": 10},
+            json={"problem": "管理员零积分生成", "slot_count": 9},
         )
 
         assert run_resp.status_code == 200
         run = run_resp.json()["run"]
-        assert run["config_snapshot"]["slot_count"] == 10
+        assert run["config_snapshot"]["slot_count"] == 9
         assert run["config_snapshot"]["credit_cost"] == 0
         assert run_resp.json()["credit_balance"] == 0
 
@@ -522,10 +553,11 @@ def test_create_run_enforces_user_card_limit():
         over_limit = client.post(
             "/api/runs",
             headers=headers,
-            json={"problem": "超过单用户卡片上限", "slot_count": 11},
+            json={"problem": "超过单用户卡片上限", "slot_count": 10},
         )
         assert over_limit.status_code == 400
         assert over_limit.json()["detail"]["error"] == "USER_CARD_LIMIT_EXCEEDED"
+        assert over_limit.json()["detail"]["limit"] == 9
 
 
 def test_worker_executor_queues_without_background_execution():
@@ -801,8 +833,8 @@ def test_runner_build_pipeline_config_returns_config():
     assert config.provider == "openrouter"
     assert config.model == "deepseek/deepseek-v4-pro"
     assert config.judge_config.provider == "openrouter"
-    assert config.parallel == 10
-    assert config.target_count == 10
+    assert config.parallel == 9
+    assert config.target_count == 9
     assert config.max_retries == 3
 
 
@@ -828,8 +860,8 @@ def test_production_like_default_run_partial_refund_and_reroll_events(monkeypatc
         }
 
     def fake_run_pipeline(problem, config, on_progress):
-        assert config.parallel == 10
-        assert config.target_count == 10
+        assert config.parallel == 9
+        assert config.target_count == 9
         slots = [
             {
                 "slot_id": f"slot-{idx}",
@@ -838,9 +870,9 @@ def test_production_like_default_run_partial_refund_and_reroll_events(monkeypatc
                 "source": f"源现象{idx}",
                 "source_phenomenon": f"源现象{idx}",
             }
-            for idx in range(1, 11)
+            for idx in range(1, 10)
         ]
-        on_progress("slots_done", {"count": 10, "target": 10, "slots": slots})
+        on_progress("slots_done", {"count": 9, "target": 9, "slots": slots})
         candidates = []
         for idx in range(1, 9):
             slot_id = f"slot-{idx}"
@@ -904,7 +936,7 @@ def test_production_like_default_run_partial_refund_and_reroll_events(monkeypatc
                 "fail": candidate.fail,
                 "scores": scores_payload(scores),
                 "done": len(candidates),
-                "total": 10,
+                "total": 9,
             })
         return Result(
             candidates=candidates,
@@ -927,7 +959,7 @@ def test_production_like_default_run_partial_refund_and_reroll_events(monkeypatc
         run_resp = client.post(
             "/api/runs",
             headers=headers,
-            json={"problem": "生产模拟默认 10 卡"},
+            json={"problem": "生产模拟默认 9 卡"},
         )
         assert run_resp.status_code == 200
         run_id = run_resp.json()["run"]["id"]
@@ -962,12 +994,12 @@ def test_production_like_default_run_partial_refund_and_reroll_events(monkeypatc
                 run_id=run_id,
                 event_type="refund",
             ).filter(RunEvent.payload["reason"].as_string() == "partial_card_refund").one()
-            assert partial_refund.amount == 2
+            assert partial_refund.amount == 1
             assert partial_refund.meta["generated_candidates"] == 8
-            assert partial_refund.meta["missing_cards"] == 2
+            assert partial_refund.meta["missing_cards"] == 1
             assert partial_refund.meta["reason"] == "reroll_limit_or_quality_gate"
-            assert refund_event.payload["credits"] == 2
-            assert refund_event.payload["missing_cards"] == 2
+            assert refund_event.payload["credits"] == 1
+            assert refund_event.payload["missing_cards"] == 1
         finally:
             db.close()
 

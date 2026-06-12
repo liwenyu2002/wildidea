@@ -10,6 +10,8 @@ outputs/
 data/
 logs/
 dist/
+artifacts/
+tmp/
 *.pdf
 .DS_Store
 *.egg-info/

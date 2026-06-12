@@ -62,16 +62,16 @@ class TestDomainPool(unittest.TestCase):
     def test_build_slots_product(self):
         from wildidea.core.domain_pool import build_slots
         slots = build_slots("product")
-        self.assertEqual(len(slots), 10)
+        self.assertEqual(len(slots), 9)
         slot_types = [s["slot"] for s in slots]
         self.assertIn("D4", slot_types)  # product type has D4
 
     def test_build_slots_algorithm(self):
         from wildidea.core.domain_pool import build_slots
         slots = build_slots("algorithm")
-        self.assertEqual(len(slots), 10)
+        self.assertEqual(len(slots), 9)
         slot_types = [s["slot"] for s in slots]
-        self.assertEqual(slot_types.count("D1"), 5)  # algorithm type has 5 D1
+        self.assertEqual(slot_types.count("D1"), 4)  # algorithm type has 4 D1
 
     def test_slots_have_required_fields(self):
         from wildidea.core.domain_pool import build_slots
