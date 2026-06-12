@@ -23,6 +23,7 @@ const state = {
   suppressProgressAnimationRunId: null,
   launchTimers: [],
   userInviteOpen: false,
+  adminCardLogPage: 1,
 };
 
 const DRAW_CARD_DELAY_MS = 210;
@@ -202,13 +203,6 @@ function ensureAdminPanel() {
         <h2>用户</h2>
         <div id="userList" class="admin-list"></div>
       </div>
-    </div>
-    <div>
-      <div class="section-title-row">
-        <h2>反馈数据</h2>
-        <button id="exportFeedbackBtn" class="ghost" type="button">导出全量 Excel</button>
-      </div>
-      <div id="feedbackList" class="admin-list feedback-list"></div>
     </div>
   `;
   const emptyState = $("emptyState");
@@ -2077,12 +2071,12 @@ function startPollingRun(runId) {
 async function loadAdmin() {
   if (!isAdminUser()) return;
   ensureAdminPanel();
-  const [metrics, queue, invites, users, feedback] = await Promise.all([
+  const [metrics, queue, invites, users, cardLogs] = await Promise.all([
     api("/api/admin/metrics"),
     api("/api/admin/queue"),
     api("/api/admin/invite-codes"),
     api("/api/admin/users"),
-    api("/api/admin/feedback"),
+    api(`/api/admin/card-logs?page=${state.adminCardLogPage}&page_size=20`),
   ]);
   $("metrics").innerHTML = `
     <div class="metric"><span class="muted">用户</span><strong>${metrics.users}</strong></div>
@@ -2090,7 +2084,7 @@ async function loadAdmin() {
     <div class="metric"><span class="muted">邀请码</span><strong>${invites.invite_codes.length}</strong></div>
     <div class="metric"><span class="muted">任务</span><strong>${Object.values(metrics.runs_by_status || {}).reduce((a, b) => a + b, 0)}</strong></div>
   `;
-  renderQueueStatus(queue.queue);
+  renderQueueStatus(queue.queue, cardLogs);
   $("inviteList").innerHTML = invites.invite_codes.map((item) => `
     <div class="admin-row">
       <strong>${escapeHtml(item.code)}</strong>
@@ -2103,61 +2097,17 @@ async function loadAdmin() {
       <span class="muted">${escapeHtml(adminUserLabel(item))}</span>
     </div>
   `).join("");
-  $("feedbackList").innerHTML = feedback.feedback.map((item) => `
-    <div class="admin-row feedback-admin-row">
-      <div class="feedback-admin-head">
-        <div>
-          <strong>${escapeHtml(feedbackLabel(item.label))}</strong>
-          <span class="muted">${escapeHtml(item.user_email || "-")} · ${escapeHtml(item.run_problem || "-")}</span>
-        </div>
-        <span class="muted">${new Date(item.created_at).toLocaleString()}</span>
-      </div>
-      ${item.comment ? `<p class="feedback-comment">${escapeHtml(item.comment)}</p>` : ""}
-      <div class="admin-card-snapshot">
-        <div class="admin-card-top">
-          <div>
-            <span class="candidate-index">方案 ${formatAdminIndex(item.candidate_index)}</span>
-            ${Number(item.candidate_reroll_count || 0) > 0 ? `<span class="reroll-badge">重抽 ${Number(item.candidate_reroll_count)} 次</span>` : ""}
-            <strong>${escapeHtml(item.candidate_name || "-")}</strong>
-          </div>
-          ${slotBadgeMarkup(item.candidate_slot, item.candidate_domain || item.candidate_source)}
-        </div>
-        <div class="admin-card-block source">
-          <span>他山之石</span>
-          <p>${escapeHtml(item.candidate_source_phenomenon || item.candidate_source || "-")}</p>
-        </div>
-        <div class="admin-card-block">
-          <span>抽象方法</span>
-          ${item.candidate_source ? `<strong>${escapeHtml(item.candidate_source)}</strong>` : ""}
-          <p>${escapeHtml(item.candidate_proto || "-")}</p>
-        </div>
-        ${item.candidate_advantage ? `
-          <div class="admin-card-block advantage">
-            <span>优势</span>
-            <p>${escapeHtml(normalizeAdvantage(item.candidate_advantage))}</p>
-          </div>
-        ` : ""}
-        <div class="admin-card-block idea">
-          <span>落地方案</span>
-          <p>${escapeHtml(item.candidate_desc || "-")}</p>
-        </div>
-        <div class="admin-card-block risk">
-          <span>失败边界</span>
-          <p>${escapeHtml(item.candidate_fail || "-")}</p>
-        </div>
-        ${adminScoreRow(item.candidate_scores)}
-      </div>
-    </div>
-  `).join("") || '<div class="muted">暂无反馈数据</div>';
 }
 
-function renderQueueStatus(queue) {
+function renderQueueStatus(queue, cardLogs = { items: [], page: 1, total_pages: 1, total: 0 }) {
   const counts = queue?.counts || {};
   const workers = queue?.workers || [];
-  const logs = queue?.recent_logs || [];
+  const logs = cardLogs?.items || [];
   const executorText = queue?.executor === "worker" ? "Worker 队列" : "本进程后台";
   const activeWorkers = workers.filter((worker) => worker.active).length;
   const oldestQueued = queue?.oldest_queued_at ? new Date(queue.oldest_queued_at).toLocaleString() : "无";
+  const page = Number(cardLogs?.page || 1);
+  const totalPages = Number(cardLogs?.total_pages || 1);
   $("queueStatus").innerHTML = `
     <div class="queue-head">
       <div>
@@ -2190,18 +2140,64 @@ function renderQueueStatus(queue) {
       `).join("") || '<div class="muted">暂无 worker 心跳</div>'}
     </div>
     <div class="queue-logs">
-      <strong>最近日志</strong>
-      ${logs.slice(0, 8).map((log) => `
-        <div class="queue-log-row ${escapeHtml(log.level)}">
-          <span>${escapeHtml(new Date(log.created_at).toLocaleTimeString())}</span>
-          <div>
-            <strong>${escapeHtml(log.message)}</strong>
-            <small>${escapeHtml(log.run_problem || log.run_id || "system")}</small>
-          </div>
+      <div class="queue-log-title">
+        <strong>最近日志</strong>
+        <div class="queue-log-actions">
+          <span class="muted">每页 20 张卡 · 第 ${page}/${totalPages} 页 · 共 ${Number(cardLogs?.total || 0)} 条</span>
+          <button id="exportFeedbackBtn" class="ghost" type="button">导出 Excel</button>
         </div>
-      `).join("") || '<div class="muted">暂无运行日志</div>'}
+      </div>
+      ${logs.map((log) => adminCardLogRow(log)).join("") || '<div class="muted">暂无卡片结果</div>'}
+      <div class="admin-pagination">
+        <button id="cardLogPrevBtn" class="ghost" type="button" ${page <= 1 ? "disabled" : ""}>上一页</button>
+        <button id="cardLogNextBtn" class="ghost" type="button" ${page >= totalPages ? "disabled" : ""}>下一页</button>
+      </div>
     </div>
   `;
+  $("cardLogPrevBtn")?.addEventListener("click", () => changeAdminCardLogPage(page - 1, totalPages));
+  $("cardLogNextBtn")?.addEventListener("click", () => changeAdminCardLogPage(page + 1, totalPages));
+  $("exportFeedbackBtn")?.addEventListener("click", downloadFeedbackExcel);
+}
+
+function adminCardLogRow(item) {
+  const feedback = item.feedback || null;
+  const label = feedback ? (item.feedback_label_text || feedbackLabel(feedback.label)) : "未反馈";
+  const comment = feedback?.comment ? ` · ${feedback.comment}` : "";
+  const statusClass = feedback ? "has-feedback" : "no-feedback";
+  const average = item.score_average ? `均分 ${item.score_average}` : "";
+  const usability = item.score_applicability ? `可用 ${item.score_applicability}` : "";
+  const scoreText = [average, usability].filter(Boolean).join(" · ");
+  const meta = [
+    item.user_email || "-",
+    item.run_problem || "-",
+    item.candidate_slot || "-",
+    item.candidate_domain || item.candidate_source || "-",
+  ].filter(Boolean).join(" · ");
+  const result = item.candidate_desc || item.candidate_advantage || item.candidate_source_phenomenon || "";
+  const time = item.candidate_created_at ? new Date(item.candidate_created_at).toLocaleString() : "-";
+  return `
+    <div class="queue-log-row card-log-row ${statusClass}" title="${escapeHtml(result)}">
+      <span>${escapeHtml(time)}</span>
+      <div>
+        <strong>
+          <b>${escapeHtml(formatAdminIndex(item.candidate_index))}. ${escapeHtml(item.candidate_name || "-")}</b>
+          <em>${escapeHtml(`反馈：${label}${comment}`)}</em>
+        </strong>
+        <small>${escapeHtml(`${meta} · 结果：${compactText(result, 72) || "-"}${scoreText ? ` · ${scoreText}` : ""}`)}</small>
+      </div>
+    </div>
+  `;
+}
+
+function compactText(value, maxLength = 80) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1)}…`;
+}
+
+function changeAdminCardLogPage(nextPage, totalPages) {
+  state.adminCardLogPage = Math.max(1, Math.min(Number(totalPages || 1), Number(nextPage || 1)));
+  loadAdmin();
 }
 
 function workerLabel(status) {

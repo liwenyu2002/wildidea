@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 import uvicorn
-from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import desc, func, select
@@ -965,6 +965,85 @@ def _admin_feedback_rows(db: Session, limit: int = 200) -> list[dict]:
     return result
 
 
+def _admin_card_log_rows(db: Session, page: int, page_size: int) -> dict:
+    safe_page = max(1, page)
+    safe_page_size = max(1, min(20, page_size))
+    total = int(db.scalar(select(func.count()).select_from(Candidate)) or 0)
+    candidates = db.scalars(
+        select(Candidate)
+        .order_by(desc(Candidate.created_at), desc(Candidate.id))
+        .offset((safe_page - 1) * safe_page_size)
+        .limit(safe_page_size)
+    ).all()
+    if not candidates:
+        return {
+            "items": [],
+            "page": safe_page,
+            "page_size": safe_page_size,
+            "total": total,
+            "total_pages": max(1, (total + safe_page_size - 1) // safe_page_size),
+        }
+
+    run_ids = {item.run_id for item in candidates}
+    runs = {
+        row.id: row
+        for row in db.scalars(select(Run).where(Run.id.in_(run_ids))).all()
+    }
+    users = {
+        row.id: row
+        for row in db.scalars(select(User).where(User.id.in_({run.user_id for run in runs.values()}))).all()
+    } if runs else {}
+    feedback_by_candidate: dict[str, Feedback] = {}
+    candidate_ids = {item.id for item in candidates}
+    feedback_rows = db.scalars(
+        select(Feedback)
+        .where(Feedback.candidate_id.in_(candidate_ids))
+        .order_by(desc(Feedback.created_at))
+    ).all()
+    for feedback in feedback_rows:
+        feedback_by_candidate.setdefault(feedback.candidate_id, feedback)
+    slot_contexts = _slot_contexts_for_runs(db, run_ids)
+
+    items = []
+    for candidate in candidates:
+        run = runs.get(candidate.run_id)
+        user = users.get(run.user_id) if run else None
+        feedback = feedback_by_candidate.get(candidate.id)
+        context = _candidate_export_context(slot_contexts, candidate)
+        search = candidate.search_json or {}
+        scores = candidate.scores_json or {}
+        items.append({
+            "candidate_id": candidate.id,
+            "candidate_index": candidate.index,
+            "candidate_name": candidate.name,
+            "candidate_slot": candidate.slot,
+            "candidate_domain": context.get("domain", ""),
+            "candidate_source_phenomenon": context.get("source_phenomenon", ""),
+            "candidate_source": candidate.source,
+            "candidate_advantage": candidate.advantage,
+            "candidate_desc": candidate.desc,
+            "candidate_reroll_count": candidate.reroll_count or 0,
+            "candidate_created_at": _utc_iso(candidate.created_at),
+            "quality_status": search.get("quality_status", "passed"),
+            "refund_credit": bool(search.get("refund_credit")),
+            "score_average": search.get("score_average"),
+            "score_applicability": scores.get("applicability"),
+            "run_id": candidate.run_id,
+            "run_problem": run.problem if run else "",
+            "run_status": run.status if run else "",
+            "user_email": user.email if user else "",
+            "feedback": _feedback_payload(feedback),
+            "feedback_label_text": FEEDBACK_LABELS.get(feedback.label or "", feedback.label or "") if feedback else "",
+        })
+    return {
+        "items": items,
+        "page": safe_page,
+        "page_size": safe_page_size,
+        "total": total,
+        "total_pages": max(1, (total + safe_page_size - 1) // safe_page_size),
+    }
+
+
 def _admin_export_rows(db: Session) -> list[dict]:
     runs = db.scalars(select(Run).order_by(desc(Run.created_at), desc(Run.id))).all()
     if not runs:
@@ -1062,6 +1141,19 @@ def admin_feedback(db: Session = Depends(get_db), admin: User = Depends(require_
     audit_admin_action(db, admin, "list_feedback", "feedback", "*")
     db.commit()
     return {"feedback": rows}
+
+
+@app.get("/api/admin/card-logs")
+def admin_card_logs(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=20),
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> dict:
+    result = _admin_card_log_rows(db, page=page, page_size=page_size)
+    audit_admin_action(db, admin, "list_card_logs", "cards", f"page:{result['page']}")
+    db.commit()
+    return result
 
 
 @app.get("/api/admin/feedback.xlsx")

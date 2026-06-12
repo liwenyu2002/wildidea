@@ -203,6 +203,7 @@ def test_admin_ui_not_in_homepage_and_admin_api_requires_admin():
             "/api/admin/invite-codes",
             "/api/admin/users",
             "/api/admin/feedback",
+            "/api/admin/card-logs",
         ]
         for route in admin_get_routes:
             response = client.get(route)
@@ -319,7 +320,8 @@ def test_feedback_is_mutually_exclusive_upsert():
     from sqlalchemy import func, select
 
     from wildidea.web.database import SessionLocal
-    from wildidea.web.models import Candidate, Feedback, InteractionEvent, Run
+    from wildidea.web.models import Candidate, Feedback, InteractionEvent, Run, User
+    from wildidea.web.security import create_access_token
 
     webapp.execute_run = lambda run_id: None
 
@@ -433,8 +435,24 @@ def test_feedback_is_mutually_exclusive_upsert():
                 "/api/auth/login",
                 json={"email": "admin@example.com", "password": "secret12"},
             )
-            assert admin_login.status_code == 200
-            admin_headers = {"Authorization": f"Bearer {admin_login.json()['access_token']}"}
+            if admin_login.status_code == 200:
+                admin_headers = {"Authorization": f"Bearer {admin_login.json()['access_token']}"}
+            else:
+                db = SessionLocal()
+                try:
+                    admin = User(
+                        email="feedback-admin@example.com",
+                        password_hash="unused",
+                        role="admin",
+                        credit_balance=0,
+                        improvement_consent=True,
+                    )
+                    db.add(admin)
+                    db.commit()
+                    db.refresh(admin)
+                    admin_headers = {"Authorization": f"Bearer {create_access_token(admin.id)}"}
+                finally:
+                    db.close()
 
         admin_feedback = client.get("/api/admin/feedback", headers=admin_headers)
         assert admin_feedback.status_code == 200
@@ -454,6 +472,20 @@ def test_feedback_is_mutually_exclusive_upsert():
         assert latest["candidate_scores"] == {}
         assert latest["label"] == "weak_other"
         assert latest["comment"] == "不贴合真实相册场景"
+
+        card_logs = client.get("/api/admin/card-logs?page=1&page_size=20", headers=admin_headers)
+        assert card_logs.status_code == 200
+        assert card_logs.json()["page_size"] == 20
+        assert len(card_logs.json()["items"]) <= 20
+        assert any(item["candidate_name"] == "未反馈方案" and item["feedback"] is None for item in card_logs.json()["items"])
+        latest_card = next(item for item in card_logs.json()["items"] if item["candidate_name"] == "测试方案")
+        assert latest_card["user_email"] == "feedback@example.com"
+        assert latest_card["run_problem"] == "给相册 App 找非常规设计思路"
+        assert latest_card["candidate_name"] == "测试方案"
+        assert latest_card["candidate_slot"] == "D1"
+        assert latest_card["candidate_source_phenomenon"] == "测试来源"
+        assert latest_card["feedback"]["label"] == "weak_other"
+        assert latest_card["feedback_label_text"] == "其他"
 
         export_resp = client.get("/api/admin/feedback.xlsx", headers=admin_headers)
         assert export_resp.status_code == 200

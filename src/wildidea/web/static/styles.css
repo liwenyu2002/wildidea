@@ -3002,6 +3002,25 @@ h2 {
   padding-top: 10px;
 }
 
+.queue-log-title {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.queue-log-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.queue-log-actions button {
+  min-height: 34px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
 .queue-log-row {
   align-items: start;
   border: 1px solid var(--line);
@@ -3033,6 +3052,53 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.card-log-row {
+  grid-template-columns: 126px minmax(0, 1fr);
+  padding: 6px 8px;
+}
+
+.card-log-row.has-feedback {
+  background: #f2fbf4;
+}
+
+.card-log-row strong {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.card-log-row strong b,
+.card-log-row strong em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-log-row strong b {
+  font-style: normal;
+}
+
+.card-log-row strong em {
+  color: var(--muted);
+  flex: 0 1 42%;
+  font-size: 12px;
+  font-style: normal;
+  text-align: right;
+}
+
+.admin-pagination {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-pagination button {
+  min-height: 34px;
+  padding: 5px 12px;
 }
 
 .metric strong {
