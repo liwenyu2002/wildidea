@@ -174,12 +174,66 @@ function isAdminUser() {
   return Boolean(state.user && state.user.role === "admin");
 }
 
+function ensureAdminPanel() {
+  let panel = $("adminPanel");
+  if (panel) return panel;
+  panel = document.createElement("section");
+  panel.id = "adminPanel";
+  panel.className = "admin-panel hidden";
+  panel.innerHTML = `
+    <div class="panel-head">
+      <strong>管理员后台</strong>
+      <button id="refreshAdminBtn" class="ghost" type="button">刷新</button>
+    </div>
+    <div id="metrics" class="metrics"></div>
+    <div id="queueStatus" class="queue-status"></div>
+    <form id="inviteForm" class="invite-create">
+      <input id="inviteCode" type="text" placeholder="邀请码，留空自动生成">
+      <input id="inviteBonus" type="number" value="20" min="1">
+      <input id="inviteMax" type="number" placeholder="最大兑换次数">
+      <button type="submit">创建邀请码</button>
+    </form>
+    <div class="admin-columns">
+      <div>
+        <h2>邀请码</h2>
+        <div id="inviteList" class="admin-list"></div>
+      </div>
+      <div>
+        <h2>用户</h2>
+        <div id="userList" class="admin-list"></div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title-row">
+        <h2>反馈数据</h2>
+        <button id="exportFeedbackBtn" class="ghost" type="button">导出全量 Excel</button>
+      </div>
+      <div id="feedbackList" class="admin-list feedback-list"></div>
+    </div>
+  `;
+  const emptyState = $("emptyState");
+  emptyState.parentNode.insertBefore(panel, emptyState);
+  bindAdminPanelEvents(panel);
+  return panel;
+}
+
+function removeAdminPanel() {
+  $("adminPanel")?.remove();
+}
+
+function bindAdminPanelEvents(panel) {
+  panel.querySelector("#refreshAdminBtn")?.addEventListener("click", loadAdmin);
+  panel.querySelector("#exportFeedbackBtn")?.addEventListener("click", downloadFeedbackExcel);
+  panel.querySelector("#inviteForm")?.addEventListener("submit", handleInviteSubmit);
+}
+
 function renderShell() {
   const booting = !state.authReady;
   const loggedIn = Boolean(state.user);
   const isAdmin = isAdminUser();
   const adminViewActive = loggedIn && isAdmin && state.adminOpen;
   if (!isAdmin) state.adminOpen = false;
+  if (!isAdmin) removeAdminPanel();
   if (!loggedIn || adminViewActive) state.historyDrawerOpen = false;
   if (!loggedIn) state.userInviteOpen = false;
   document.body.classList.toggle("app-logged-in", loggedIn);
@@ -192,7 +246,8 @@ function renderShell() {
   $("historyBackdrop").classList.toggle("hidden", !state.historyDrawerOpen);
   document.body.classList.toggle("history-drawer-open", state.historyDrawerOpen);
   $("workspace").classList.toggle("hidden", booting || adminViewActive);
-  $("adminPanel").classList.toggle("hidden", !adminViewActive);
+  const adminPanel = adminViewActive ? ensureAdminPanel() : $("adminPanel");
+  adminPanel?.classList.toggle("hidden", !adminViewActive);
   $("emptyState").classList.add("hidden");
   $("toolbarTitle").textContent = adminViewActive ? "管理员后台" : "生成工作台";
   $("toolbarSubtitle").textContent = adminViewActive
@@ -2020,6 +2075,8 @@ function startPollingRun(runId) {
 }
 
 async function loadAdmin() {
+  if (!isAdminUser()) return;
+  ensureAdminPanel();
   const [metrics, queue, invites, users, feedback] = await Promise.all([
     api("/api/admin/metrics"),
     api("/api/admin/queue"),
@@ -2214,6 +2271,26 @@ async function downloadFeedbackExcel() {
     link.remove();
     URL.revokeObjectURL(url);
     showToast("全量数据已导出");
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+async function handleInviteSubmit(event) {
+  event.preventDefault();
+  try {
+    await api("/api/admin/invite-codes", {
+      method: "POST",
+      body: JSON.stringify({
+        code: $("inviteCode").value || null,
+        bonus_credits: Number($("inviteBonus").value || 20),
+        max_redemptions: $("inviteMax").value ? Number($("inviteMax").value) : null,
+      }),
+    });
+    $("inviteCode").value = "";
+    $("inviteMax").value = "";
+    await loadAdmin();
+    showToast("邀请码已创建");
   } catch (err) {
     showToast(err.message);
   }
@@ -3225,8 +3302,6 @@ $("historySearch").addEventListener("input", (event) => {
   state.historyQuery = event.currentTarget.value;
   renderRuns();
 });
-$("refreshAdminBtn").addEventListener("click", loadAdmin);
-$("exportFeedbackBtn").addEventListener("click", downloadFeedbackExcel);
 $("slotCount").addEventListener("input", updateRunCostLabel);
 ["problem", "forbidTerms", "slotCount"].forEach((id) => {
   $(id)?.addEventListener("focus", () => {
@@ -3249,26 +3324,6 @@ window.addEventListener("resize", () => {
 });
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !$("posterModal").classList.contains("hidden")) closePoster();
-});
-
-$("inviteForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try {
-    await api("/api/admin/invite-codes", {
-      method: "POST",
-      body: JSON.stringify({
-        code: $("inviteCode").value || null,
-        bonus_credits: Number($("inviteBonus").value || 20),
-        max_redemptions: $("inviteMax").value ? Number($("inviteMax").value) : null,
-      }),
-    });
-    $("inviteCode").value = "";
-    $("inviteMax").value = "";
-    await loadAdmin();
-    showToast("邀请码已创建");
-  } catch (err) {
-    showToast(err.message);
-  }
 });
 
 setAuthMode("login");

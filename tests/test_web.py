@@ -185,6 +185,61 @@ def test_register_invite_redeem_and_run_charge():
             db.close()
 
 
+def test_admin_ui_not_in_homepage_and_admin_api_requires_admin():
+    from wildidea.web.database import SessionLocal
+    from wildidea.web.models import User
+    from wildidea.web.security import create_access_token
+
+    with TestClient(webapp.app) as client:
+        home = client.get("/")
+        assert home.status_code == 200
+        assert 'id="adminPanel"' not in home.text
+        assert "feedbackList" not in home.text
+        assert "创建邀请码" not in home.text
+
+        admin_get_routes = [
+            "/api/admin/metrics",
+            "/api/admin/queue",
+            "/api/admin/invite-codes",
+            "/api/admin/users",
+            "/api/admin/feedback",
+        ]
+        for route in admin_get_routes:
+            response = client.get(route)
+            assert response.status_code == 401
+            assert response.json()["detail"]["error"] == "AUTH_REQUIRED"
+
+        db = SessionLocal()
+        try:
+            user = User(
+                email="ordinary-admin-guard@example.com",
+                password_hash="unused",
+                role="user",
+                credit_balance=30,
+                improvement_consent=True,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            token = create_access_token(user.id)
+        finally:
+            db.close()
+
+        headers = {"Authorization": f"Bearer {token}"}
+        for route in admin_get_routes:
+            response = client.get(route, headers=headers)
+            assert response.status_code == 403
+            assert response.json()["detail"]["error"] == "ADMIN_REQUIRED"
+
+        create_invite = client.post(
+            "/api/admin/invite-codes",
+            headers=headers,
+            json={"code": "NOPE", "bonus_credits": 1},
+        )
+        assert create_invite.status_code == 403
+        assert create_invite.json()["detail"]["error"] == "ADMIN_REQUIRED"
+
+
 def test_registration_requires_email_code_and_smtp_configuration():
     with TestClient(webapp.app) as client:
         missing_code = client.post(
