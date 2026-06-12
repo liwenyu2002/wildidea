@@ -750,6 +750,21 @@ h2 {
   pointer-events: auto;
 }
 
+.workspace.logged-out-preview .printer-shell,
+.workspace.logged-out-preview .floating-question {
+  cursor: pointer;
+}
+
+.workspace.logged-out-preview .printer-paper textarea,
+.workspace.logged-out-preview #forbidTerms,
+.workspace.logged-out-preview #slotCount {
+  cursor: pointer;
+}
+
+.workspace.logged-out-preview .printer-led {
+  background: #fff4bd;
+}
+
 .workspace.launching .question-cloud,
 .workspace.result-open .question-cloud {
   opacity: 0;

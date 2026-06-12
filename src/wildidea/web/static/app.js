@@ -139,6 +139,11 @@ function showToast(message) {
   setTimeout(() => toast.classList.add("hidden"), 3200);
 }
 
+function promptAuthRequired() {
+  showToast("请先登录或注册，再开始打印灵感卡");
+  $("email")?.focus();
+}
+
 function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
@@ -186,13 +191,13 @@ function renderShell() {
   $("historyDrawerBtn").setAttribute("aria-expanded", String(state.historyDrawerOpen));
   $("historyBackdrop").classList.toggle("hidden", !state.historyDrawerOpen);
   document.body.classList.toggle("history-drawer-open", state.historyDrawerOpen);
-  $("workspace").classList.toggle("hidden", !loggedIn || adminViewActive);
+  $("workspace").classList.toggle("hidden", booting || adminViewActive);
   $("adminPanel").classList.toggle("hidden", !adminViewActive);
-  $("emptyState").classList.toggle("hidden", booting || loggedIn);
+  $("emptyState").classList.add("hidden");
   $("toolbarTitle").textContent = adminViewActive ? "管理员后台" : "生成工作台";
   $("toolbarSubtitle").textContent = adminViewActive
     ? "查看队列、用户、邀请码、反馈和导出数据。"
-    : (isAdmin ? "管理员无限配额；系统失败会自动恢复任务状态。" : "每张卡片消耗 1 积分；系统失败会自动退回本次扣除。");
+    : (!loggedIn ? "登录或注册后即可输入问题，打印跨域灵感卡。" : (isAdmin ? "管理员无限配额；系统失败会自动恢复任务状态。" : "每张卡片消耗 1 积分；系统失败会自动退回本次扣除。"));
   $("statusPill").textContent = statusPillText(booting, loggedIn, isAdmin, adminViewActive);
   $("statusPill").disabled = !isAdmin;
   $("statusPill").classList.toggle("is-admin-action", isAdmin);
@@ -206,6 +211,10 @@ function renderShell() {
   if (loggedIn) {
     $("userEmail").textContent = state.user.email;
   }
+  ["problem", "forbidTerms", "slotCount"].forEach((id) => {
+    const field = $(id);
+    if (field) field.readOnly = !loggedIn;
+  });
   updateRunCostLabel();
   renderWorkspaceMode();
 }
@@ -219,6 +228,10 @@ function statusPillText(booting, loggedIn, isAdmin, adminViewActive) {
 
 function updateRunCostLabel() {
   const count = Math.max(1, Math.min(MAX_SLOT_COUNT, Number($("slotCount")?.value || DEFAULT_SLOT_COUNT)));
+  if (!state.user) {
+    $("runSubmit").textContent = `登录后打印 ${count} 张灵感卡`;
+    return;
+  }
   $("runSubmit").textContent = isAdminUser() ? `打印 ${count} 张灵感卡` : `消耗 ${count} 积分打印`;
 }
 
@@ -268,11 +281,12 @@ function clearLaunchTimers({ softLayer = false } = {}) {
 
 function renderWorkspaceMode() {
   const loggedIn = Boolean(state.user);
-  const showSearch = loggedIn && !state.adminOpen && state.searchOpen && !state.launchingSearch;
+  const showSearch = !state.adminOpen && state.searchOpen && !state.launchingSearch;
   $("workspace").classList.toggle("search-open", showSearch);
+  $("workspace").classList.toggle("logged-out-preview", !loggedIn);
   $("workspace").classList.toggle("result-open", loggedIn && !state.adminOpen && !showSearch);
   $("workspace").classList.toggle("launching", Boolean(state.launchingSearch));
-  $("runForm").classList.toggle("hidden", loggedIn && !showSearch && !state.launchingSearch);
+  $("runForm").classList.toggle("hidden", !showSearch && !state.launchingSearch);
   $("resultSection").classList.toggle("hidden", !loggedIn || (showSearch && !state.launchingSearch));
 }
 
@@ -299,7 +313,11 @@ function openSearchPage() {
 }
 
 function fillExampleProblem(text) {
-  if (!state.user || !text) return;
+  if (!state.user) {
+    promptAuthRequired();
+    return;
+  }
+  if (!text) return;
   $("problem").value = text;
   $("problem").focus();
   $("problem").dispatchEvent(new Event("input", { bubbles: true }));
@@ -3151,6 +3169,10 @@ $("redeemForm").addEventListener("submit", async (event) => {
 
 $("runForm").addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!state.user) {
+    promptAuthRequired();
+    return;
+  }
   $("runSubmit").disabled = true;
   const problemText = $("problem").value.trim();
   if (!problemText) {
@@ -3206,6 +3228,14 @@ $("historySearch").addEventListener("input", (event) => {
 $("refreshAdminBtn").addEventListener("click", loadAdmin);
 $("exportFeedbackBtn").addEventListener("click", downloadFeedbackExcel);
 $("slotCount").addEventListener("input", updateRunCostLabel);
+["problem", "forbidTerms", "slotCount"].forEach((id) => {
+  $(id)?.addEventListener("focus", () => {
+    if (!state.user) promptAuthRequired();
+  });
+  $(id)?.addEventListener("click", () => {
+    if (!state.user) promptAuthRequired();
+  });
+});
 document.querySelectorAll(".floating-question").forEach((button) => {
   button.addEventListener("click", () => fillExampleProblem(button.dataset.exampleProblem || button.textContent.trim()));
 });
