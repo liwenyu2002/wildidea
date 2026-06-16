@@ -20,6 +20,10 @@ The first idea people see when facing a problem is often the least creative one.
 
 WildIdea does not brainstorm inside the user's familiar problem frame. It first draws a source phenomenon from a distant-domain card pool, freezes it as "他山之石", abstracts the transferable method, and then maps that method back to the user's problem. This interrupts habitual answers and reduces the chance of repackaging old solutions as new ones.
 
+## Web Version
+
+WildIdea now has a web version: [wildidea.wenyuli.site](https://wildidea.wenyuli.site). Use it directly in the browser to draw, save, and share cross-domain idea cards without installing the local skill. New users receive 30 idea cards after registration.
+
 ## Core Capabilities
 
 | Capability | Description |
