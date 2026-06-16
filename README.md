@@ -2,8 +2,6 @@
 
 # WildIdea Skill
 
-[![GitHub stars](https://img.shields.io/github/stars/liwenyu2002/wildidea.svg?style=social)](https://github.com/liwenyu2002/wildidea)
-[![GitHub forks](https://img.shields.io/github/forks/liwenyu2002/wildidea.svg?style=social)](https://github.com/liwenyu2002/wildidea/fork)
 [![Skill](https://img.shields.io/badge/Codex%20Skill-v1.3-6f42c1)](./skill/wildidea/SKILL.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
