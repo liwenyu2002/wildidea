@@ -2,14 +2,14 @@
 
 # WildIdea Skill
 
-[![Skill](https://img.shields.io/badge/Codex%20Skill-v1.3-6f42c1)](./skill/wildidea/SKILL.md)
+[![Skill](https://img.shields.io/badge/Skill-v1.3-6f42c1)](./skill/wildidea/SKILL.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 [简体中文](./README.md) | [English](./README_EN.md)
 
 **Inject distant-domain mechanisms into the problem space to generate farther, more concrete ideas.**
 
-WildIdea is a standalone Codex skill for cross-domain ideation across product, strategy, research, algorithm, and design problems.
+WildIdea is a standalone ideation skill for cross-domain thinking across product, strategy, research, algorithm, and design problems.
 
 </div>
 
@@ -31,14 +31,15 @@ WildIdea does not brainstorm inside the user's familiar problem frame. It first 
 
 ## Quick Start
 
-Download or clone this repository, then copy the standalone skill folder into your Codex skills directory:
+Download or clone this repository, then copy the standalone skill folder into your local skills directory:
 
 ```bash
-mkdir -p ~/.codex/skills
-cp -R skill/wildidea ~/.codex/skills/wildidea
+export SKILLS_DIR=/path/to/your/skills
+mkdir -p "$SKILLS_DIR"
+cp -R skill/wildidea "$SKILLS_DIR/wildidea"
 ```
 
-Start a new Codex chat and ask:
+Start a new chat that supports local skills and ask:
 
 ```text
 Use $wildidea to generate cross-domain ideas for how to make a fresh photo album app
@@ -68,7 +69,7 @@ Use $wildidea to generate cross-domain ideas for how to make a fresh photo album
 ## Local Validation
 
 ```bash
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py skill/wildidea
+python3 /path/to/skill-creator/scripts/quick_validate.py skill/wildidea
 ```
 
 ## License
