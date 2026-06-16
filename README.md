@@ -42,10 +42,16 @@ WildIdea 现已推出网页版本：[wildidea.wenyuli.site](https://wildidea.wen
 
 ## 快速开始
 
-一句话安装：
+将下方指令粘贴并发送给你的 Agent，Agent 将自动安装本 Skill：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/liwenyu2002/wildidea/main/scripts/install.sh | bash
+```
+
+安装完成后，你就可以和你的 Agent 说：
+
+```text
+用 wildidea，帮我回答一下如何设计相册 APP
 ```
 
 ## 工作流

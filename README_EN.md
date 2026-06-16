@@ -42,10 +42,16 @@ WildIdea now has a web version: [wildidea.wenyuli.site](https://wildidea.wenyuli
 
 ## Quick Start
 
-Install with one command:
+Paste the instruction below into your agent and send it. The agent will install this skill automatically:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/liwenyu2002/wildidea/main/scripts/install.sh | bash
+```
+
+After installation, you can say to your agent:
+
+```text
+Use wildidea to help me answer: how should I design a photo album app?
 ```
 
 ## Workflow
