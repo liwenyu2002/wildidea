@@ -42,18 +42,10 @@ WildIdea 现已推出网页版本：[wildidea.wenyuli.site](https://wildidea.wen
 
 ## 快速开始
 
-下载或克隆本仓库，然后把独立 Skill 文件夹复制到本地 skills 目录：
+一句话安装：
 
 ```bash
-export SKILLS_DIR=/path/to/your/skills
-mkdir -p "$SKILLS_DIR"
-cp -R skill/wildidea "$SKILLS_DIR/wildidea"
-```
-
-重新打开一个支持本地 Skill 的对话，然后这样使用：
-
-```text
-Use $wildidea to generate cross-domain ideas for 如何做一个新鲜的相册 APP
+curl -fsSL https://raw.githubusercontent.com/liwenyu2002/wildidea/main/scripts/install.sh | bash
 ```
 
 ## 工作流
@@ -76,6 +68,7 @@ Use $wildidea to generate cross-domain ideas for 如何做一个新鲜的相册 
 | `skill/wildidea/scripts/search_helper.py` | 免 API key 联网搜索 helper |
 | `skill/wildidea/scripts/pick_domain_slots.py` | 卡池抽取脚本 |
 | `skill/wildidea/templates/poster.html` | 可选海报模板 |
+| `scripts/install.sh` | 一句话安装脚本 |
 
 ## 本地校验
 

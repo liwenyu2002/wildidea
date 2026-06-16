@@ -42,18 +42,10 @@ WildIdea now has a web version: [wildidea.wenyuli.site](https://wildidea.wenyuli
 
 ## Quick Start
 
-Download or clone this repository, then copy the standalone skill folder into your local skills directory:
+Install with one command:
 
 ```bash
-export SKILLS_DIR=/path/to/your/skills
-mkdir -p "$SKILLS_DIR"
-cp -R skill/wildidea "$SKILLS_DIR/wildidea"
-```
-
-Start a new chat that supports local skills and ask:
-
-```text
-Use $wildidea to generate cross-domain ideas for how to make a fresh photo album app
+curl -fsSL https://raw.githubusercontent.com/liwenyu2002/wildidea/main/scripts/install.sh | bash
 ```
 
 ## Workflow
@@ -76,6 +68,7 @@ Use $wildidea to generate cross-domain ideas for how to make a fresh photo album
 | `skill/wildidea/scripts/search_helper.py` | Zero-key web search helper |
 | `skill/wildidea/scripts/pick_domain_slots.py` | Slot sampler |
 | `skill/wildidea/templates/poster.html` | Optional poster template |
+| `scripts/install.sh` | One-command installer |
 
 ## Local Validation
 
