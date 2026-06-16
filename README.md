@@ -1,6 +1,8 @@
-# WildIdea Web
+# WildIdea
 
 WildIdea Web is a FastAPI web app for generating cross-domain innovation ideas. It includes user accounts, credits, invitation codes, task history, live card progress, feedback collection, admin review, and Excel export.
+
+This repository also carries the original WildIdea agent skill. The skill is not a user-facing CLI: `skill/wildidea/SKILL.md` is the standalone skill entrypoint, `skill/wildidea/references/wildidea-skill.md` is the full workflow spec, and the Python scripts are helper tools an agent may call internally.
 
 ## Versions
 
@@ -34,6 +36,29 @@ Open:
 ```text
 http://127.0.0.1:8000
 ```
+
+## Standalone Skill
+
+The downloadable skill package lives in:
+
+```text
+skill/wildidea/
+```
+
+To use it without running the Web app, copy that folder into your Codex skills directory:
+
+```bash
+mkdir -p ~/.codex/skills
+cp -R skill/wildidea ~/.codex/skills/wildidea
+```
+
+Then start a new Codex chat and ask:
+
+```text
+Use $wildidea to generate cross-domain ideas for ...
+```
+
+The standalone skill includes its own card pool, references, poster template, and zero-key web search helper (`scripts/search_helper.py`). Users who want the networking/search version can download this skill folder directly and use it without deploying the website.
 
 ## Hermes Deployment
 
@@ -81,6 +106,9 @@ WILDIDEA_RUN_REAL_API_SMOKE=1 python -m pytest tests/test_real_api_smoke.py -q -
 ## Project Layout
 
 ```text
+skill/wildidea/           Standalone downloadable Codex skill
+SKILL.md                  Root mirror of the skill entrypoint
+docs/wildidea-skill.md    Root copy of the full skill workflow spec
 src/wildidea/web/          Web backend and frontend
 src/wildidea/pipeline.py   Idea generation pipeline
 references/domains.json    Source mechanism pool
