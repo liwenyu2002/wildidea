@@ -24,6 +24,12 @@ WildIdea does not brainstorm inside the user's familiar problem frame. It first 
 
 WildIdea now has a web version: [wildidea.wenyuli.site](https://wildidea.wenyuli.site). Use it directly in the browser to draw, save, and share cross-domain idea cards without installing the local skill. New users receive 30 idea cards after registration.
 
+<p align="center">
+  <a href="https://wildidea.wenyuli.site">
+    <img src="./docs/assets/wildidea-web-preview.png" alt="WildIdea web version preview" width="900">
+  </a>
+</p>
+
 ## Core Capabilities
 
 | Capability | Description |
