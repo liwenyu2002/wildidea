@@ -1,11 +1,12 @@
 ---
 name: wildidea
+version: "1.3"
 description: "WildIdea V5：用于产品、策略、研究和算法创新发散。按问题类型抽取算法技术、学术机制、人文艺术、产品机制、毛选和随机组词槽位；标准模式默认强制联网搜索和查重，算法/科研类默认强制在线论文粗查，循环到10条通过候选并生成白底米黄的横版自由窗口HTML。算法/科研类使用源域优先、原型编号、去锚点退化、最近邻差异、最强反驳和人工 novelty 标记。"
 ---
 
-# WildIdea V5
+# WildIdea Skill v1.3
 
-This is the legacy agent skill spec kept for reference. The deployable product in this repository is now the WildIdea Web app; see `README.md` and `deploy/macmini/README.md`.
+This is the legacy agent skill spec v1.3 kept for reference. The deployable product in this repository is now the WildIdea Web app; see `README.md` and `deploy/macmini/README.md`.
 
 ## Pipeline
 

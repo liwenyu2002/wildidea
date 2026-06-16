@@ -2,6 +2,11 @@
 
 WildIdea Web is a FastAPI web app for generating cross-domain innovation ideas. It includes user accounts, credits, invitation codes, task history, live card progress, feedback collection, admin review, and Excel export.
 
+## Versions
+
+- Web: 1.4
+- Skill spec: 1.3
+
 ## Stack
 
 - Backend: Python, FastAPI, SQLAlchemy, Uvicorn

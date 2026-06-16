@@ -257,6 +257,7 @@ function renderShell() {
   $("userPanelToggle").setAttribute("aria-expanded", String(loggedIn && state.userInviteOpen));
   $("brandHomeBtn").classList.toggle("is-clickable", loggedIn);
   $("brandHomeBtn").setAttribute("aria-label", loggedIn ? "发起新的 WildIdea 搜索" : "WildIdea");
+  $("brandActionHint").classList.toggle("hidden", !loggedIn || adminViewActive || state.searchOpen || state.launchingSearch);
   if (loggedIn) {
     $("userEmail").textContent = state.user.email;
   }
@@ -3214,13 +3215,31 @@ $("logoutBtn").addEventListener("click", () => {
   renderCurrentRun(null);
 });
 
-$("userPanelToggle").addEventListener("click", () => {
+function focusRedeemCode() {
+  window.setTimeout(() => {
+    const field = $("redeemCode");
+    field?.focus();
+    field?.select();
+  }, 0);
+}
+
+$("userPanelToggle").addEventListener("click", (event) => {
+  event.stopPropagation();
   if (!state.user) return;
-  state.userInviteOpen = !state.userInviteOpen;
+  state.userInviteOpen = true;
   renderShell();
-  if (state.userInviteOpen) {
-    window.setTimeout(() => $("redeemCode").focus(), 0);
-  }
+  focusRedeemCode();
+});
+
+$("userPanel").addEventListener("click", (event) => {
+  event.stopPropagation();
+});
+
+document.addEventListener("click", (event) => {
+  if (!state.userInviteOpen) return;
+  if ($("userPanel").contains(event.target)) return;
+  state.userInviteOpen = false;
+  renderShell();
 });
 
 $("redeemForm").addEventListener("submit", async (event) => {

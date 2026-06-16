@@ -138,7 +138,7 @@ async def lifespan(app_: FastAPI):
     yield
 
 
-app = FastAPI(title="WildIdea Web", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="WildIdea Web", version="1.4", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

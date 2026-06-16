@@ -1,4 +1,5 @@
 interface:
   display_name: "WildIdea"
+  version: "1.3"
   short_description: "Generate checked cross-domain anchors and a free-window HTML poster"
   default_prompt: "Use $wildidea to generate concrete cross-domain anchors and mechanism-transfer candidates with default web/literature rough checking, then create a horizontal free-window HTML poster for this product, strategy, research, or algorithm question."

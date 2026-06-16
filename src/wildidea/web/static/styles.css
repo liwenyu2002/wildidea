@@ -282,6 +282,8 @@ textarea {
   height: 100vh;
   min-height: 0;
   overflow: hidden;
+  position: relative;
+  z-index: 80;
 }
 
 .brand {
@@ -312,7 +314,32 @@ textarea {
 }
 
 .brand-copy {
+  display: grid;
+  gap: 3px;
   min-width: 0;
+}
+
+.brand-action-hint {
+  align-items: center;
+  background: #eaf2f6;
+  border: 2px dashed rgba(85, 112, 172, 0.72);
+  color: var(--accent);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  justify-self: start;
+  line-height: 1.15;
+  margin-top: 3px;
+  padding: 3px 6px;
+  text-shadow: none;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.brand.is-clickable:hover .brand-action-hint {
+  background: #fff4bd;
+  transform: translateX(1px);
 }
 
 .glitch-text {
@@ -390,6 +417,11 @@ textarea {
 
 .panel {
   padding: 14px;
+}
+
+.auth-panel {
+  position: relative;
+  z-index: 1800;
 }
 
 #historyPanel {
@@ -644,6 +676,9 @@ textarea {
 
 .toolbar {
   margin-bottom: 16px;
+  position: relative;
+  z-index: 1600;
+  isolation: isolate;
 }
 
 h1,
@@ -3902,6 +3937,8 @@ h2,
   gap: 8px;
   justify-content: flex-end;
   max-width: min(560px, 46vw);
+  position: relative;
+  z-index: 1601;
 }
 
 .user-panel {
@@ -3911,6 +3948,7 @@ h2,
   gap: 6px;
   min-width: 0;
   position: relative;
+  z-index: 1602;
 }
 
 .user-panel-toggle {
@@ -3968,7 +4006,7 @@ h2,
   right: 0;
   top: calc(100% + 7px);
   width: min(330px, calc(100vw - 32px));
-  z-index: 35;
+  z-index: 1700;
 }
 
 .user-panel.invite-open .user-panel-toggle {
@@ -3981,8 +4019,28 @@ h2,
 }
 
 .user-invite-form button {
+  background: #f7df89;
+  border-color: var(--line);
+  box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.85);
+  color: var(--text);
+  font-weight: 900;
   min-height: 34px;
   padding: 6px 10px;
+  transition:
+    background 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.user-invite-form button:hover {
+  background: #ffe9a5;
+  box-shadow: 1px 1px 0 rgba(42, 42, 42, 0.85);
+  transform: translate(1px, 1px);
+}
+
+.user-invite-form button:active {
+  box-shadow: 0 0 0 rgba(42, 42, 42, 0.85);
+  transform: translate(2px, 2px);
 }
 
 .mobile-history-trigger,
@@ -4048,7 +4106,7 @@ h2,
     transform: translateX(calc(-100% - 12px));
     transition: transform 0.24s cubic-bezier(0.18, 0.82, 0.24, 1);
     width: var(--mobile-drawer-width);
-    z-index: 50;
+    z-index: 1650;
   }
 
   body.history-drawer-open.app-logged-in .history-backdrop {
@@ -4120,7 +4178,7 @@ h2,
     margin-bottom: 10px;
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 1600;
     background: rgba(243, 236, 216, 0.94);
     border-bottom: 2px solid rgba(42, 42, 42, 0.16);
     padding: 8px 0 10px;
