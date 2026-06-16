@@ -1,7 +1,7 @@
 ---
 name: wildidea
 version: "1.3"
-description: "WildIdea V5：用于产品、策略、研究和算法创新发散。按问题类型抽取算法技术、学术机制、人文艺术、产品机制、毛选和随机组词槽位；标准模式默认强制联网搜索和查重，算法/科研类默认强制在线论文粗查，循环到10条通过候选并生成白底米黄的横版自由窗口HTML。算法/科研类使用源域优先、原型编号、去锚点退化、最近邻差异、最强反驳和人工 novelty 标记。"
+description: "WildIdea V5：用于产品、策略、研究和算法创新发散。按问题类型抽取算法技术、学术机制、人文艺术、产品机制、毛选和随机组词槽位；标准模式必须调用 Agent 联网搜索并查重，必须由独立子智能体评分，必须循环到10条通过候选并生成白底米黄的横版自由窗口HTML。算法/科研类使用源域优先、原型编号、去锚点退化、最近邻差异、最强反驳和人工 novelty 标记。"
 ---
 
 # WildIdea Skill v1.3
@@ -14,8 +14,16 @@ This is the active agent skill spec v1.3. Treat the listed Python commands as in
 
 `输入 -> 类型判断 -> 抽槽位 -> 隔离常规答案 -> 源域/外域机制冻结 -> 映射到用户领域 -> 联网查重过滤 -> 淘汰则重抽 -> 得到10条 -> 启动独立子智能体评映射质量(6维度0-10分，Structural Depth<5淘汰) -> 生成HTML -> 校验HTML -> 返回路径`
 
-标准模式不得只给文字；除非用户明确说“不要 HTML/只要文本”，最终都生成 `outputs/<topic>.html`。
-标准模式默认强制联网搜索和查重；算法/科研类默认强制在线论文粗查。
+标准模式不得只给文字；最终必须生成并校验 `outputs/<topic>.html`。如果用户明确说“不要 HTML/只要文本”，本轮只能标记为非标准草稿模式。
+标准模式必须调用当前 Agent/运行环境可用的联网搜索能力进行查重；`scripts/search_helper.py` 只是兜底 helper，不可替代 Agent 自身联网搜索。算法/科研类必须在线粗查论文、代码、benchmark、专利和数据集。
+
+## Standard Mode Hard Requirements
+
+标准模式有三项硬性门槛，缺一项都不得声称“标准模式完成”：
+
+1. **HTML 必须生成**：必须读取 `references/poster-guide.md` 和 `templates/poster.html`，写出 `outputs/<topic>.html`，并通过 `scripts/validate_poster.py` 校验。
+2. **联网查重必须执行**：每条最终候选必须至少有一条真实联网搜索记录，写入 `outputs/<topic>.search.json`。必须优先使用当前 Agent 的联网搜索/浏览器/搜索工具；没有可用联网能力时，必须请用户开启或明确切换为非标准草稿模式，不得用模型记忆假装查重。
+3. **独立子智能体评分必须执行**：候选必须交给独立子智能体/独立评价器评分。生成候选的同一上下文不得自评标准结果；若运行环境不能启动独立子智能体，本轮只能标记为非标准模式，并说明“缺独立判官评分”。
 
 ## Core Rules
 
@@ -43,7 +51,7 @@ This is the active agent skill spec v1.3. Treat the listed Python commands as in
 例：`python scripts/pick_domain_slots.py --reroll D1 --exclude D1-03 D1-11`
 整轮抽取也支持 `--exclude`，把上一轮来源的 id 排除掉。
 
-随机组词的设计目的是**最大化随机**，不要求组合有意义。流程：从 `references/common-chinese-chars.txt` 随机抽两个字 → 联网搜索该词（按 `references/search-integration.md` 的搜索工具兜底链：`scripts/search_helper.py` → 询问用户可用搜索工具 → 兜底直接联想） → 拿搜索结果的第一条 → 从中提取一种方法论、机制、规则或边界 → 映射到用户领域。词越无意义，搜索结果越不可预期，这正是随机组词的价值。不要因为组合"看起来没意义"就重抽。
+随机组词的设计目的是**最大化随机**，不要求组合有意义。流程：从 `references/common-chinese-chars.txt` 随机抽两个字 → 联网搜索该词（按 `references/search-integration.md` 的搜索工具兜底链：Agent 联网搜索 → `scripts/search_helper.py` → 询问用户可用搜索工具） → 拿搜索结果的第一条 → 从中提取一种方法论、机制、规则或边界 → 映射到用户领域。词越无意义，搜索结果越不可预期，这正是随机组词的价值。不要因为组合"看起来没意义"就重抽；但没有真实联网搜索结果时，该随机组词不得进入标准结果。
 
 ## Candidate Contract
 
@@ -56,7 +64,7 @@ This is the active agent skill spec v1.3. Treat the listed Python commands as in
 - 对应物至少包含一个可指认专有名词，例如具体分子、技术、框架、设备、算法、产品或公司名。
 - 去掉远域机制后，如果只剩行业常识、普通组合或命名差异，则淘汰。
 - **可执行性门槛**：候选描述必须让读者能在脑中形成实施画面。写清楚：用什么数据/材料、按什么顺序做什么、什么条件触发、触发后改变什么。禁止只写"可以用来做X"而不说明怎么做。如果一个候选去掉专有名词后只剩"做X来解决Y"的句式，说明描述不够具体，需要补充机制细节。
-- **映射结构深度**：全部 10 条候选生成完毕后，由**独立子智能体**逐条评分（0-10 分），不得由生成者自评，不得在生成流程中顺带评分。独立子智能体有独立的上下文窗口，看不到生成过程、源域锚点列表和 SKILL.md 规则，只收到以下输入：
+- **映射结构深度**：全部 10 条候选生成完毕后，必须启动**独立子智能体/独立评价器**逐条评分（0-10 分），不得由生成者自评，不得在生成流程中顺带评分。独立子智能体有独立的上下文窗口，看不到生成过程、源域锚点列表和 SKILL.md 规则，只收到以下输入：
   - 用户问题
   - 源域名称
   - 目标域名称
@@ -76,6 +84,7 @@ This is the active agent skill spec v1.3. Treat the listed Python commands as in
     2. `deepseek/deepseek-v4-pro`（免费/低成本）— 降级方案，max_tokens 必须设为 2000。评分比 Claude 宽松约 0.5-1.0 分（实测 SD 平均 8.22 vs Claude 7.8），淘汰阈值 SD<7，平均阈值 SD≥7
     3. 任意其他推理模型 — max_tokens ≥ 2000，淘汰阈值和平均阈值需比 Claude 上调 1 分
     4. 当前正在运行 WildIdea 的同一个模型 — 最后手段，必须注明"判官=生成模型，评分可能 inflation"
+  - **无独立子智能体时的处理**：不得退回生成者自评分。必须暂停标准模式并询问用户是否切换为非标准草稿；若用户同意草稿模式，最终统计必须写明“独立判官未启用，评分不可作为正式筛选依据”。
   - **JSON 解析容错**：推理模型输出的 JSON 可能被 reasoning token 截断或嵌套过深。解析时：先尝试提取 markdown 代码块内的 JSON；失败则用括号计数法提取第一个完整 JSON 对象；再失败则重试一次（max_tokens 再加 500）。
 
 算法/科研类还必须读 `references/mechanism-transfer.md`，并保留这些字段：源域机制原文、源域原型/外域抽象结果、用户领域怎么干、改变环节、去锚点退化物、最近邻同/异/风险、最强反驳、最小可证伪实验、三项评分、验证状态。
@@ -84,7 +93,7 @@ This is the active agent skill spec v1.3. Treat the listed Python commands as in
 
 ## Verification States
 
-标准模式查重状态只允许前两档；第三档只用于用户明确要求“快速/草稿/不要联网”的非标准模式。
+标准模式查重状态只允许前两档；第三档只用于用户明确要求“快速/草稿/不要联网”的非标准模式。标准模式不得跳过联网查重，也不得只用模型记忆或本地 helper 的失败结果充当查重。
 
 | 状态 | 使用条件 | 写法 |
 |---|---|---|
@@ -122,7 +131,7 @@ V1: ...
 
 生成 HTML 时：
 
-1. 读取 `references/poster-guide.md` 和 `templates/poster.html`。
+1. **标准模式必须生成 HTML**：读取 `references/poster-guide.md` 和 `templates/poster.html`。
 2. 写入 `outputs/<topic>.html`；无法命名时用 `wildidea-YYYYMMDD-HHMM.html`。
 3. 卡片只放：远域类别、具体来源机制、源域原型/外域抽象结果、候选名、用户领域怎么干、失败条件、映射质量评分（Structural Depth / Domain Distance / Novelty）。
 4. 隔离区后必须放“本轮淘汰/重抽”。
@@ -131,7 +140,7 @@ V1: ...
    - 校验脚本还会检查：`.proto` 与 `.desc` 的相似度——若 `.proto` 大体上是 `.desc` 删掉禁词后的洗白版，标记为"疑似马后炮"（先写领域方案再删词填入 proto），这是去锚点纪律的结构性检测。
    - 校验脚本除此之外还查：占位符、卡片数、`.source` 不能是槽位名、`.slot` 必须带 D1–D6、卡片不得残留模板样例文字、文字溢出防护。
    - 精简/极端/一杀模式卡片不足 10 张时加 `--cards N`。
-6. **（标准模式必须）生成搜索证据 sidecar**：按 `references/search-integration.md` 的格式，为每条最终候选写搜索记录，输出为 `outputs/<topic>.search.json`。然后运行：`python scripts/validate_poster.py outputs/<topic>.html --forbid-proto-term <禁词> --search-sidecar outputs/<topic>.search.json`。校验脚本会检查：每条候选至少有一条搜索记录、status 合法、decision 与 status 自洽、标准模式不允许 `needs_manual_check` 候选进入最终列表。
+6. **（标准模式必须）生成搜索证据 sidecar**：按 `references/search-integration.md` 的格式，为每条最终候选写真实联网搜索记录，输出为 `outputs/<topic>.search.json`。然后运行：`python scripts/validate_poster.py outputs/<topic>.html --forbid-proto-term <禁词> --search-sidecar outputs/<topic>.search.json`。校验脚本会检查：每条候选至少有一条搜索记录、status 合法、decision 与 status 自洽、标准模式不允许 `needs_manual_check` 候选进入最终列表。
 7. 最终答复给出本地路径和 `file:///` 地址。
 
 ## Iteration

@@ -20,8 +20,18 @@ Always preserve this order:
 3. **Source phenomenon**: identify the concrete outside-domain phenomenon, rule, event, or mechanism.
 4. **Abstract method**: express the transferable method without target-domain terms.
 5. **Mapping**: map the method back into the user's problem.
-6. **Quality filter**: reject or reroll ideas that are conventional, self-justifying, or not implementable.
-7. **Output**: show readable cards with source, method, solution, advantage, and optional risk/failure boundary.
+6. **Live novelty audit**: use the agent's online search capability to check each mapped idea against existing products, papers, code, patents, and obvious nearest neighbors.
+7. **Independent judging**: send candidates to an independent sub-agent judge for 6-dimension scoring; do not let the generator self-score standard results.
+8. **HTML artifact**: generate and validate an `outputs/<topic>.html` card page before the final response.
+9. **Output**: return the HTML path plus a concise summary of passed cards, search status, and judge status.
+
+## Mandatory Standard Mode
+
+Standard WildIdea runs have three non-negotiable requirements:
+
+- **HTML is mandatory**: every standard run must create a validated `outputs/<topic>.html` artifact. A plain-text answer alone is not a standard WildIdea result.
+- **Live search is mandatory**: use the current agent/runtime's web search or browser/search tool for novelty checking. `scripts/search_helper.py` is only a fallback helper, not a replacement for the agent's own online search capability. If no online search is available, ask the user to enable it or explicitly switch to a non-standard draft mode.
+- **Independent scoring is mandatory**: standard results must be scored by an independent sub-agent/evaluator that did not generate the candidates. If the runtime cannot spawn a sub-agent, the run is non-standard and must be labeled as such.
 
 ## Slot Pool
 
@@ -51,13 +61,13 @@ A candidate is good only if:
 - it would still look non-obvious after removing the card title;
 - it avoids repackaging the user's known/common solution.
 
-Use independent judging when possible. Prefer ideas with high domain distance, novelty, structural depth, and applicability.
+Use independent judging for every standard run. Prefer ideas with high domain distance, novelty, structural depth, and applicability.
 
 ## Detailed Spec
 
-For the full original workflow, output contracts, HTML/poster rules, search sidecar rules, and validation details, read:
+For the full workflow, output contracts, mandatory HTML/poster rules, mandatory search sidecar rules, and independent judging details, read:
 
 - `references/wildidea-skill.md`
-- `references/search-integration.md` when online novelty/search evidence is needed
+- `references/search-integration.md` for every standard run, because live novelty/search evidence is mandatory
 - `references/mechanism-transfer.md` for algorithm or research questions
-- `references/poster-guide.md` only when the user asks for HTML/poster-style output
+- `references/poster-guide.md` for every standard run, because HTML output is mandatory
