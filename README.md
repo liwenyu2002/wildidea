@@ -3,6 +3,7 @@
 # WildIdea Skill
 
 [![Skill](https://img.shields.io/badge/Skill-v1.3-6f42c1)](./skill/wildidea/SKILL.md)
+[![Web](https://img.shields.io/badge/Web-v1.4-f6d365)](https://wildidea.wenyuli.site)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 [简体中文](./README.md) | [English](./README_EN.md)
