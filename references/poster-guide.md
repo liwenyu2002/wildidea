@@ -77,7 +77,7 @@
   <article class="card">
     <div class="id">
       <em>P01</em>
-      <span class="slot">D1 算法技术</span>
+      <span class="slot">D5 社会政策</span>
     </div>
     <div class="source">来源：<strong>Hyperband</strong></div>
     <div class="name">候选机制名</div>
@@ -90,7 +90,7 @@
 
 ### 卡片写法
 
-- `.slot` 必须写清楚远域类别，例如 `D1 算法技术`、`D2 学术机制`、`D3 人文艺术`、`D4 产品机制`、`MAO 毛选`、`RANDOM_WORD 随机组词`。
+- `.slot` 必须写清楚远域类别，例如 `D1 算法技术`、`D2 学术机制`、`D3 人文艺术`、`D4 产品机制`、`D5 社会政策`、`MAO 毛选`、`RANDOM_WORD 随机组词`。
 - `.source` 必须写具体来源机制名，例如 `Hyperband`、`Kalman NIS`、`V2G`，不要只写"算法技术"。
 - `.proto` 必须写“源域原型/外域抽象结果”，也就是映射到用户领域之前最后冻结出的通用机制。不能出现用户领域术语。
 - `.name` 是候选方法名，尽量短。

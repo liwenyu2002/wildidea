@@ -49,6 +49,12 @@ SLOT_NAMES = _DOC["slot_names"]
 QUOTAS = _DOC["quotas"]
 # POOLS: each row is the raw anchor dict (already carries its own stable "id").
 POOLS = _DOC["pools"]
+POOL_MODE_QUOTAS = {
+    "default": None,
+    "social_policy": {"D5": 9},
+    "algorithm": {"D1": 9},
+    "product": {"D4": 9},
+}
 
 
 class PoolExhausted(Exception):
@@ -112,21 +118,35 @@ def pick_random_word(exclude=None):
 
 
 def reroll(target, exclude=None):
-    """Single entry point for rerolling one slot. target is mao/random_word/D1..D4."""
+    """Single entry point for rerolling one slot. target is mao/random_word/D*."""
     if target == "mao":
         return pick_mao(exclude=exclude)
     if target == "random_word":
         return pick_random_word(exclude=exclude)
     if target in POOLS:
         return sample_pool(target, 1, exclude=exclude)[0]
-    raise ValueError(f"unknown reroll target: {target} (use mao/random_word/D1/D2/D3/D4)")
+    pool_targets = "/".join(sorted(POOLS))
+    raise ValueError(f"unknown reroll target: {target} (use mao/random_word/{pool_targets})")
 
 
-def build_slots(problem_type, exclude=None):
-    quota = QUOTAS[problem_type]
+def quota_for(problem_type, pool_mode="default"):
+    mode = (pool_mode or "default").strip()
+    if mode == "default":
+        return QUOTAS[problem_type]
+    if mode not in POOL_MODE_QUOTAS:
+        available = "/".join(sorted(POOL_MODE_QUOTAS))
+        raise ValueError(f"unknown pool mode: {mode} (use {available})")
+    return POOL_MODE_QUOTAS[mode]
+
+
+def build_slots(problem_type, exclude=None, pool_mode="default"):
+    quota = quota_for(problem_type, pool_mode)
     slots = []
-    for slot in ("D1", "D2", "D3", "D4"):
-        n = quota.get(slot, 0)
+    for slot, n in quota.items():
+        if slot in ("MAO", "RANDOM_WORD"):
+            continue
+        if slot not in POOLS:
+            continue
         if n:
             slots.extend(sample_pool(slot, n, exclude=exclude))
     if quota.get("MAO"):
@@ -141,8 +161,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--type", choices=sorted(QUOTAS), help="algorithm/research/product/strategy")
     parser.add_argument(
+        "--pool-mode",
+        default="default",
+        choices=sorted(POOL_MODE_QUOTAS),
+        help="Preset draw distribution: default/social_policy/algorithm/product",
+    )
+    parser.add_argument(
         "--reroll",
-        help="Reroll a single slot instead of a full draw: mao/random_word/D1/D2/D3/D4",
+        help="Reroll a single slot instead of a full draw: mao/random_word/D1/D2/D3/D4/D5",
     )
     parser.add_argument(
         "--exclude",
@@ -177,13 +203,14 @@ def main():
         parser.error("either --type or --reroll is required")
 
     try:
-        slots = build_slots(args.type, exclude=args.exclude)
+        slots = build_slots(args.type, exclude=args.exclude, pool_mode=args.pool_mode)
     except PoolExhausted as e:
         sys.exit(str(e))
 
     output = {
         "problem_type": args.type,
-        "quota": QUOTAS[args.type],
+        "pool_mode": args.pool_mode,
+        "quota": quota_for(args.type, args.pool_mode),
         "slots": slots,
         "instruction": "Use only these sampled anchors for this run. Do not load the full domain pool.",
     }

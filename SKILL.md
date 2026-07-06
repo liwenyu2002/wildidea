@@ -41,10 +41,12 @@ Use `scripts/pick_domain_slots.py` as an internal helper when available. Read on
 - `D2`: academic / scientific / engineering mechanisms
 - `D3`: humanities / art / architecture / narrative mechanisms
 - `D4`: product / interaction / business mechanisms
+- `D5`: social / policy / governance mechanisms
 - `MAO` or `D6`: 毛选-style contradiction, route, organization, and struggle methods
 - `RANDOM_WORD` or `D7`: random word disruption
 
-For product or strategy questions, prefer a mixed pool that includes `D2`, `D3`, `D4`, `MAO`, and `RANDOM_WORD`.
+For product or strategy questions, prefer a mixed pool that includes `D2`, `D3`, `D4`, `D5`, `MAO`, and `RANDOM_WORD`.
+For social simulation, policy, governance, city, welfare, or institutional-design questions, increase `D5`.
 For algorithm or research questions, increase `D1` and `D2`.
 
 ## Random Word Rule
