@@ -2,7 +2,9 @@
 set -euo pipefail
 
 repo_url="https://github.com/liwenyu2002/wildidea"
-ref="${WILDIDEA_REF:-main}"
+# 默认锚定到最近一次发布 tag，保证不同时刻安装拿到同一份内容；
+# 需要开发版时显式 WILDIDEA_REF=main 覆盖。发布新版本时更新此默认值并打同名 tag。
+ref="${WILDIDEA_REF:-v1.4}"
 skills_dir="${SKILLS_DIR:-${WILDIDEA_SKILLS_DIR:-$HOME/.codex/skills}}"
 
 tmp_dir="$(mktemp -d)"
