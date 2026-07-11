@@ -1,0 +1,16 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mirror sync check (root <-> skill/wildidea)
+        run: bash scripts/check_mirrors.sh
+      - name: domains.json schema check
+        run: python3 scripts/check_domains.py
