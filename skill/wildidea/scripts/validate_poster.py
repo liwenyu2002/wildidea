@@ -219,7 +219,7 @@ def class_regex(class_name: str) -> re.Pattern[str]:
     return re.compile(rf'class=["\'][^"\']*\b{re.escape(class_name)}\b[^"\']*["\']')
 
 
-def validate(path: Path, expected_cards: int = 10, forbid_proto_terms=None, cards_explicit=True, check_int_diversity: bool = False, int_verb_min: int = 3) -> list[str]:
+def validate(path: Path, expected_cards: int = 9, forbid_proto_terms=None, cards_explicit=True, check_int_diversity: bool = False, int_verb_min: int = 3) -> list[str]:
     errors: list[str] = []
     # Expand and normalize forbid terms: NFKC + casefold + cross-language synonyms.
     raw_terms = forbid_proto_terms or []
@@ -255,10 +255,10 @@ def validate(path: Path, expected_cards: int = 10, forbid_proto_terms=None, card
             errors.append(f"card {index} missing classes: {', '.join(missing)}")
             continue
 
-        # .slot must carry a real slot identifier: D1–D6, MAO, or RANDOM_WORD.
+        # .slot must carry a real slot identifier: D1–D7, MAO, or RANDOM_WORD.
         slot_text = text_of("slot", card)
-        if not re.search(r"\b(?:D[1-6]|MAO|RANDOM_WORD)\b", slot_text):
-            errors.append(f"card {index}: .slot must name a slot D1–D6, got {slot_text!r}")
+        if not re.search(r"\b(?:D[1-7]|MAO|RANDOM_WORD)\b", slot_text):
+            errors.append(f"card {index}: .slot must name a slot D1–D7, got {slot_text!r}")
 
         # Candidate-contract content checks (SKILL.md "Candidate Contract").
         source = text_of("source", card)
@@ -354,7 +354,7 @@ def validate(path: Path, expected_cards: int = 10, forbid_proto_terms=None, card
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("html", help="Path to generated WildIdea HTML")
-    parser.add_argument("--cards", type=int, default=None, help="Expected card count (default 10)")
+    parser.add_argument("--cards", type=int, default=None, help="Expected card count (default 9)")
     parser.add_argument(
         "--forbid-proto-term",
         nargs="+",
@@ -409,7 +409,7 @@ def main() -> int:
 
     errors = validate(
         Path(args.html),
-        args.cards if cards_explicit else 10,
+        args.cards if cards_explicit else 9,
         forbid_proto_terms=args.forbid_proto_term,
         cards_explicit=cards_explicit,
         check_int_diversity=True,

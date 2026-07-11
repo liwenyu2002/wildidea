@@ -1,6 +1,6 @@
 # WildIdea HTML 海报生成指南
 
-每次 WildIdea 标准模式生成 10 条结果后，必须使用本文件生成横版 HTML。用户不需要额外说"生成 HTML"。如果用户明确说"不要 HTML/只要文本"，本轮只能标记为非标准草稿模式。
+每次 WildIdea 标准模式完成默认 9 个槽位后，必须使用本文件生成横版 HTML。用户不需要额外说"生成 HTML"。如果用户明确说"不要 HTML/只要文本"，本轮只能标记为非标准草稿模式。
 
 默认输出是横版静态 HTML（无固定宽高比，高度由内容自适应），风格为 Claude 式白底米黄：浅暖背景、低对比边框、棕色强调、信息密度高但不花。除非用户明确要求，不再使用深色霓虹、标题渐变、大面积装饰背景。
 
@@ -18,11 +18,11 @@
 |--------|------|------|
 | `{TITLE}` | 主标题 | EEG domain adaptation 创新方法 |
 | `{BADGE_TEXT}` | 顶部小徽章 | WILDIDEA V5 |
-| `{FOCUS}` | 副标题 | 10 个外域机制，全部重抽到自审通过 |
+| `{FOCUS}` | 副标题 | 9 个外域槽位，逐卡独立生成与评分 |
 | `{META_HTML}` | 右上统计条 | 见下方 |
 | `{QUARANTINE_HTML}` | 隔离区 | 见下方 |
 | `{REJECTED_HTML}` | 本轮淘汰/重抽记录 | 见下方 |
-| `{CARD_ROWS}` | 10 张卡片区 | 外层必须是 `.cards` |
+| `{CARD_ROWS}` | 默认 9 张卡片区 | 外层必须是 `.cards` |
 | `{SUMMARY}` | 底部一句主线 | 见下方 |
 
 生成前后都要检查：最终 HTML 不得残留 `{PLACEHOLDER}`。
@@ -33,7 +33,7 @@
 
 ```html
 <div class="stats">
-  <div class="stat"><b>10/10</b><span>候选通过</span></div>
+  <div class="stat"><b>8/9</b><span>候选通过</span></div>
   <div class="stat"><b>0</b><span>页面占位符</span></div>
   <div class="stat"><b>待验证</b><span>文献级查重</span></div>
 </div>
@@ -56,7 +56,7 @@
 
 ## 淘汰/重抽记录
 
-`{REJECTED_HTML}` 使用 `.ban.rejected`。每次标准模式都要生成这一段；没有淘汰时写“无重抽，10 条一次通过”。这里记录抽卡过程中被 ban 的来源、候选或随机词，以及为什么重抽。
+`{REJECTED_HTML}` 使用 `.ban.rejected`。每次标准模式都要生成这一段；没有淘汰时写“无重抽，9 个槽位一次通过”。这里记录抽卡过程中被 ban 的来源、候选或随机词，以及为什么重抽。
 
 ```html
 <section class="ban rejected">
@@ -70,7 +70,7 @@
 
 ## 卡片结构
 
-`{CARD_ROWS}` 必须自带外层 `.cards`，默认 10 张卡片，适配 5 列 x 2 行。每张卡片只放读者最需要先看懂的内容，不塞完整审稿表。
+`{CARD_ROWS}` 必须自带外层 `.cards`，默认 9 张卡片，适配 3 列 x 3 行。每张卡片只放读者最需要先看懂的内容，不塞完整审稿表。
 
 ```html
 <section class="cards">
@@ -112,7 +112,7 @@
 ## 版式约束
 
 - 默认横版，`.slide` 最大宽度 1600px 居中，高度由内容自适应，不锁比例。
-- 默认 10 张卡片，5 列自适应：≤1200px → 3列，≤780px → 2列，≤500px → 1列。不要做成单列长页，除非用户要求。
+- 默认 9 张卡片，3 列自适应：≤780px → 2列，≤500px → 1列。不要做成单列长页，除非用户要求。
 - `.card` 使用 flex 列布局，不裁切内容（`overflow: visible`），不高宽压缩（无 `min-height: 0`）。
 - `.proto`、`.desc` 和 `.fail` 必须设置 `word-break: break-word; overflow-wrap: break-word` 防止长英文串溢出。
 - 卡片内下方留空要少，`.desc` 字体要明显大于 `.fail`。
@@ -122,14 +122,14 @@
 ## 生成与验证
 
 1. 生成 HTML 到 `outputs/<topic>.html`。
-2. 运行 `python scripts/validate_poster.py outputs/<topic>.html --forbid-proto-term <用户领域禁词...> --search-sidecar outputs/<topic>.search.json`（`--forbid-proto-term` 和 `--search-sidecar` 在标准模式下均为必填）。
+2. 运行 `python3 scripts/validate_poster.py outputs/<topic>.html --cards 9 --forbid-proto-term <用户领域禁词...> --search-sidecar outputs/<topic>.search.json`（`--cards 9`、`--forbid-proto-term` 和 `--search-sidecar` 在默认标准模式下均为必填）。
 3. 若脚本失败，先修 HTML 再交付。
 4. 最终答复必须提示文件路径和 `file:///` 地址；如用户要截图，再使用浏览器打开并目测文字是否溢出。
 
 校验脚本会检查两类问题：
 
-- 结构：占位符、10 张卡片、`.slot/.source/.proto/.name/.desc/.fail`、`.ban.rejected`、旧版类名、固定比例裁切、文字溢出防护。
+- 结构：占位符、9 张卡片、`.slot/.source/.proto/.name/.desc/.fail`、`.ban.rejected`、旧版类名、固定比例裁切、文字溢出防护。
 - 候选契约（内容）：`.source` 非空且不能是槽位名（必须写具体来源机制，如 `Hyperband`）；`.name/.proto/.desc/.fail` 不得残留模板样例文字。
 - 必填去锚点审查：`--forbid-proto-term <用户领域术语...>` 是必填项，不传直接 FAIL。脚本自动做 NFKC+大小写归一并展开中英同义词。检查 `.proto` 是否泄露了用户领域术语，同时检测 `.proto` 与 `.desc` 的相似度（疑似马后炮）。禁词需覆盖任务名、数据类型、指标，例如：
-  `python scripts/validate_poster.py outputs/eeg.html --forbid-proto-term EEG 脑电 域适应 --search-sidecar outputs/eeg.search.json`
-- 非标准模式（精简/极端/一杀）卡片数不是 10 时，用 `--cards N` 指定预期数量。
+  `python3 scripts/validate_poster.py outputs/eeg.html --cards 9 --forbid-proto-term EEG 脑电 域适应 --search-sidecar outputs/eeg.search.json`
+- 非标准模式或完全失败槽位导致卡片数不是 9 时，用 `--cards N` 指定实际渲染数量，并明确报告缺失槽位。
