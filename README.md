@@ -2,7 +2,7 @@
 
 # WildIdea Skill
 
-[![Skill](https://img.shields.io/badge/Skill-v1.3-6f42c1)](./skill/wildidea/SKILL.md)
+[![Skill](https://img.shields.io/badge/Skill-v1.4-6f42c1)](./skill/wildidea/SKILL.md)
 [![Web](https://img.shields.io/badge/Web-v1.4-f6d365)](https://wildidea.wenyuli.site)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
@@ -36,7 +36,7 @@ WildIdea 现已推出网页版本：[wildidea.wenyuli.site](https://wildidea.wen
 |---|---|
 | 远领域抽卡 | 从算法技术、学术机制、人文艺术、产品机制、毛选、随机组词等卡池抽取源机制 |
 | 他山之石 | 先展示真实源现象，再抽象出方法论，帮助用户理解创意从哪里来 |
-| 联网搜索 | 内置免 API key 搜索 helper，用于随机组词和基础新颖性检查 |
+| 联网搜索 | 内置免 API key 搜索 helper，用于随机组词和基础新颖性检查（仅 Skill 路径生效；Web 版新颖度分数为 AI 判官自评，不含联网查重） |
 | 质量过滤 | 对结构深度、领域距离、新颖度和可用性进行约束，弱候选可重抽 |
 | 独立使用 | 直接下载 `skill/wildidea/` 即可使用，不需要额外服务 |
 

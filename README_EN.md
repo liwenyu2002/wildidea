@@ -2,7 +2,7 @@
 
 # WildIdea Skill
 
-[![Skill](https://img.shields.io/badge/Skill-v1.3-6f42c1)](./skill/wildidea/SKILL.md)
+[![Skill](https://img.shields.io/badge/Skill-v1.4-6f42c1)](./skill/wildidea/SKILL.md)
 [![Web](https://img.shields.io/badge/Web-v1.4-f6d365)](https://wildidea.wenyuli.site)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
@@ -36,7 +36,7 @@ WildIdea now has a web version: [wildidea.wenyuli.site](https://wildidea.wenyuli
 |---|---|
 | Distant-domain draw | Samples mechanisms from algorithm, academic, humanities/art, product, Mao-style, and random-word pools |
 | Source-first reasoning | Shows the source phenomenon before abstracting the transferable method |
-| Web search helper | Includes a zero-key search helper for random-word grounding and basic novelty checks |
+| Web search helper | Includes a zero-key search helper for random-word grounding and basic novelty checks (Skill path only; the web app's novelty score is an AI-judge self-assessment without live web dedup) |
 | Quality filtering | Constrains structural depth, domain distance, novelty, and applicability; weak candidates can be redrawn |
 | Standalone use | Download `skill/wildidea/` and use it directly without running extra services |
 
