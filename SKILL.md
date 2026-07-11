@@ -23,8 +23,9 @@ Always preserve this order:
 8. Run basic readability and actionability checks.
 9. Send the candidate to an independent judge, who also checks the mapping against the `problem_card`.
 10. Reroll that slot when it misses the quality gate or judge threshold, following the three-stage repair sequence in Web-Parity Contract — never a blind resample — subject to the retry limit.
-11. Run live novelty search, render the final HTML, validate it, and return its path.
-12. After all 9 slots finish, audit `problem_card` coverage across the 9 cards' declared target keys and disclose any key none of them targeted.
+11. After all 9 slots finish, run the batch-level diversity check (see Batch Diversity Check) before finalizing delivery; redraw the most redundant card from a new source domain when fewer than roughly 6 essentially distinct solution directions remain.
+12. Run live novelty search, render the final HTML, validate it, and return its path.
+13. After all 9 slots finish, audit `problem_card` coverage across the 9 cards' declared target keys and disclose any key none of them targeted.
 
 Never start from a conventional answer and decorate it with a distant-domain name afterward.
 
@@ -89,6 +90,7 @@ Each candidate must contain:
 - the slot number and specific source domain;
 - `source_phenomenon`: a concrete source-world event, rule, operation, or constraint, written mainly in Chinese;
 - `proto`: the abstract transferable method, containing no target-domain terms;
+- `named_method`: the real-world existing method, algorithm, or technique that the source mechanism corresponds to (for example 卡尔曼滤波 or 岛屿生物地理学模型). When no genuine real-world counterpart exists, write `抽象概括（无真实具名对应）` instead of inventing one — never fabricate a method name that does not exist;
 - `desc`: 2-4 operational sentences, opening with which `problem_card` key this card primarily targets, then naming inputs/materials, action order, trigger, resulting change, and a visible or measurable output;
 - `advantage`: a plain-language sentence beginning with `这种方案的优势在于，`, preferably within 50 Chinese characters;
 - `fail`: a concrete hidden premise or failure condition, retained as internal/detail metadata even when the compact card hides it.
@@ -96,6 +98,16 @@ Each candidate must contain:
 For technical English terms, show the Chinese name first and place only the necessary acronym in Chinese parentheses, such as `随机采样一致性（RANSAC）`.
 
 Reject a candidate when removing the source mechanism leaves only industry common sense, a renamed conventional solution, or a vague "use X to improve Y" sentence.
+
+## Batch Diversity Check
+
+After all 9 slots reach a final per-slot outcome (pass, `未达标保底`, or failed), run one more check across the whole batch before delivery:
+
+- Judge whether the 9 cards represent roughly **6 or more solution directions that are essentially different** — different core mechanisms or angles of attack, not just different wording or a different source domain dressing the same fix.
+- Count cards as duplicates of the same direction whenever their core mechanism or approach is essentially the same, even if their titles, `source_phenomenon`, or domains look different on the surface.
+- If distinct directions fall below roughly 6, treat it as set-level mode collapse (generation converging on one class of fix), not a per-card quality defect: redraw the most redundant card from a new source domain instead of delivering a homogeneous batch.
+- Any redrawn replacement card must still pass the full quality gate and independent judge — do not wave it through unchecked.
+- Disclose the counted number of essentially distinct directions when delivering results.
 
 ## Random Word Rule
 
@@ -109,6 +121,7 @@ The standalone Skill preserves the web quality gate and adds stricter execution 
 
 - **Live search**: use the current agent's online search capability for every final candidate. Search products, papers, code, patents, datasets, or nearest neighbors as appropriate. Local helpers are fallback utilities, not substitutes for real online search.
 - **Independent judge isolation**: the website already uses a separate judge call; the Skill must additionally keep that judge in a fresh sub-agent/evaluator context. The generator must not self-score. Retain all 6 dimensions: Structural Depth, Domain Distance, Applicability, Novelty, Unexpectedness, and Non-Obviousness — except `RANDOM_WORD` slots, which use the separate 4-dimension judge described in Random Word Rule.
+- **Structural Depth checks systematicity**: when scoring Structural Depth, the judge must explicitly verify whether the source→target correspondence points are strung together by one shared causal or functional relation (systematicity), rather than being isolated coincidences of surface-level properties. Score isolated surface coincidences low even when several correspondence points are listed.
 - **Validated HTML**: create `outputs/<topic>.html` plus the search sidecar and validate the artifact before replying.
 
 If one of these capabilities is unavailable, say exactly which standard step is blocked or switch only with the user's explicit permission to a non-standard quick/text draft. Never silently downgrade.
