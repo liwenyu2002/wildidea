@@ -22,7 +22,7 @@ Always preserve this order:
 7. Map the method into a concrete proposal in the user's domain, checked against the `problem_card`.
 8. Run basic readability and actionability checks.
 9. Send the candidate to an independent judge, who also checks the mapping against the `problem_card`.
-10. Reroll that slot when it misses the quality gate, subject to the retry limit.
+10. Reroll that slot when it misses the quality gate or judge threshold, following the three-stage repair sequence in Web-Parity Contract — never a blind resample — subject to the retry limit.
 11. Run live novelty search, render the final HTML, validate it, and return its path.
 12. After all 9 slots finish, audit `problem_card` coverage across the 9 cards' declared target keys and disclose any key none of them targeted.
 
@@ -45,13 +45,16 @@ Match the current Web v1.4 generation logic unless the user explicitly requests 
 
 - Draw **9 cards by default**. Treat 9 as the normal maximum for one run.
 - Generate and judge each slot independently. A completed card may be reported immediately; do not wait for every other slot before acknowledging it.
-- Give each slot at most **3 total attempts**: the initial attempt plus at most **2 rerolls**.
+- Give each slot at most **3 total attempts**: the initial attempt plus at most **2 rerolls**. Use the three attempts as a fixed repair sequence, never a blind resample:
+  - **Attempt 1 -> attempt 2 (repair)**: if attempt 1 fails the quality gate or the judge threshold, attempt 2 must carry forward the specific rule name(s) or judge dimension(s)/explanation that failed, and rewrite only the field(s) those failures point to. Never resubmit without carrying that concrete failure reason into the prompt.
+  - **Attempt 2 -> attempt 3 (reangle)**: if the same failure cause repeats on attempt 2 (same quality rule id, or the same judge dimension still short), attempt 3 must change structural angle on the same source anchor — do not switch anchors, and do not just reword the same mapping again.
 - The quality gate has two tiers, selected by `risk_profile`; default to `pragmatic` unless the user asks to go wilder/explore.
-  - `pragmatic` (default): `Structural Depth` reaches the judge-model-calibrated threshold, `Novelty >= 7`, and `Applicability >= 9`.
+  - `pragmatic` (default): `Structural Depth` reaches the judge-model-calibrated threshold, `Novelty >= 7`, and `Applicability >= 8`.
   - `explore`: `Structural Depth` reaches the same threshold, `Novelty >= 7`, `Applicability >= 7`, and at least one of `Domain Distance >= 7` or `Unexpectedness >= 8`.
   - Switch to `explore` when the user says things like "更野"/"探索模式"/wilder/explore mode, and disclose which tier was actually used when delivering results.
-- If no attempt passes after 3 tries but at least one valid, scored, search-confirmable candidate remains, keep the eligible attempt with the highest mean of `Structural Depth`, `Domain Distance`, `Novelty`, and `Applicability`. Mark it `未达标保底`; do not describe it as passed.
-- A malformed candidate, unsupported source, or confirmed direct duplicate is not eligible as a fallback. If every attempt is unusable, retain a failed slot instead of inventing a result.
+- If all 3 attempts fail the quality gate and never reach the judge, keep the draft with the fewest rule violations among the 3 attempts as a `未达标保底` delivery instead of a total slot failure.
+- If no attempt passes the judge after 3 tries but at least one valid, scored, search-confirmable candidate remains, keep the eligible attempt with the highest mean of `Structural Depth`, `Domain Distance`, `Novelty`, and `Applicability`. Mark it `未达标保底`; do not describe it as passed.
+- A malformed candidate, unsupported source, or confirmed direct duplicate is not eligible as a fallback. If every attempt is unusable (including the quality-gate floor above), retain a failed slot instead of inventing a result.
 - Do not keep drawing indefinitely until 9 cards pass. Preserve the 9 original slot outcomes so the user can see where quality gates failed.
 - The Web product refunds a failed/fallback card. The standalone Skill has no credit ledger, so preserve the quality label but do not claim that money or credits were refunded.
 
