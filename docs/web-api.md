@@ -246,12 +246,15 @@ Authorization: Bearer <access_token>
 - `pragmatic`：现状阈值（默认，SD>=校准线 且 NV>=7 且 AP>=9）
 - `explore`：更宽松的远域/高风险探索阈值（SD>=校准线 且 NV>=7 且 AP>=7 且 (DD>=7 或 UNX>=8)）
 
+`novelty_check` 可选，布尔值，默认 `false`。开启后，对通过判官的卡额外做一次联网学术查重（目标领域新颖度检查）：如果卡片声称的方法在目标领域内已经是已知做法，会标记"领域内已知"，并可能更换一个新锚点重新生成该卡。这个开关不再要求 `risk_profile` 必须是 `research`，任何档位都可以单独开启；开启会增加该任务的生成耗时。
+
 ```json
 {
   "problem": "如何做一个新鲜的相册 APP",
   "slot_count": 9,
   "pool_mode": "default",
   "risk_profile": "pragmatic",
+  "novelty_check": false,
   "forbid_terms": ["时间线", "AI相册"]
 }
 ```

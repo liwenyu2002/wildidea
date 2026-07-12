@@ -49,10 +49,11 @@ Match the current Web v1.4 generation logic unless the user explicitly requests 
 - Give each slot at most **3 total attempts**: the initial attempt plus at most **2 rerolls**. Use the three attempts as a fixed repair sequence, never a blind resample:
   - **Attempt 1 -> attempt 2 (repair)**: if attempt 1 fails the quality gate or the judge threshold, attempt 2 must carry forward the specific rule name(s) or judge dimension(s)/explanation that failed, and rewrite only the field(s) those failures point to. Never resubmit without carrying that concrete failure reason into the prompt.
   - **Attempt 2 -> attempt 3 (reangle)**: if the same failure cause repeats on attempt 2 (same quality rule id, or the same judge dimension still short), attempt 3 must change structural angle on the same source anchor — do not switch anchors, and do not just reword the same mapping again.
-- The quality gate has two tiers, selected by `risk_profile`; default to `pragmatic` unless the user asks to go wilder/explore.
+- The quality gate has three tiers, selected by `risk_profile`; default to `pragmatic` unless the user asks to go wilder/explore, or is feeding candidates into an automated research/verification pipeline.
   - `pragmatic` (default): `Structural Depth` reaches the judge-model-calibrated threshold, `Novelty >= 7`, and `Applicability >= 8`.
   - `explore`: `Structural Depth` reaches the same threshold, `Novelty >= 7`, `Applicability >= 7`, and at least one of `Domain Distance >= 7` or `Unexpectedness >= 8`.
-  - Switch to `explore` when the user says things like "更野"/"探索模式"/wilder/explore mode, and disclose which tier was actually used when delivering results.
+  - `research`: `Structural Depth` reaches the same threshold, `Novelty >= 8`, `Applicability >= 6`, and `Domain Distance >= 7`. This tier is tuned for feeding an auto-research pipeline (idea -> implementation -> benchmark verification): it deliberately relaxes immediate feasibility and raises the novelty/domain-distance floor instead, so a wild-but-falsifiable candidate is not screened out just for lacking day-one Applicability.
+  - Switch to `explore` or `research` when the user says things like "更野"/"探索模式"/wilder/explore mode, or wants research-grade exploration over immediate practicality (e.g. an auto-research integration), and disclose which tier was actually used when delivering results.
 - If all 3 attempts fail the quality gate and never reach the judge, keep the draft with the fewest rule violations among the 3 attempts as a `未达标保底` delivery instead of a total slot failure.
 - If no attempt passes the judge after 3 tries but at least one valid, scored, search-confirmable candidate remains, keep the eligible attempt with the highest mean of `Structural Depth`, `Domain Distance`, `Novelty`, and `Applicability`. Mark it `未达标保底`; do not describe it as passed.
 - A malformed candidate, unsupported source, or confirmed direct duplicate is not eligible as a fallback. If every attempt is unusable (including the quality-gate floor above), retain a failed slot instead of inventing a result.
@@ -70,6 +71,8 @@ Use `scripts/pick_domain_slots.py` and read only its sampled JSON. Do not load t
 - `D5`: social, policy, governance, and institutional mechanisms
 - `MAO` / displayed `D6`: 毛选 methods
 - `RANDOM_WORD` / displayed `D7`: random-word disruption
+
+The default per-type quota (see the Detailed Spec's Type And Slots table) no longer allocates a `RANDOM_WORD` slot to `algorithm` or `research` questions — a random word is low-signal noise rather than a useful disruption source for hard-science problems. `product` and `strategy` still each draw one `RANDOM_WORD` slot.
 
 Supported pool modes mirror the website:
 
@@ -90,7 +93,7 @@ Each candidate must contain:
 - the slot number and specific source domain;
 - `source_phenomenon`: a concrete source-world event, rule, operation, or constraint, written mainly in Chinese;
 - `proto`: the abstract transferable method, containing no target-domain terms;
-- `named_method`: the real-world existing method, algorithm, or technique that the source mechanism corresponds to (for example 卡尔曼滤波 or 岛屿生物地理学模型). When no genuine real-world counterpart exists, write `抽象概括（无真实具名对应）` instead of inventing one — never fabricate a method name that does not exist;
+- `claimed_method`: the real-world existing method, algorithm, or technique that the source mechanism corresponds to (for example 卡尔曼滤波 or 岛屿生物地理学模型). When no genuine real-world counterpart exists, write `抽象概括（无真实具名对应）` instead of inventing one — never fabricate a method name that does not exist;
 - `desc`: 2-4 operational sentences, opening with which `problem_card` key this card primarily targets, then naming inputs/materials, action order, trigger, resulting change, and a visible or measurable output;
 - `advantage`: a plain-language sentence beginning with `这种方案的优势在于，`, preferably within 50 Chinese characters;
 - `fail`: a concrete hidden premise or failure condition, retained as internal/detail metadata even when the compact card hides it.
@@ -114,6 +117,19 @@ After all 9 slots reach a final per-slot outcome (pass, `未达标保底`, or fa
 Keep the sampled word as the source. Ground it with a real search result before extracting an operation or rule. Do not silently replace it with an unrelated natural or scientific mechanism. If grounding is weak, reroll or fail the slot.
 
 `RANDOM_WORD` slots do not use the 6-dimension structural-mapping score. Judge them with the dedicated `judge_random_word.txt` template instead, on 4 dimensions (0-10 each): `chain_clarity`, `actionability`, `novelty`, `unexpectedness`. Pass line: `chain_clarity >= 6` and `actionability >= 6` and `novelty >= 7` (an initial, uncalibrated bar).
+
+## Target-Field Novelty Check (independent per-run toggle)
+
+A candidate that clears the independent judge still gets one more check whenever the novelty-check toggle is active for this run (see the activation rule below — no longer tied to `risk_profile == "research"`): whether its `claimed_method` is already a known or standard method *for the target problem/field*, not just whether the source-domain analogy reads as unusual. The six-dimension score only judges the analogy — it can score a pairing like Mixture-of-Experts routing for cross-subject EEG transfer as freshly novel because the source/target labels look far apart, even though that pairing is already an established approach in that literature.
+
+- Default implementation branches by problem type: `algorithm`/`research` questions search arXiv (academic search, e.g. via `https://export.arxiv.org/api/query`) rather than the generic-web sogou fallback — sogou's signal is too weak for judging whether *this specific named-method-for-this-specific-problem combination* is already published work. `product`/`strategy` questions keep using the generic web search for this check.
+- The evidence question stays narrow either way: only "is `claimed_method` applied to this specific problem already existing published/public work" counts as known. Many hits about the method itself (famous in its own origin field, or plainly related papers that don't target this problem) do not make it known — the pairing with *this* target problem/field is what must already exist.
+- The judging model is asked once whether the results show the claimed method (applied to this problem) is already standard/known; any search or parsing failure degrades gracefully to "not known" rather than penalizing the candidate — a tool failure must never manufacture a false known-method verdict.
+- An auto-research integration may swap in its own literature-search backend (its own paper corpus, Semantic Scholar, etc.) in place of the default arXiv/web search, through the same pluggable backend parameter.
+- **Closed loop instead of a passive label**: a candidate flagged `is_known` in this profile is no longer just labeled "领域内已知" (known in the target field) and left as-is. The slot rerolls from a **new source anchor** (never a reworded restatement of the same anchor) and repeats the full pipeline — quality gate, independent judge, then this novelty check again — up to **`max_novelty_rerolls`** additional times. This turns the online novelty check from a passive filter into an active novelty driver, so that both what gets delivered and what feeds an auto-research pipeline stays as free as possible of collisions with already-published work.
+- If `max_novelty_rerolls` is exhausted and the candidate is still flagged `is_known`, keep the last version, label it "领域内已知", and disclose that the anchor-reroll budget was exhausted — never reroll indefinitely.
+- **Activation, decoupled from `risk_profile`**: whether this check runs is decided solely by `Config.research_novelty_check`, a tri-state `Optional[bool]` (default `None`). `None` auto-selects by tier (on for `research`, off for `pragmatic`/`explore`); `True` forces it on regardless of tier; `False` forces it off regardless of tier. Both call sites that used to test `risk_profile == "research" and research_novelty_check` — the per-candidate gate and the closed-loop reroll gate — now go through one shared helper, `_novelty_enabled(config) = config.research_novelty_check if config.research_novelty_check is not None else (config.risk_profile == "research")`, so a candidate no longer has to be on the `research` tier for this check to run. The CLI exposes `--novelty-check` / `--no-novelty-check` (omitted = `None`, auto by `--profile`); the web app adds a "是否查重" (run novelty check) toggle (`CreateRunRequest.novelty_check`, default `False` — off unless the user opts in) that is stored in `config_snapshot` and passed to `Config.research_novelty_check` as an explicit `True`/`False` (the web layer always passes an explicit bool, never `None`, so a web-originated run never falls into the by-tier auto branch).
+- Exists to avoid handing an auto-research pipeline a repackaged known method as if it were new, burning implementation and benchmark compute on it for nothing.
 
 ## Standard-Mode Requirements
 

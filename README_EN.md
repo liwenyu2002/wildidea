@@ -38,6 +38,7 @@ WildIdea now has a web version: [wildidea.wenyuli.site](https://wildidea.wenyuli
 | Source-first reasoning | Shows the source phenomenon before abstracting the transferable method |
 | Web search helper | Includes a zero-key search helper for random-word grounding and basic novelty checks (Skill path only; the web app's novelty score is an AI-judge self-assessment without live web dedup) |
 | Quality filtering | Constrains structural depth, domain distance, novelty, and applicability; weak candidates can be redrawn |
+| Auto-research ready | The `research` quality tier raises the novelty/domain-distance bar and relaxes immediate feasibility at generation time, screening for novel, implementable cross-domain ideas ready to feed an idea -> implementation -> benchmark pipeline |
 | Standalone use | Download `skill/wildidea/` and use it directly without running extra services |
 
 ## Quick Start

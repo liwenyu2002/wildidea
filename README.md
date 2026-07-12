@@ -38,6 +38,7 @@ WildIdea 现已推出网页版本：[wildidea.wenyuli.site](https://wildidea.wen
 | 他山之石 | 先展示真实源现象，再抽象出方法论，帮助用户理解创意从哪里来 |
 | 联网搜索 | 内置免 API key 搜索 helper，用于随机组词和基础新颖性检查（仅 Skill 路径生效；Web 版新颖度分数为 AI 判官自评，不含联网查重） |
 | 质量过滤 | 对结构深度、领域距离、新颖度和可用性进行约束，弱候选可重抽 |
+| 可对接 auto-research | `research` 质量档在生成阶段就抬高新颖度与跨域门槛、放宽即时可行性，筛出又新又可实现的跨域 idea，供 idea→实现→benchmark 全流程复用 |
 | 独立使用 | 直接下载 `skill/wildidea/` 即可使用，不需要额外服务 |
 
 ## 快速开始
