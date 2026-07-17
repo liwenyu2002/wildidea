@@ -36,8 +36,10 @@ WildIdea 现已推出网页版本：[wildidea.wenyuli.site](https://wildidea.wen
 |---|---|
 | 远领域抽卡 | 从算法技术、学术机制、人文艺术、产品机制、毛选、随机组词等卡池抽取源机制 |
 | 他山之石 | 先展示真实源现象，再抽象出方法论，帮助用户理解创意从哪里来 |
-| 联网搜索 | 内置免 API key 搜索 helper，用于随机组词和基础新颖性检查（仅 Skill 路径生效；Web 版新颖度分数为 AI 判官自评，不含联网查重） |
-| 质量过滤 | 对结构深度、领域距离、新颖度和可用性进行约束，弱候选可重抽 |
+| 隔离结构映射 | 源机制和目标问题由互相隔离的角色分别建图，再按因果/功能关系对齐 |
+| 红蓝对抗 | 每张卡都经过证据红队攻击，并记录存活理由、残余弱点或致命反例 |
+| 联网搜索 | 使用 OpenAlex、arXiv 或公开网页检查目标领域撞车，并保留证据记录 |
+| 质量与多样性 | 独立判官、定向修复、Vendi 多样性和解法形式检查共同约束输出 |
 | 可对接 auto-research | `research` 质量档在生成阶段就抬高新颖度与跨域门槛、放宽即时可行性，筛出又新又可实现的跨域 idea，供 idea→实现→benchmark 全流程复用 |
 | 独立使用 | 直接下载 `skill/wildidea/` 即可使用，不需要额外服务 |
 
@@ -57,13 +59,13 @@ curl -fsSL https://raw.githubusercontent.com/liwenyu2002/wildidea/main/scripts/i
 
 ## 工作流
 
-1. 输入问题，并写下需要避开的常见解法。
-2. 从远领域卡池中抽取源机制。
-3. 识别具体源现象。
-4. 抽象出不含目标领域术语的可迁移方法。
-5. 将方法映射回用户问题。
-6. 过滤或重抽弱候选。
-7. 返回具体的灵感卡片。
+1. 将问题结构化并建立目标关系图。
+2. 从远领域卡池抽取源机制，在隔离上下文中建立源关系图。
+3. 对齐两张图，从共享因果结构生成方案。
+4. 由独立判官评分，再由红队尝试用证据杀死方案。
+5. 蓝队记录存活理由，或把反例送回定向修复。
+6. 做目标领域查重、可证伪推论和整批多样性检查。
+7. 返回带红蓝档案的灵感卡片与校验后的 HTML。
 
 ## 包含内容
 
@@ -71,6 +73,7 @@ curl -fsSL https://raw.githubusercontent.com/liwenyu2002/wildidea/main/scripts/i
 |---|---|
 | `skill/wildidea/SKILL.md` | Skill 入口 |
 | `skill/wildidea/references/wildidea-skill.md` | 完整工作流规则 |
+| `skill/wildidea/references/red-blue-workflow.md` | 红蓝角色、证据门槛与审计档案 |
 | `skill/wildidea/references/domains.json` | 卡池数据 |
 | `skill/wildidea/scripts/search_helper.py` | 免 API key 联网搜索 helper |
 | `skill/wildidea/scripts/pick_domain_slots.py` | 卡池抽取脚本 |

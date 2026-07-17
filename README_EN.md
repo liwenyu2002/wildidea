@@ -36,8 +36,10 @@ WildIdea now has a web version: [wildidea.wenyuli.site](https://wildidea.wenyuli
 |---|---|
 | Distant-domain draw | Samples mechanisms from algorithm, academic, humanities/art, product, Mao-style, and random-word pools |
 | Source-first reasoning | Shows the source phenomenon before abstracting the transferable method |
-| Web search helper | Includes a zero-key search helper for random-word grounding and basic novelty checks (Skill path only; the web app's novelty score is an AI-judge self-assessment without live web dedup) |
-| Quality filtering | Constrains structural depth, domain distance, novelty, and applicability; weak candidates can be redrawn |
+| Isolated structure mapping | Separate roles graph the source mechanism and target problem before causal/functional alignment |
+| Red/blue adversarial review | Every card receives evidence-backed attacks plus recorded survival reasons, weaknesses, or a fatal counterexample |
+| Live novelty search | Uses OpenAlex, arXiv, or public web evidence to detect target-field collisions |
+| Quality and diversity control | Independent judging, targeted repair, Vendi diversity, and solution-form checks constrain the batch |
 | Auto-research ready | The `research` quality tier raises the novelty/domain-distance bar and relaxes immediate feasibility at generation time, screening for novel, implementable cross-domain ideas ready to feed an idea -> implementation -> benchmark pipeline |
 | Standalone use | Download `skill/wildidea/` and use it directly without running extra services |
 
@@ -57,13 +59,13 @@ Use wildidea to help me answer: how should I design a photo album app?
 
 ## Workflow
 
-1. Input the problem and common solutions to avoid.
-2. Draw source mechanisms from distant-domain card pools.
-3. Identify the concrete source phenomenon.
-4. Abstract a transferable method without target-domain terms.
-5. Map the method back to the user's problem.
-6. Filter or redraw weak candidates.
-7. Return concrete idea cards.
+1. Structure the problem and build its target relation graph.
+2. Draw a distant source and build its source graph in an isolated context.
+3. Align the graphs and generate from the shared causal structure.
+4. Run an independent judge and evidence-backed red-team attacks.
+5. Record blue-team survival reasons or inject counterevidence into targeted repair.
+6. Run target-field novelty, falsifiable inference, and batch-diversity checks.
+7. Return idea cards with red/blue dossiers and validated HTML.
 
 ## What Is Included
 
@@ -71,6 +73,7 @@ Use wildidea to help me answer: how should I design a photo album app?
 |---|---|
 | `skill/wildidea/SKILL.md` | Skill entrypoint |
 | `skill/wildidea/references/wildidea-skill.md` | Full workflow spec |
+| `skill/wildidea/references/red-blue-workflow.md` | Red/blue roles, evidence gates, and audit dossier |
 | `skill/wildidea/references/domains.json` | Card pool data |
 | `skill/wildidea/scripts/search_helper.py` | Zero-key web search helper |
 | `skill/wildidea/scripts/pick_domain_slots.py` | Slot sampler |
