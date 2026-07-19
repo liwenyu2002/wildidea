@@ -137,6 +137,8 @@ python3 scripts/pick_domain_slots.py --reroll random_word --exclude 已用词
 - `advantage`：以 `这种方案的优势在于，` 开头，尽量不超过 50 个中文字符，用人话说明价值。
 - `fail`：具体失败前提，作为详情或内部元数据保留；紧凑卡面可隐藏。
 
+所有机器可读结果统一使用 `wildidea.candidate.v1`：除上述卡面字段外，还必须暴露来源域与槽位标识、`relation_pairs`、`targets`、完整判官评分、质量/退款状态、重抽记录、目标域查重结果、grounding、结构映射与红蓝对抗档案。不得为了界面简洁把接口也压缩成摘要；同时不得把密钥、系统提示词或模型隐藏思维纳入该契约。
+
 如果锚点有 `source_scene`，优先把它作为他山之石。若有 `methods`，用 `input/process/output/key_insight` 理解结构，但不要照搬 `transfer_examples`。
 
 算法/学术卡的主要卡面仍显示源现象；环境支持悬停详情时，同时补充通俗实际场景。

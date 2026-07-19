@@ -119,6 +119,14 @@ Each candidate contains:
 - `fail`: a concrete hidden premise or failure condition;
 - the red/blue dossier described above.
 
+Use the versioned `wildidea.candidate.v1` contract for every machine-readable
+card artifact. Do not collapse it to a display summary: expose the source
+fields, mapping fields, implementation and advantage, failure boundary, full
+judge scores, quality/refund state, retry history, novelty result, grounding,
+mapping, and adversarial dossier. This contract contains explicit product and
+audit outputs only; never expose credentials, system prompts, or hidden model
+reasoning.
+
 For technical English, show the Chinese name first and only the necessary acronym in Chinese parentheses, such as `随机采样一致性（RANSAC）`.
 
 Reject the card when removing the source mechanism leaves common sense, a renamed conventional fix, or vague “use X to improve Y” language.
